@@ -1,0 +1,641 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glassy-ui-base-nova",
+  "title": "Glassy UI components for shadcn/ui (base-nova)",
+  "description": "Replaces shadcn/ui's base-nova components (Base UI (@base-ui/react)) with Glassy UI versions that keep their API, so your imports stay as they are.",
+  "files": [
+    {
+      "path": "registry/glassyui/glassy-engine.tsx",
+      "content": "'use client';\n\n/*\n * The shadcn/ui components distributed with this engine use the following license:\n *\n * MIT License\n *\n * Copyright (c) 2023 shadcn\n *\n * Permission is hereby granted, free of charge, to any person obtaining a copy\n * of this software and associated documentation files (the \"Software\"), to deal\n * in the Software without restriction, including without limitation the rights\n * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n * copies of the Software, and to permit persons to whom the Software is\n * furnished to do so, subject to the following conditions:\n *\n * The above copyright notice and this permission notice shall be included in all\n * copies or substantial portions of the Software.\n *\n * THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\n * SOFTWARE.\n */\n\nimport {\n  useCallback,\n  useEffect,\n  useId,\n  useLayoutEffect,\n  useRef,\n  useState,\n  useSyncExternalStore,\n} from 'react';\nimport type { ComponentProps, ReactNode, Ref } from 'react';\nimport { createPortal } from 'react-dom';\nimport { buildLensMapDataUrl, clamp, MAX_LENS_SURFACE_AREA } from './lib/refraction-map';\nimport type { LensMapMetrics, LensRadii } from './lib/refraction-map';\nimport { useGlassScenePane } from './lib/scene-context';\n\n// A pane's or slab's glass is its ::after, the padding box. A float's and the tabs track's is\n// the element itself, so a float keeps its glass while it fades, and its lens covers the\n// border box.\nexport type GlassyEngineKind = 'pane' | 'slab' | 'float' | 'track';\n\ntype Lens = {\n  blur: number;\n  bodyBrightness: number;\n  dispersion: number;\n  host: HTMLElement;\n  href: string;\n  metrics: LensMapMetrics;\n  rimBrightness: number;\n  saturation: number;\n};\n\n// The components' lens rules (useLensFilter in lib/use-refraction-filter.tsx): a rim as wide as\n// the corners are round, up to 36 px, glass 1.4 times as thick as its rim, and at least half a\n// pixel of frost, so bent edges never stair-step.\nconst LENS_BEVEL = 36;\n\nconst LENS_THICKNESS_RATIO = 1.4;\n\nconst MIN_FROST = 0.5;\n\n// Only Chromium draws an SVG filter in backdrop-filter, and only Chromium has userAgentData.\nfunction supportsLens() {\n  return (\n    typeof navigator !== 'undefined' &&\n    'userAgentData' in navigator &&\n    typeof ResizeObserver !== 'undefined'\n  );\n}\n\nfunction readNumber(style: CSSStyleDeclaration, name: string, fallback = 0) {\n  const value = Number.parseFloat(style.getPropertyValue(name));\n\n  return Number.isFinite(value) ? value : fallback;\n}\n\nfunction readRadius(value: string, width: number, height: number) {\n  const [first] = value.trim().split(/\\s+/);\n  const largest = Math.min(width, height) / 2;\n  const parsed = Number.parseFloat(first);\n\n  if (first.endsWith('%')) return clamp((parsed / 100) * Math.min(width, height), 0, largest);\n\n  return clamp(Number.isFinite(parsed) ? parsed : largest, 0, largest);\n}\n\n// Measures the box the glass fills and reads the --lg-lens-* tokens the theme sets on the\n// element, as the components do. Layout sizes, so a float's zoom-in never shrinks its map.\nfunction measureLens(host: HTMLElement, borderBox: boolean): Lens | null {\n  const width = borderBox ? host.offsetWidth : host.clientWidth;\n  const height = borderBox ? host.offsetHeight : host.clientHeight;\n  const style = getComputedStyle(host);\n  const depth = readNumber(style, '--lg-lens-depth');\n\n  if (depth <= 0 || !width || !height || width * height > MAX_LENS_SURFACE_AREA) return null;\n\n  const radii: LensRadii = [\n    readRadius(style.borderTopLeftRadius, width, height),\n    readRadius(style.borderTopRightRadius, width, height),\n    readRadius(style.borderBottomRightRadius, width, height),\n    readRadius(style.borderBottomLeftRadius, width, height),\n  ];\n\n  const multiplier = clamp(readNumber(style, '--lg-glass-thickness', 1), 0.1, 4);\n  const bevelToken = readNumber(style, '--lg-lens-bevel');\n  const thicknessToken = readNumber(style, '--lg-lens-thickness');\n  const baseBevel = bevelToken > 0 ? bevelToken : clamp(Math.max(...radii), 6, LENS_BEVEL);\n\n  const { href, metrics } = buildLensMapDataUrl({\n    bevel: clamp(baseBevel * (0.6 + 0.4 * multiplier), 4, Math.min(width, height) / 2),\n    depth,\n    devicePixelRatio: window.devicePixelRatio || 1,\n    height,\n    ior: Math.max(1, readNumber(style, '--lg-lens-ior', 1.5)),\n    radii,\n    thickness:\n      (thicknessToken > 0 ? thicknessToken : baseBevel * LENS_THICKNESS_RATIO) * multiplier,\n    width,\n  });\n\n  return {\n    blur: Math.max(0, readNumber(style, '--lg-lens-blur')),\n    bodyBrightness: clamp(readNumber(style, '--lg-lens-body-brightness', 1), 0, 1),\n    dispersion: clamp(readNumber(style, '--lg-lens-dispersion') * multiplier, 0, 1),\n    host,\n    href,\n    metrics,\n    rimBrightness: clamp(readNumber(style, '--lg-lens-rim-brightness', 1), 0, 1),\n    saturation: readNumber(style, '--lg-lens-saturation') || 1,\n  };\n}\n\nfunction sameLens(previous: Lens | null, next: Lens | null) {\n  return (\n    previous === next ||\n    (previous !== null &&\n      next !== null &&\n      previous.host === next.host &&\n      previous.href === next.href &&\n      previous.blur === next.blur &&\n      previous.bodyBrightness === next.bodyBrightness &&\n      previous.dispersion === next.dispersion &&\n      previous.rimBrightness === next.rimBrightness &&\n      previous.saturation === next.saturation)\n  );\n}\n\n// Measures the host when it mounts, resizes or the signature changes.\nfunction useMeasuredLens(host: HTMLElement | null, signature: string, borderBox: boolean) {\n  const [lens, setLens] = useState<Lens | null>(null);\n\n  useEffect(() => {\n    if (!host || !supportsLens()) return;\n\n    let frame = 0;\n\n    const measure = () => {\n      frame = 0;\n      const next = measureLens(host, borderBox);\n      setLens((previous) => (sameLens(previous, next) ? previous : next));\n    };\n\n    const schedule = () => {\n      if (!frame) frame = requestAnimationFrame(measure);\n    };\n\n    const observer = new ResizeObserver(schedule);\n    observer.observe(host, { box: borderBox ? 'border-box' : 'content-box' });\n    schedule();\n\n    return () => {\n      cancelAnimationFrame(frame);\n      observer.disconnect();\n    };\n  }, [borderBox, host, signature]);\n\n  return lens?.host === host ? lens : null;\n}\n\n/**\n * The components' lens for one measured element: the page frosted, then read through a map of\n * the rim drawn for the element's own size and corners (buildLensMapDataUrl). Where the theme\n * splits the page into colour, red and cyan bend apart and screen back together, as the\n * components blend their three colours; a third colour made scrolling a dashboard of ten\n * cards in Chrome miss more than a third of its frames, and so did restoring the page's alpha\n * after an opaque sum.\n */\nfunction LensFilter({ id, lens }: { id: string; lens: Lens }) {\n  const frost = Math.max(lens.blur, MIN_FROST);\n  const padding = Math.ceil(frost * 3) + 2;\n  // The map holds a unit offset; the scale turns it into CSS pixels.\n  const scale = Math.round(2 * lens.metrics.reach * 100) / 100;\n\n  const bend = (input: string, factor: number, result: string) => (\n    <feDisplacementMap\n      in={input}\n      in2=\"lens\"\n      scale={Math.round(scale * factor * 100) / 100}\n      xChannelSelector=\"R\"\n      yChannelSelector=\"G\"\n      result={result}\n    />\n  );\n\n  const channel = (name: string, matrix: string, factor: number) => (\n    <>\n      <feColorMatrix in=\"frost\" type=\"matrix\" values={matrix} result={`${name}-only`} />\n      {bend(`${name}-only`, factor, `${name}-bent`)}\n    </>\n  );\n\n  // Dark slabs dim the page, less at their rim, as the components' do. A primitive is added\n  // only where it changes something: each one is another pass on the GPU.\n  const dim = (brightness: number, result: string) =>\n    brightness < 1 ? (\n      <feComponentTransfer in=\"bent\" result={result}>\n        <feFuncR type=\"linear\" slope={brightness} />\n        <feFuncG type=\"linear\" slope={brightness} />\n        <feFuncB type=\"linear\" slope={brightness} />\n      </feComponentTransfer>\n    ) : null;\n\n  const shaded = lens.rimBrightness !== lens.bodyBrightness;\n  const rimSource = lens.rimBrightness < 1 ? 'rim-lit' : 'bent';\n  const topSource = lens.bodyBrightness < 1 ? 'top-lit' : 'bent';\n\n  return (\n    <svg aria-hidden=\"true\" className=\"lg-refraction-filter\" focusable=\"false\" viewBox=\"0 0 0 0\">\n      <defs>\n        <filter\n          id={id}\n          x={-padding}\n          y={-padding}\n          width={lens.metrics.width + padding * 2}\n          height={lens.metrics.height + padding * 2}\n          filterUnits=\"userSpaceOnUse\"\n          primitiveUnits=\"userSpaceOnUse\"\n          colorInterpolationFilters=\"sRGB\"\n        >\n          <feGaussianBlur in=\"SourceGraphic\" stdDeviation={frost} result=\"frost\" />\n          <feImage\n            href={lens.href}\n            x={0}\n            y={0}\n            width={lens.metrics.width}\n            height={lens.metrics.height}\n            preserveAspectRatio=\"none\"\n            result=\"lens\"\n          />\n          {lens.dispersion > 0.005 ? (\n            <>\n              {channel('red', '1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0', 1 - lens.dispersion / 2)}\n              {channel('cyan', '0 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0', 1 + lens.dispersion / 4)}\n              <feBlend in=\"red-bent\" in2=\"cyan-bent\" mode=\"screen\" result=\"bent\" />\n            </>\n          ) : (\n            bend('frost', 1, 'bent')\n          )}\n          {shaded ? (\n            <>\n              {/* The map's blue channel is the rim, which weights its light over the top's. */}\n              <feColorMatrix\n                in=\"lens\"\n                type=\"matrix\"\n                values=\"0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0\"\n                result=\"rim\"\n              />\n              {dim(lens.rimBrightness, 'rim-lit')}\n              {dim(lens.bodyBrightness, 'top-lit')}\n              <feComposite in={rimSource} in2=\"rim\" operator=\"in\" result=\"rim-glass\" />\n              <feComposite in=\"rim-glass\" in2={topSource} operator=\"over\" result=\"glass\" />\n            </>\n          ) : (\n            dim(lens.bodyBrightness, 'top-lit')\n          )}\n          {lens.saturation === 1 ? null : (\n            <feColorMatrix\n              in={shaded ? 'glass' : topSource}\n              type=\"saturate\"\n              values={String(lens.saturation)}\n            />\n          )}\n        </filter>\n      </defs>\n    </svg>\n  );\n}\n\n// shadcn/ui apps switch between light and dark with a class, data-theme or color-scheme on\n// <html>, which changes the tokens the lens reads, so the engine measures again then.\nfunction subscribeToTheme(onChange: () => void) {\n  const observer = new MutationObserver(onChange);\n\n  observer.observe(document.documentElement, {\n    attributes: true,\n    attributeFilter: ['class', 'data-theme', 'style'],\n  });\n\n  return () => observer.disconnect();\n}\n\nfunction readTheme() {\n  const root = document.documentElement;\n\n  return `${root.className}|${root.dataset.theme ?? ''}|${root.style.colorScheme}`;\n}\n\nconst serverTheme = () => '';\n\n/**\n * Runs Glassy UI's engine on one element of a shadcn/ui component. In Chromium it measures\n * the element and gives its glass the components' own lens: a map drawn for its exact size\n * and corners, which the theme's CSS can only approximate, measured again whenever the\n * element resizes or the page changes theme. The engine marks the element\n * data-glassy-engine and names the filter in --glassy-measured-lens; the filter itself\n * lives in document.body, so the component's own markup stays exactly as shadcn/ui wrote\n * it. Inside a GlassScene the element is handed to the scene, which draws it as thick\n * glass. Elsewhere nothing changes and the theme's CSS glass stays in charge.\n *\n * Returns the portal to render beside the element.\n */\nexport function useGlassyEngine(host: HTMLElement | null, kind: GlassyEngineKind): ReactNode {\n  const id = `lg-lens-${useId().replaceAll(':', '')}`;\n  const theme = useSyncExternalStore(subscribeToTheme, readTheme, serverTheme);\n  const lens = useMeasuredLens(host, `${kind}|${theme}`, kind === 'float' || kind === 'track');\n  const hostRef = useRef<HTMLElement | null>(null);\n  const active = lens !== null;\n\n  useLayoutEffect(() => {\n    hostRef.current = host;\n  }, [host]);\n\n  useGlassScenePane(hostRef, host !== null);\n\n  useLayoutEffect(() => {\n    const element = hostRef.current;\n\n    if (!element || !active) return;\n\n    element.dataset.glassyEngine = kind;\n    element.style.setProperty('--glassy-measured-lens', `url(#${id})`);\n\n    return () => {\n      delete element.dataset.glassyEngine;\n      element.style.removeProperty('--glassy-measured-lens');\n    };\n  }, [active, host, id, kind]);\n\n  return lens ? createPortal(<LensFilter id={id} lens={lens} />, document.body) : null;\n}\n\nfunction assignRef<T>(ref: Ref<T> | undefined, node: T | null) {\n  if (ref instanceof Function) ref(node);\n  else if (ref) ref.current = node;\n}\n\n// One stable callback ref that keeps the engine's element and the caller's ref in step.\nexport function useHostRef<T extends HTMLElement>(ref: Ref<T> | undefined) {\n  const [host, setHost] = useState<T | null>(null);\n\n  const attach = useCallback(\n    (node: T | null) => {\n      setHost(node);\n      assignRef(ref, node);\n    },\n    [ref],\n  );\n\n  return [host, attach] as const;\n}\n\n/**\n * The engine for an element a drop-in renders itself: the ref to give the element, which also\n * reaches the caller's ref, and the filter to render anywhere inside the component.\n */\nexport function useGlassy<T extends HTMLElement>(ref: Ref<T> | undefined, kind: GlassyEngineKind) {\n  const [host, attach] = useHostRef(ref);\n  const glass = useGlassyEngine(host, kind);\n\n  return [attach, glass] as const;\n}\n\n/** The root of a card or an alert: shadcn/ui's div, with the engine. */\nexport function GlassyPane({ ref, ...props }: ComponentProps<'div'>) {\n  const [attach, glass] = useGlassy(ref, 'pane');\n\n  return (\n    <>\n      <div ref={attach} {...props} />\n      {glass}\n    </>\n  );\n}\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glassy-engine.tsx"
+    },
+    {
+      "path": "registry/glassyui/lib/refraction-map.ts",
+      "content": "import { SLAB_AIR_GAP, SLAB_MAX_SLOPE, SLAB_MIN_RISE, SLAB_RISE_SPAN } from './slab-optics';\n\nexport type GeneratedRefractionStrength = 'soft' | 'strong';\n\ntype RefractionPreset = {\n  centerNeutralRatio: number;\n  defaultDisplacement: number;\n  edgeBandRatio: number;\n  edgeWidth: number;\n  /** Rim pull at the default displacement, as a share of the edge band. */\n  rimPull: number;\n};\n\nexport type RefractionMapOptions = {\n  devicePixelRatio?: number;\n  displacement?: number;\n  height: number;\n  radius: number;\n  strength: GeneratedRefractionStrength;\n  thickness?: number;\n  width: number;\n};\n\nexport type RefractionMapMetrics = {\n  cacheKey: string;\n  dispersion: number;\n  edgeBand: number;\n  /** Corner radius of the bend field, never tighter than the edge band. */\n  fieldRadius: number;\n  filterBlur: number;\n  filterPadding: number;\n  filterScale: number;\n  height: number;\n  mapHeight: number;\n  mapPixels: number;\n  mapWidth: number;\n  paddedHeight: number;\n  paddedWidth: number;\n  /** Inward offset at the rim, in CSS pixels. */\n  pull: number;\n  radius: number;\n  width: number;\n};\n\nexport type RefractionMapBuildResult = {\n  href: string;\n  metrics: RefractionMapMetrics;\n};\n\nexport const MAX_REFRACTION_MAP_PIXELS = 160000;\n\nconst REFRACTION_PRESETS: Record<GeneratedRefractionStrength, RefractionPreset> = {\n  soft: {\n    centerNeutralRatio: 0.68,\n    defaultDisplacement: 72,\n    edgeBandRatio: 0.18,\n    edgeWidth: 1.08,\n    rimPull: 0.22,\n  },\n  strong: {\n    centerNeutralRatio: 0.58,\n    defaultDisplacement: 112,\n    edgeBandRatio: 0.2,\n    edgeWidth: 1.22,\n    rimPull: 0.34,\n  },\n};\n\n/**\n * Scene blur under the rim, in CSS pixels. Chromium and Firefox sample the bend\n * nearest-neighbour, so the magnified rim would stair-step at 1x pixel density. The\n * map's blue channel keeps the blur off the flat centre.\n */\nconst RIM_BLUR = 0.8;\n\n/**\n * The bend falls off as (1 - t)^2 across the edge band, steepest at the rim. Any pull\n * under half the band keeps each sample further in than its outer neighbour, so the rim\n * compresses the view like thick glass and never mirrors it. The base pull is 0.34;\n * even the furthest colour stays below 0.4 to leave room for the map's 8-bit rounding.\n */\nconst MAX_RIM_PULL = 0.34;\n\nconst MAX_CHROMATIC_RIM_PULL = 0.4;\n\nconst refractionMapCache = new Map<string, string>();\n\nconst maxCachedRefractionMaps = 48;\n\nexport function clamp(value: number, min: number, max: number) {\n  return Math.min(max, Math.max(min, value));\n}\n\nfunction smoothstep(edge0: number, edge1: number, value: number) {\n  const t = clamp((value - edge0) / Math.max(edge1 - edge0, 0.0001), 0, 1);\n\n  return t * t * (3 - 2 * t);\n}\n\ntype Edge = { distance: number; normalX: number; normalY: number };\n\n// Distance to a rounded rectangle plus its outward unit normal.\nfunction roundedRectEdge(\n  x: number,\n  y: number,\n  width: number,\n  height: number,\n  radius: number,\n  edge: Edge,\n) {\n  const px = x - width / 2;\n  const py = y - height / 2;\n  const qx = Math.abs(px) - (width / 2 - radius);\n  const qy = Math.abs(py) - (height / 2 - radius);\n  const signX = px < 0 ? -1 : 1;\n  const signY = py < 0 ? -1 : 1;\n\n  if (qx > 0 && qy > 0) {\n    const length = Math.hypot(qx, qy);\n\n    edge.distance = length - radius;\n    edge.normalX = (signX * qx) / length;\n    edge.normalY = (signY * qy) / length;\n  } else if (qx > qy) {\n    edge.distance = qx - radius;\n    edge.normalX = signX;\n    edge.normalY = 0;\n  } else {\n    edge.distance = qy - radius;\n    edge.normalX = 0;\n    edge.normalY = signY;\n  }\n\n  return edge;\n}\n\nfunction fitMapSize(width: number, height: number, pixelRatio: number) {\n  let mapWidth = clamp(Math.round(width * pixelRatio), 32, 1800);\n  let mapHeight = clamp(Math.round(height * pixelRatio), 32, 1200);\n\n  const pixels = mapWidth * mapHeight;\n\n  if (pixels <= MAX_REFRACTION_MAP_PIXELS) {\n    return { mapWidth, mapHeight };\n  }\n\n  const ratio = Math.sqrt(MAX_REFRACTION_MAP_PIXELS / pixels);\n  mapWidth = Math.max(32, Math.floor(mapWidth * ratio));\n  mapHeight = Math.max(32, Math.floor(mapHeight * ratio));\n\n  while (mapWidth * mapHeight > MAX_REFRACTION_MAP_PIXELS) {\n    if (mapWidth >= mapHeight) {\n      mapWidth -= 1;\n    } else {\n      mapHeight -= 1;\n    }\n  }\n\n  return { mapWidth, mapHeight };\n}\n\nexport function computeRefractionMapMetrics(options: RefractionMapOptions): RefractionMapMetrics {\n  const preset = REFRACTION_PRESETS[options.strength];\n  const width = Math.max(0, options.width);\n  const height = Math.max(0, options.height);\n  const minDimension = Math.min(width, height);\n  const radius = clamp(options.radius, 0, minDimension / 2);\n  const displacement = clamp(options.displacement ?? preset.defaultDisplacement, 0, 196);\n  const thickness = clamp(options.thickness ?? 1, 0.1, 4);\n  const rimWidth = 0.6 + 0.4 * thickness;\n  const dispersion = clamp((thickness - 1) * 0.2, 0, 0.6);\n  const blueFactor = 1 + dispersion / 2;\n  const neutralInset = (minDimension * (1 - preset.centerNeutralRatio)) / 2;\n\n  const edgeBand = clamp(\n    Math.min(minDimension * preset.edgeBandRatio, neutralInset) * preset.edgeWidth * rimWidth,\n    6,\n    Math.min(72 * rimWidth, (radius || 56) * 1.15 * rimWidth, minDimension * 0.48),\n  );\n\n  // Inside a tighter corner the inset contours would turn sharp and pinch the bend.\n  const fieldRadius = clamp(Math.max(radius, edgeBand), 0, minDimension / 2);\n\n  const pull =\n    edgeBand *\n    Math.min(\n      MAX_RIM_PULL,\n      MAX_CHROMATIC_RIM_PULL / blueFactor,\n      (preset.rimPull * displacement) / preset.defaultDisplacement,\n    );\n\n  // WebKit shifts a clipped, filtered scene unless the filter region reaches past the\n  // box as far as the primitives read: the blue pull plus three blur deviations.\n  const filterPadding = Math.ceil(pull * blueFactor + RIM_BLUR * 3) + 2;\n  const paddedWidth = width + filterPadding * 2;\n  const paddedHeight = height + filterPadding * 2;\n  const targetRatio = clamp((options.devicePixelRatio ?? 1) * 1.12, 1.15, 2.1);\n  const targetPixels = paddedWidth * paddedHeight * targetRatio * targetRatio;\n\n  const pixelRatio =\n    targetPixels > MAX_REFRACTION_MAP_PIXELS\n      ? Math.max(1, targetRatio * Math.sqrt(MAX_REFRACTION_MAP_PIXELS / targetPixels))\n      : targetRatio;\n\n  const { mapWidth, mapHeight } = fitMapSize(paddedWidth, paddedHeight, pixelRatio);\n\n  const cacheKey = [\n    mapWidth,\n    mapHeight,\n    Math.round(width),\n    Math.round(height),\n    Math.round(fieldRadius * 10),\n    Math.round(edgeBand * 10),\n    filterPadding,\n  ].join(':');\n\n  return {\n    cacheKey,\n    dispersion,\n    edgeBand,\n    fieldRadius,\n    filterBlur: RIM_BLUR,\n    filterPadding,\n    // Map channels hold a unit offset; the scale turns it into CSS pixels.\n    filterScale: Math.round(pull * 2 * 100) / 100,\n    height,\n    mapHeight,\n    mapPixels: mapWidth * mapHeight,\n    mapWidth,\n    paddedHeight,\n    paddedWidth,\n    pull,\n    radius,\n    width,\n  };\n}\n\n/**\n * Encodes a unit rim field: R/G = 0.5 + 0.5 * inward offset. Past the field's edge the\n * rim offset carries on unchanged, so the map stays smooth across the clipped border.\n * B is the share of softened scene: full through the outer half of the band, which\n * holds every point the steep rim samples, and gone by the flat centre.\n */\nexport async function buildRefractionMapDataUrl(\n  options: RefractionMapOptions,\n): Promise<RefractionMapBuildResult> {\n  const metrics = computeRefractionMapMetrics(options);\n  const cached = refractionMapCache.get(metrics.cacheKey);\n\n  if (cached) return { href: cached, metrics };\n\n  if (typeof document === 'undefined') {\n    throw new Error('Refraction maps require a browser document');\n  }\n\n  const canvas = document.createElement('canvas');\n  canvas.width = metrics.mapWidth;\n  canvas.height = metrics.mapHeight;\n\n  const ctx = canvas.getContext('2d');\n\n  if (!ctx) {\n    throw new Error('Canvas 2D context unavailable');\n  }\n\n  const {\n    edgeBand,\n    fieldRadius,\n    filterPadding,\n    height,\n    mapHeight,\n    mapWidth,\n    paddedHeight,\n    paddedWidth,\n    width,\n  } = metrics;\n\n  const data = new Uint8ClampedArray(mapWidth * mapHeight * 4);\n  const edge: Edge = { distance: 0, normalX: 0, normalY: 0 };\n\n  for (let yIndex = 0; yIndex < mapHeight; yIndex += 1) {\n    const y = ((yIndex + 0.5) / mapHeight) * paddedHeight - filterPadding;\n\n    for (let xIndex = 0; xIndex < mapWidth; xIndex += 1) {\n      const x = ((xIndex + 0.5) / mapWidth) * paddedWidth - filterPadding;\n      const index = (yIndex * mapWidth + xIndex) * 4;\n      roundedRectEdge(x, y, width, height, fieldRadius, edge);\n      const depth = clamp(-edge.distance / edgeBand, 0, 1);\n      const falloff = (1 - depth) ** 2;\n      const offsetX = -edge.normalX * falloff;\n      const offsetY = -edge.normalY * falloff;\n\n      data[index] = Math.round((0.5 + offsetX / 2) * 255);\n      data[index + 1] = Math.round((0.5 + offsetY / 2) * 255);\n      data[index + 2] = Math.round((1 - smoothstep(0.5, 1, depth)) * 255);\n      data[index + 3] = 255;\n    }\n  }\n\n  ctx.putImageData(new ImageData(data, mapWidth, mapHeight), 0, 0);\n  const href = canvas.toDataURL('image/png');\n  refractionMapCache.set(metrics.cacheKey, href);\n\n  if (refractionMapCache.size > maxCachedRefractionMaps) {\n    const oldestKey = refractionMapCache.keys().next().value;\n\n    if (oldestKey) refractionMapCache.delete(oldestKey);\n  }\n\n  return { href, metrics };\n}\n\n/** Corner radii in CSS pixels, clockwise from the top left. */\nexport type LensRadii = readonly [number, number, number, number];\n\nexport type LensMapOptions = {\n  /** Width of the curved rim in CSS pixels. */\n  bevel: number;\n  /** Multiplies how far the rim bends the backdrop. 0 leaves it flat. */\n  depth: number;\n  devicePixelRatio?: number;\n  height: number;\n  /** Refractive index of the glass. */\n  ior: number;\n  radii: LensRadii;\n  /** Height of the slab in CSS pixels. Thicker glass bends further. */\n  thickness: number;\n  width: number;\n};\n\nexport type LensMapMetrics = {\n  bevel: number;\n  cacheKey: string;\n  height: number;\n  mapHeight: number;\n  mapWidth: number;\n  /** The furthest the rim reads the backdrop from, in CSS pixels. */\n  reach: number;\n  width: number;\n};\n\nexport type LensMapBuildResult = {\n  href: string;\n  metrics: LensMapMetrics;\n};\n\nconst MAX_LENS_MAP_PIXELS = 420000;\n\nexport const MAX_LENS_SURFACE_AREA = 720000;\n\n// The rim reads the backdrop from no further than this share of its width, and\n// the point it reads from advances by at least a quarter of every pixel across\n// the rim, so the view compresses toward the edge and never folds back on itself.\nconst LENS_REACH = 0.7;\n\nconst LENS_FOLD = 0.75;\n\nconst LENS_PROFILE_STEPS = 512;\n\n// The rim and the flat top are the same frosted glass, but smoked glass lets more\n// light through its rim. Blue holds the share of the rim's light: all of it near\n// the edge, none past four fifths of the rim or a sixth of the surface, whichever\n// comes first, so small pieces keep the top's shade in the middle.\nconst LENS_RIM_LIGHT = 0.8;\n\nconst LENS_RIM_LIGHT_SURFACE = 0.16;\n\nconst LENS_RIM_LIGHT_FALLOFF = 0.45;\n\nconst lensMapCache = new Map<string, LensMapBuildResult>();\n\nconst maxCachedLensMaps = 32;\n\n/**\n * How far inward a view ray lands on the backdrop after it crosses a slab of glass\n * whose top curves down into a rim, s pixels in from the edge. The top follows\n * (1 - (1 - u)^4)^(1/4) across the rim, Snell's law bends the ray into the glass and\n * again out of its flat underside, and it crosses an air gap to the backdrop. This is\n * the WebGL scene's `through()`, for a ray straight down.\n */\nfunction slabOffset(s: number, bevel: number, thickness: number, ior: number) {\n  const u = s / bevel;\n  const v = 1 - Math.max(u, 0.002);\n  let rise = 1;\n  let steepness = 0;\n\n  if (u < 1) {\n    const v4 = v ** 4;\n\n    rise = (1 - v4) ** 0.25;\n    steepness = v ** 3 * Math.max(1 - v4, 1e-6) ** -0.75;\n  }\n\n  const slope = Math.min(((SLAB_RISE_SPAN * thickness) / bevel) * steepness, SLAB_MAX_SLOPE);\n  const height = thickness * (SLAB_MIN_RISE + SLAB_RISE_SPAN * rise);\n  const tilt = Math.hypot(slope, 1);\n  const sinTilt = slope / tilt;\n  const cosTilt = 1 / tilt;\n  const eta = 1 / ior;\n  const root = Math.sqrt(Math.max(1 - eta * eta * sinTilt * sinTilt, 0));\n  const bend = eta * cosTilt - root;\n  const along = bend * sinTilt;\n  const down = Math.max(eta - bend * cosTilt, 0.05);\n  const sinOut = ior * Math.abs(along);\n  const cosOut = Math.sqrt(Math.max(1 - sinOut * sinOut, 0));\n  const leaving = (ior * along) / Math.max(sinOut, 1);\n\n  return -(along * (height / down) + leaving * (SLAB_AIR_GAP / Math.max(cosOut, 0.1)));\n}\n\n/**\n * The inward offset across the rim, from the edge to its inner boundary. The physical\n * offset is softly capped, then limited so it never falls faster than the pixels it\n * crosses, which would fold the view back on itself.\n */\nfunction lensProfile(bevel: number, thickness: number, ior: number, depth: number) {\n  const cap = LENS_REACH * bevel;\n  const step = bevel / LENS_PROFILE_STEPS;\n  const offsets = new Float32Array(LENS_PROFILE_STEPS + 1);\n\n  for (let index = 0; index < LENS_PROFILE_STEPS; index += 1) {\n    offsets[index] =\n      cap * Math.tanh((depth * slabOffset(index * step, bevel, thickness, ior)) / cap);\n  }\n\n  for (let index = LENS_PROFILE_STEPS - 1; index >= 0; index -= 1) {\n    offsets[index] = Math.min(offsets[index], offsets[index + 1] + LENS_FOLD * step);\n  }\n\n  return { offsets, reach: Math.max(...offsets, 0.01) };\n}\n\n// Distance to a rounded rectangle with its own radius in every corner, plus its outward unit normal.\nfunction roundedBoxEdge(\n  x: number,\n  y: number,\n  width: number,\n  height: number,\n  radii: LensRadii,\n  edge: Edge,\n) {\n  const px = x - width / 2;\n  const py = y - height / 2;\n  const radius = px < 0 ? (py < 0 ? radii[0] : radii[3]) : py < 0 ? radii[1] : radii[2];\n  const qx = Math.abs(px) - (width / 2 - radius);\n  const qy = Math.abs(py) - (height / 2 - radius);\n  const signX = px < 0 ? -1 : 1;\n  const signY = py < 0 ? -1 : 1;\n\n  if (qx > 0 && qy > 0) {\n    const length = Math.hypot(qx, qy);\n\n    edge.distance = length - radius;\n    edge.normalX = (signX * qx) / length;\n    edge.normalY = (signY * qy) / length;\n  } else if (qx > qy) {\n    edge.distance = qx - radius;\n    edge.normalX = signX;\n    edge.normalY = 0;\n  } else {\n    edge.distance = qy - radius;\n    edge.normalX = 0;\n    edge.normalY = signY;\n  }\n\n  return edge;\n}\n\nfunction computeLensMapMetrics(options: LensMapOptions) {\n  const width = Math.max(1, options.width);\n  const height = Math.max(1, options.height);\n  const bevel = clamp(options.bevel, 1, Math.min(width, height) / 2);\n  const pixelRatio = clamp(options.devicePixelRatio ?? 1, 1, 2);\n  let mapWidth = clamp(Math.round(width * pixelRatio), 32, 1800);\n  let mapHeight = clamp(Math.round(height * pixelRatio), 32, 1200);\n\n  if (mapWidth * mapHeight > MAX_LENS_MAP_PIXELS) {\n    const ratio = Math.sqrt(MAX_LENS_MAP_PIXELS / (mapWidth * mapHeight));\n\n    mapWidth = Math.max(32, Math.floor(mapWidth * ratio));\n    mapHeight = Math.max(32, Math.floor(mapHeight * ratio));\n  }\n\n  const cacheKey = [\n    mapWidth,\n    mapHeight,\n    Math.round(width),\n    Math.round(height),\n    ...options.radii.map((radius) => Math.round(radius * 10)),\n    Math.round(bevel * 10),\n    Math.round(options.thickness * 10),\n    Math.round(options.ior * 100),\n    Math.round(options.depth * 100),\n  ].join(':');\n\n  return { bevel, cacheKey, height, mapHeight, mapWidth, width };\n}\n\n/**\n * Encodes the rim of a slab of glass as a displacement field: R/G = 0.5 + 0.5 * the\n * offset the backdrop is read from, as a share of `reach`. The SVG feDisplacementMap\n * scale of twice `reach` turns it back into CSS pixels. B is the share of the rim's\n * light, which smoked glass dims less than its top. The field is flat past the rim.\n */\nexport function buildLensMapDataUrl(options: LensMapOptions): LensMapBuildResult {\n  const base = computeLensMapMetrics(options);\n  const cached = lensMapCache.get(base.cacheKey);\n\n  if (cached) {\n    lensMapCache.delete(base.cacheKey);\n    lensMapCache.set(base.cacheKey, cached);\n\n    return cached;\n  }\n\n  if (typeof document === 'undefined') {\n    throw new Error('Lens maps require a browser document');\n  }\n\n  const canvas = document.createElement('canvas');\n  canvas.width = base.mapWidth;\n  canvas.height = base.mapHeight;\n\n  const ctx = canvas.getContext('2d');\n\n  if (!ctx) {\n    throw new Error('Canvas 2D context unavailable');\n  }\n\n  const { bevel, height, mapHeight, mapWidth, width } = base;\n  const { offsets, reach } = lensProfile(bevel, options.thickness, options.ior, options.depth);\n\n  const litTo = Math.min(\n    LENS_RIM_LIGHT,\n    (LENS_RIM_LIGHT_SURFACE * Math.min(width, height)) / bevel,\n  );\n\n  const litFrom = litTo * LENS_RIM_LIGHT_FALLOFF;\n  const data = new Uint8ClampedArray(mapWidth * mapHeight * 4);\n  const edge: Edge = { distance: 0, normalX: 0, normalY: 0 };\n\n  for (let yIndex = 0; yIndex < mapHeight; yIndex += 1) {\n    const y = ((yIndex + 0.5) / mapHeight) * height;\n\n    for (let xIndex = 0; xIndex < mapWidth; xIndex += 1) {\n      const x = ((xIndex + 0.5) / mapWidth) * width;\n      const index = (yIndex * mapWidth + xIndex) * 4;\n      roundedBoxEdge(x, y, width, height, options.radii, edge);\n      const inset = Math.max(-edge.distance, 0);\n      let offset = 0;\n\n      if (inset < bevel) {\n        const position = (inset / bevel) * LENS_PROFILE_STEPS;\n        const lower = Math.floor(position);\n        const fraction = position - lower;\n\n        offset = offsets[lower] * (1 - fraction) + offsets[lower + 1] * fraction;\n      }\n\n      data[index] = Math.round(clamp(0.5 - (offset * edge.normalX) / (2 * reach), 0, 1) * 255);\n      data[index + 1] = Math.round(clamp(0.5 - (offset * edge.normalY) / (2 * reach), 0, 1) * 255);\n      data[index + 2] = Math.round((1 - smoothstep(litFrom, litTo, inset / bevel)) * 255);\n      data[index + 3] = 255;\n    }\n  }\n\n  ctx.putImageData(new ImageData(data, mapWidth, mapHeight), 0, 0);\n\n  const result = {\n    href: canvas.toDataURL('image/png'),\n    metrics: { ...base, reach },\n  };\n\n  lensMapCache.set(base.cacheKey, result);\n\n  if (lensMapCache.size > maxCachedLensMaps) {\n    const oldestKey = lensMapCache.keys().next().value;\n\n    if (oldestKey) lensMapCache.delete(oldestKey);\n  }\n\n  return result;\n}\n\nexport type MagnifierMapOptions = {\n  devicePixelRatio?: number;\n  size: number;\n};\n\nexport type MagnifierMapMetrics = {\n  /** Width of the ring that bends, in CSS pixels. */\n  band: number;\n  cacheKey: string;\n  /** Outward offset at the rim, in CSS pixels. */\n  depth: number;\n  mapSize: number;\n  size: number;\n};\n\nexport type MagnifierMapBuildResult = {\n  href: string;\n  metrics: MagnifierMapMetrics;\n};\n\nconst magnifierMapCache = new Map<string, string>();\n\nconst maxCachedMagnifierMaps = 8;\n\nexport function computeMagnifierMapMetrics(options: MagnifierMapOptions): MagnifierMapMetrics {\n  const size = Math.max(1, options.size);\n  const radius = size / 2;\n  const mapSize = clamp(Math.round(size * clamp(options.devicePixelRatio ?? 1, 1, 2)), 32, 400);\n\n  return {\n    band: radius * 0.46,\n    cacheKey: [mapSize, Math.round(size * 10)].join(':'),\n    depth: radius * 0.5,\n    mapSize,\n    size,\n  };\n}\n\n/**\n * Encodes an outward offset that grows toward the rim of a circle:\n * R/G = 0.5 + 0.5 * offset / depth. Each pixel samples a little further out than its\n * inner neighbour, so the view compresses into the rim like thick glass and never folds\n * back on itself, even over sharp text.\n */\nexport function buildMagnifierMapDataUrl(options: MagnifierMapOptions): MagnifierMapBuildResult {\n  const metrics = computeMagnifierMapMetrics(options);\n  const cached = magnifierMapCache.get(metrics.cacheKey);\n\n  if (cached) return { href: cached, metrics };\n\n  if (typeof document === 'undefined') {\n    throw new Error('Magnifier maps require a browser document');\n  }\n\n  const canvas = document.createElement('canvas');\n  canvas.width = metrics.mapSize;\n  canvas.height = metrics.mapSize;\n\n  const ctx = canvas.getContext('2d');\n\n  if (!ctx) {\n    throw new Error('Canvas 2D context unavailable');\n  }\n\n  const { band, mapSize, size } = metrics;\n  const radius = size / 2;\n  const data = new Uint8ClampedArray(mapSize * mapSize * 4);\n\n  for (let yIndex = 0; yIndex < mapSize; yIndex += 1) {\n    const dy = ((yIndex + 0.5) / mapSize) * size - radius;\n\n    for (let xIndex = 0; xIndex < mapSize; xIndex += 1) {\n      const dx = ((xIndex + 0.5) / mapSize) * size - radius;\n      const index = (yIndex * mapSize + xIndex) * 4;\n      const distance = Math.hypot(dx, dy) || 1;\n      // Flat in the centre, cubic through the ring so the bend starts without a crease.\n      const rim = clamp((distance - (radius - band)) / band, 0, 1) ** 3;\n\n      data[index] = Math.round((0.5 + (0.5 * rim * dx) / distance) * 255);\n      data[index + 1] = Math.round((0.5 + (0.5 * rim * dy) / distance) * 255);\n      data[index + 2] = 128;\n      data[index + 3] = 255;\n    }\n  }\n\n  ctx.putImageData(new ImageData(data, mapSize, mapSize), 0, 0);\n  const href = canvas.toDataURL('image/png');\n  magnifierMapCache.set(metrics.cacheKey, href);\n\n  if (magnifierMapCache.size > maxCachedMagnifierMaps) {\n    const oldestKey = magnifierMapCache.keys().next().value;\n\n    if (oldestKey) magnifierMapCache.delete(oldestKey);\n  }\n\n  return { href, metrics };\n}\n",
+      "type": "registry:lib",
+      "target": "components/glassyui/lib/refraction-map.ts"
+    },
+    {
+      "path": "registry/glassyui/lib/slab-optics.ts",
+      "content": "// The glass floats this far above its backdrop, in CSS pixels.\nexport const SLAB_AIR_GAP = 8;\n\n// Fractions of full slab thickness at the rim and added across its curved top.\nexport const SLAB_MIN_RISE = 0.3;\n\nexport const SLAB_RISE_SPAN = 0.7;\n\nexport const SLAB_MAX_SLOPE = 12;\n",
+      "type": "registry:lib",
+      "target": "components/glassyui/lib/slab-optics.ts"
+    },
+    {
+      "path": "registry/glassyui/lib/scene-context.ts",
+      "content": "'use client';\n\nimport { createContext, useContext, useLayoutEffect } from 'react';\nimport type { RefObject } from 'react';\n\nexport type GlassSceneRegistry = {\n  elements: ReadonlySet<HTMLElement>;\n  register: (element: HTMLElement) => () => void;\n  subscribe: (listener: () => void) => () => void;\n};\n\n// The registry exists before any effect runs, because children register in\n// their effects and those run before the scene's own effect.\nexport function createGlassSceneRegistry(): GlassSceneRegistry {\n  const elements = new Set<HTMLElement>();\n  const listeners = new Set<() => void>();\n  const notify = () => listeners.forEach((listener) => listener());\n\n  return {\n    elements,\n    register(element) {\n      elements.add(element);\n      notify();\n\n      return () => {\n        elements.delete(element);\n        notify();\n      };\n    },\n    subscribe(listener) {\n      listeners.add(listener);\n\n      return () => {\n        listeners.delete(listener);\n      };\n    },\n  };\n}\n\nexport const GlassSceneContext = createContext<GlassSceneRegistry | null>(null);\n\n/**\n * Lets a glass element hand its material to the nearest GlassScene. Outside a\n * scene it does nothing. It registers before paint, so glass that mounts into\n * a live scene never shows its CSS material first.\n */\nexport function useGlassScenePane(ref: RefObject<HTMLElement | null>, enabled = true) {\n  const registry = useContext(GlassSceneContext);\n\n  useLayoutEffect(() => {\n    const element = ref.current;\n\n    if (!registry || !enabled || !element) return;\n\n    return registry.register(element);\n  }, [enabled, ref, registry]);\n}\n",
+      "type": "registry:lib",
+      "target": "components/glassyui/lib/scene-context.ts"
+    },
+    {
+      "path": "registry/glassyui-shadcn/base-nova/glassy-button-root.tsx",
+      "content": "'use client';\n\nimport { Button as ButtonPrimitive } from '@base-ui/react/button';\nimport type { Ref } from 'react';\nimport { useGlassy } from './glassy-engine';\n\n/** The root of shadcn/ui's Button: Base UI's button, with the engine. */\nexport function GlassyButtonRoot({ ref, ...props }: ButtonPrimitive.Props) {\n  // SAFETY: Base UI renders an HTML element, a button unless render replaces it.\n  const [attach, glass] = useGlassy(ref as Ref<HTMLElement> | undefined, 'slab');\n\n  return (\n    <>\n      <ButtonPrimitive ref={attach} {...props} />\n      {glass}\n    </>\n  );\n}\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glassy-button-root.tsx"
+    },
+    {
+      "path": "registry/glassyui-shadcn/base-nova/alert.tsx",
+      "content": "import * as React from \"react\"\nimport { cva, type VariantProps } from \"class-variance-authority\"\nimport { cn } from \"@/lib/utils\"\nimport { GlassyPane } from \"../glassyui/glassy-engine\"\n\nconst alertVariants = cva(\n  \"group/alert relative grid w-full gap-0.5 rounded-[18px] px-4 py-3.5 text-left text-sm has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pr-18 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg]:text-current *:[svg:not([class*='size-'])]:size-4\",\n  {\n    variants: {\n      variant: {\n        default: \"text-card-foreground\",\n        destructive:\n          \"text-destructive *:data-[slot=alert-description]:text-destructive/90 *:[svg]:text-current\",\n      },\n    },\n    defaultVariants: {\n      variant: \"default\",\n    },\n  }\n)\n\nfunction Alert({\n  className,\n  variant,\n  ...props\n}: React.ComponentProps<\"div\"> & VariantProps<typeof alertVariants>) {\n  return (\n    <GlassyPane\n      data-slot=\"alert\"\n      role=\"alert\"\n      className={cn(alertVariants({ variant }), className)}\n      {...props}\n    />\n  )\n}\n\nfunction AlertTitle({ className, ...props }: React.ComponentProps<\"div\">) {\n  return (\n    <div\n      data-slot=\"alert-title\"\n      className={cn(\n        \"font-semibold group-has-[>svg]/alert:col-start-2 [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nfunction AlertDescription({\n  className,\n  ...props\n}: React.ComponentProps<\"div\">) {\n  return (\n    <div\n      data-slot=\"alert-description\"\n      className={cn(\n        \"text-sm text-balance text-muted-foreground md:text-pretty [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nfunction AlertAction({ className, ...props }: React.ComponentProps<\"div\">) {\n  return (\n    <div\n      data-slot=\"alert-action\"\n      className={cn(\"absolute top-2 right-2\", className)}\n      {...props}\n    />\n  )\n}\n\nexport { Alert, AlertTitle, AlertDescription, AlertAction }\n",
+      "type": "registry:ui",
+      "target": "components/ui/alert.tsx"
+    },
+    {
+      "path": "registry/glassyui-shadcn/base-nova/badge.tsx",
+      "content": "import { mergeProps } from \"@base-ui/react/merge-props\"\nimport { useRender } from \"@base-ui/react/use-render\"\nimport { cva, type VariantProps } from \"class-variance-authority\"\nimport { cn } from \"@/lib/utils\"\n\nconst badgeVariants = cva(\n  \"group/badge inline-flex h-[22px] w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border border-transparent px-2.5 text-xs font-semibold whitespace-nowrap has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive [&>svg]:pointer-events-none [&>svg]:size-3! outline-none focus-visible:outline-2 focus-visible:outline-offset-2\",\n  {\n    variants: {\n      variant: {\n        default: \"\",\n        secondary:\n          \"\",\n        destructive:\n          \"\",\n        outline:\n          \"text-foreground\",\n        ghost:\n          \"text-foreground\",\n        link: \"text-primary underline-offset-4 hover:underline\",\n      },\n    },\n    defaultVariants: {\n      variant: \"default\",\n    },\n  }\n)\n\nfunction Badge({\n  className,\n  variant = \"default\",\n  render,\n  ...props\n}: useRender.ComponentProps<\"span\"> & VariantProps<typeof badgeVariants>) {\n  return useRender({\n    defaultTagName: \"span\",\n    props: mergeProps<\"span\">(\n      {\n        className: cn(badgeVariants({ variant }), className),\n      },\n      props\n    ),\n    render,\n    state: {\n      slot: \"badge\",\n      variant,\n    },\n  })\n}\n\nexport { Badge, badgeVariants }\n",
+      "type": "registry:ui",
+      "target": "components/ui/badge.tsx"
+    },
+    {
+      "path": "registry/glassyui-shadcn/base-nova/button.tsx",
+      "content": "import { Button as ButtonPrimitive } from \"@base-ui/react/button\"\nimport { cva, type VariantProps } from \"class-variance-authority\"\nimport { cn } from \"@/lib/utils\"\nimport { GlassyButtonRoot } from \"../glassyui/glassy-button-root\"\n\nconst buttonVariants = cva(\n  \"group/button inline-flex shrink-0 items-center justify-center font-medium whitespace-nowrap outline-none select-none disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 rounded-full text-[0.95rem] disabled:opacity-45 aria-invalid:ring-2 aria-invalid:ring-destructive/40\",\n  {\n    variants: {\n      variant: {\n        default: \"text-primary-foreground\",\n        outline: \"text-foreground\",\n        secondary: \"text-foreground\",\n        ghost: \"text-foreground\",\n        destructive: \"text-white\",\n        link: \"text-primary underline-offset-4 hover:underline\",\n      },\n      size: {\n        default:\n          \"h-11 gap-2 px-[1.4rem] has-data-[icon=inline-end]:pr-5 has-data-[icon=inline-start]:pl-5\",\n        xs: \"h-7 gap-1 px-2.5 text-xs has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3\",\n        sm: \"h-8 gap-1.5 px-3.5 text-[0.8rem] has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3 [&_svg:not([class*='size-'])]:size-3.5\",\n        lg: \"h-[52px] gap-2 px-7 text-base has-data-[icon=inline-end]:pr-6 has-data-[icon=inline-start]:pl-6\",\n        icon: \"size-11\",\n        \"icon-xs\":\n          \"size-7 [&_svg:not([class*='size-'])]:size-3\",\n        \"icon-sm\":\n          \"size-8\",\n        \"icon-lg\": \"size-[52px]\",\n      },\n    },\n    defaultVariants: {\n      variant: \"default\",\n      size: \"default\",\n    },\n  }\n)\n\nfunction Button({\n  className,\n  variant = \"default\",\n  size = \"default\",\n  ...props\n}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {\n  return (\n    <GlassyButtonRoot\n      data-slot=\"button\"\n      data-variant={variant}\n      data-size={size}\n      className={cn(buttonVariants({ variant, size, className }))}\n      {...props}\n    />\n  )\n}\n\nexport { Button, buttonVariants }\n",
+      "type": "registry:ui",
+      "target": "components/ui/button.tsx"
+    },
+    {
+      "path": "registry/glassyui-shadcn/base-nova/card.tsx",
+      "content": "import * as React from \"react\"\nimport { cn } from \"@/lib/utils\"\nimport { GlassyPane } from \"../glassyui/glassy-engine\"\n\nfunction Card({\n  className,\n  size = \"default\",\n  ...props\n}: React.ComponentProps<\"div\"> & { size?: \"default\" | \"sm\" }) {\n  return (\n    <GlassyPane\n      data-slot=\"card\"\n      data-size={size}\n      className={cn(\n        \"group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-[16px] py-(--card-spacing) text-sm text-card-foreground [--card-spacing:--spacing(4)] has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] *:[img:first-child]:rounded-t-[16px] *:[img:last-child]:rounded-b-[16px]\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nfunction CardHeader({ className, ...props }: React.ComponentProps<\"div\">) {\n  return (\n    <div\n      data-slot=\"card-header\"\n      className={cn(\n        \"group/card-header @container/card-header grid auto-rows-min items-start gap-1 rounded-t-[16px] px-(--card-spacing) has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto] [.border-b]:pb-(--card-spacing)\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nfunction CardTitle({ className, ...props }: React.ComponentProps<\"div\">) {\n  return (\n    <div\n      data-slot=\"card-title\"\n      className={cn(\n        \"font-heading text-base leading-snug font-medium group-data-[size=sm]/card:text-sm\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nfunction CardDescription({ className, ...props }: React.ComponentProps<\"div\">) {\n  return (\n    <div\n      data-slot=\"card-description\"\n      className={cn(\"text-sm text-muted-foreground\", className)}\n      {...props}\n    />\n  )\n}\n\nfunction CardAction({ className, ...props }: React.ComponentProps<\"div\">) {\n  return (\n    <div\n      data-slot=\"card-action\"\n      className={cn(\n        \"col-start-2 row-span-2 row-start-1 self-start justify-self-end\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nfunction CardContent({ className, ...props }: React.ComponentProps<\"div\">) {\n  return (\n    <div\n      data-slot=\"card-content\"\n      className={cn(\"px-(--card-spacing)\", className)}\n      {...props}\n    />\n  )\n}\n\nfunction CardFooter({ className, ...props }: React.ComponentProps<\"div\">) {\n  return (\n    <div\n      data-slot=\"card-footer\"\n      className={cn(\n        \"flex items-center px-(--card-spacing) [.border-t]:pt-(--card-spacing)\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nexport {\n  Card,\n  CardHeader,\n  CardFooter,\n  CardTitle,\n  CardAction,\n  CardDescription,\n  CardContent,\n}\n",
+      "type": "registry:ui",
+      "target": "components/ui/card.tsx"
+    },
+    {
+      "path": "registry/glassyui-shadcn/base-nova/checkbox.tsx",
+      "content": "\"use client\"\n\nimport { Checkbox as CheckboxPrimitive } from \"@base-ui/react/checkbox\"\nimport { cn } from \"@/lib/utils\"\nimport { CheckIcon } from \"lucide-react\"\n\nfunction Checkbox({ className, ...props }: CheckboxPrimitive.Root.Props) {\n  return (\n    <CheckboxPrimitive.Root\n      data-slot=\"checkbox\"\n      className={cn(\n        \"peer relative flex size-5 shrink-0 items-center justify-center rounded-[7px] border outline-none group-has-disabled/field:opacity-50 group-has-[:focus-visible]/field-label:ring-0 after:absolute after:-inset-x-3 after:-inset-y-2 disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-destructive data-checked:text-primary-foreground group-has-[:focus-visible]/field-label:data-checked:border-primary focus-visible:outline-2 focus-visible:outline-offset-2\",\n        className\n      )}\n      {...props}\n    >\n      <CheckboxPrimitive.Indicator\n        data-slot=\"checkbox-indicator\"\n        className=\"grid place-content-center text-current transition-none [&>svg]:size-3.5\"\n      >\n        <CheckIcon\n        />\n      </CheckboxPrimitive.Indicator>\n    </CheckboxPrimitive.Root>\n  )\n}\n\nexport { Checkbox }\n",
+      "type": "registry:ui",
+      "target": "components/ui/checkbox.tsx"
+    },
+    {
+      "path": "registry/glassyui-shadcn/base-nova/dialog.tsx",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\nimport { Dialog as DialogPrimitive } from \"@base-ui/react/dialog\"\nimport { cn } from \"@/lib/utils\"\nimport { useGlassy } from \"../glassyui/glassy-engine\"\n\nimport { Button } from \"@/components/ui/button\"\nimport { XIcon } from \"lucide-react\"\n\nfunction Dialog({ ...props }: DialogPrimitive.Root.Props) {\n  return <DialogPrimitive.Root data-slot=\"dialog\" {...props} />\n}\n\nfunction DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {\n  return <DialogPrimitive.Trigger data-slot=\"dialog-trigger\" {...props} />\n}\n\nfunction DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {\n  return <DialogPrimitive.Portal data-slot=\"dialog-portal\" {...props} />\n}\n\nfunction DialogClose({ ...props }: DialogPrimitive.Close.Props) {\n  return <DialogPrimitive.Close data-slot=\"dialog-close\" {...props} />\n}\n\nfunction DialogOverlay({\n  className,\n  ...props\n}: DialogPrimitive.Backdrop.Props) {\n  return (\n    <DialogPrimitive.Backdrop\n      data-slot=\"dialog-overlay\"\n      className={cn(\n        \"fixed inset-0 isolate z-50 duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nfunction DialogContent({\n  className,\n  children,\n  showCloseButton = true,\n  ref,\n  ...props\n}: DialogPrimitive.Popup.Props & {\n  showCloseButton?: boolean\n}) {\n  const [attach, glass] = useGlassy(ref, \"float\")\n\n  return (\n    <DialogPortal>\n      <DialogOverlay />\n      <DialogPrimitive.Popup\n        ref={attach}\n        data-slot=\"dialog-content\"\n        className={cn(\n          \"fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-[24px] text-sm text-popover-foreground duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 p-8\",\n          className\n        )}\n        {...props}\n      >\n        {children}\n        {showCloseButton && (\n          <DialogPrimitive.Close\n            data-slot=\"dialog-close\"\n            render={\n              <Button\n                variant=\"ghost\"\n                className=\"absolute top-2 right-2\"\n                size=\"icon-sm\"\n              />\n            }\n          >\n            <XIcon\n            />\n            <span className=\"sr-only\">Close</span>\n          </DialogPrimitive.Close>\n        )}\n        {glass}\n      </DialogPrimitive.Popup>\n    </DialogPortal>\n  )\n}\n\nfunction DialogHeader({ className, ...props }: React.ComponentProps<\"div\">) {\n  return (\n    <div\n      data-slot=\"dialog-header\"\n      className={cn(\"flex flex-col gap-2\", className)}\n      {...props}\n    />\n  )\n}\n\nfunction DialogFooter({\n  className,\n  showCloseButton = false,\n  children,\n  ...props\n}: React.ComponentProps<\"div\"> & {\n  showCloseButton?: boolean\n}) {\n  return (\n    <div\n      data-slot=\"dialog-footer\"\n      className={cn(\n        \"flex flex-col-reverse gap-2 sm:flex-row sm:justify-end\",\n        className\n      )}\n      {...props}\n    >\n      {children}\n      {showCloseButton && (\n        <DialogPrimitive.Close render={<Button variant=\"outline\" />}>\n          Close\n        </DialogPrimitive.Close>\n      )}\n    </div>\n  )\n}\n\nfunction DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {\n  return (\n    <DialogPrimitive.Title\n      data-slot=\"dialog-title\"\n      className={cn(\n        \"font-heading text-base leading-none font-medium\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nfunction DialogDescription({\n  className,\n  ...props\n}: DialogPrimitive.Description.Props) {\n  return (\n    <DialogPrimitive.Description\n      data-slot=\"dialog-description\"\n      className={cn(\n        \"text-sm text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nexport {\n  Dialog,\n  DialogClose,\n  DialogContent,\n  DialogDescription,\n  DialogFooter,\n  DialogHeader,\n  DialogOverlay,\n  DialogPortal,\n  DialogTitle,\n  DialogTrigger,\n}\n",
+      "type": "registry:ui",
+      "target": "components/ui/dialog.tsx"
+    },
+    {
+      "path": "registry/glassyui-shadcn/base-nova/dropdown-menu.tsx",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\nimport { Menu as MenuPrimitive } from \"@base-ui/react/menu\"\nimport { cn } from \"@/lib/utils\"\nimport { useGlassy } from \"../glassyui/glassy-engine\"\nimport { ChevronRightIcon, CheckIcon } from \"lucide-react\"\n\nfunction DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {\n  return <MenuPrimitive.Root data-slot=\"dropdown-menu\" {...props} />\n}\n\nfunction DropdownMenuPortal({ ...props }: MenuPrimitive.Portal.Props) {\n  return <MenuPrimitive.Portal data-slot=\"dropdown-menu-portal\" {...props} />\n}\n\nfunction DropdownMenuTrigger({ ...props }: MenuPrimitive.Trigger.Props) {\n  return <MenuPrimitive.Trigger data-slot=\"dropdown-menu-trigger\" {...props} />\n}\n\nfunction DropdownMenuContent({\n  align = \"start\",\n  alignOffset = 0,\n  side = \"bottom\",\n  sideOffset = 4,\n  className,\n  children,\n  ref,\n  ...props\n}: MenuPrimitive.Popup.Props &\n  Pick<\n    MenuPrimitive.Positioner.Props,\n    \"align\" | \"alignOffset\" | \"side\" | \"sideOffset\"\n  >) {\n  const [attach, glass] = useGlassy(ref, \"float\")\n\n  return (\n    <MenuPrimitive.Portal>\n      <MenuPrimitive.Positioner\n        className=\"isolate z-50 outline-none\"\n        align={align}\n        alignOffset={alignOffset}\n        side={side}\n        sideOffset={sideOffset}\n      >\n        <MenuPrimitive.Popup\n          ref={attach}\n          data-slot=\"dropdown-menu-content\"\n          className={cn(\"z-50 max-h-(--available-height) w-(--anchor-width) min-w-32 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-[18px] p-1.5 text-popover-foreground duration-100 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-95\", className )}\n          {...props}\n        >\n          {children}\n          {glass}\n        </MenuPrimitive.Popup>\n      </MenuPrimitive.Positioner>\n    </MenuPrimitive.Portal>\n  )\n}\n\nfunction DropdownMenuGroup({ ...props }: MenuPrimitive.Group.Props) {\n  return <MenuPrimitive.Group data-slot=\"dropdown-menu-group\" {...props} />\n}\n\nfunction DropdownMenuLabel({\n  className,\n  inset,\n  ...props\n}: MenuPrimitive.GroupLabel.Props & {\n  inset?: boolean\n}) {\n  return (\n    <MenuPrimitive.GroupLabel\n      data-slot=\"dropdown-menu-label\"\n      data-inset={inset}\n      className={cn(\n        \"px-1.5 py-1 text-xs font-medium text-muted-foreground data-inset:pl-7\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nfunction DropdownMenuItem({\n  className,\n  inset,\n  variant = \"default\",\n  ...props\n}: MenuPrimitive.Item.Props & {\n  inset?: boolean\n  variant?: \"default\" | \"destructive\"\n}) {\n  return (\n    <MenuPrimitive.Item\n      data-slot=\"dropdown-menu-item\"\n      data-inset={inset}\n      data-variant={variant}\n      className={cn(\n        \"group/dropdown-menu-item relative flex cursor-default items-center gap-1.5 rounded-[12px] px-3 py-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-inset:pl-7 data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive dark:data-[variant=destructive]:focus:bg-destructive/20 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive min-h-9\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nfunction DropdownMenuSub({ ...props }: MenuPrimitive.SubmenuRoot.Props) {\n  return <MenuPrimitive.SubmenuRoot data-slot=\"dropdown-menu-sub\" {...props} />\n}\n\nfunction DropdownMenuSubTrigger({\n  className,\n  inset,\n  children,\n  ...props\n}: MenuPrimitive.SubmenuTrigger.Props & {\n  inset?: boolean\n}) {\n  return (\n    <MenuPrimitive.SubmenuTrigger\n      data-slot=\"dropdown-menu-sub-trigger\"\n      data-inset={inset}\n      className={cn(\n        \"flex cursor-default items-center gap-1.5 rounded-[12px] px-3 py-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-inset:pl-7 data-popup-open:bg-accent data-popup-open:text-accent-foreground data-open:bg-accent data-open:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 min-h-9\",\n        className\n      )}\n      {...props}\n    >\n      {children}\n      <ChevronRightIcon className=\"ml-auto\" />\n    </MenuPrimitive.SubmenuTrigger>\n  )\n}\n\nfunction DropdownMenuSubContent({\n  align = \"start\",\n  alignOffset = -3,\n  side = \"right\",\n  sideOffset = 0,\n  className,\n  ...props\n}: React.ComponentProps<typeof DropdownMenuContent>) {\n  return (\n    <DropdownMenuContent\n      data-slot=\"dropdown-menu-sub-content\"\n      className={cn(\"w-auto min-w-[96px] rounded-[18px] p-1.5 text-popover-foreground duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95\", className )}\n      align={align}\n      alignOffset={alignOffset}\n      side={side}\n      sideOffset={sideOffset}\n      {...props}\n    />\n  )\n}\n\nfunction DropdownMenuCheckboxItem({\n  className,\n  children,\n  checked,\n  inset,\n  ...props\n}: MenuPrimitive.CheckboxItem.Props & {\n  inset?: boolean\n}) {\n  return (\n    <MenuPrimitive.CheckboxItem\n      data-slot=\"dropdown-menu-checkbox-item\"\n      data-inset={inset}\n      className={cn(\n        \"relative flex cursor-default items-center gap-1.5 rounded-[12px] py-1.5 pr-8 pl-3 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-7 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 min-h-9\",\n        className\n      )}\n      checked={checked}\n      {...props}\n    >\n      <span\n        className=\"pointer-events-none absolute right-2 flex items-center justify-center\"\n        data-slot=\"dropdown-menu-checkbox-item-indicator\"\n      >\n        <MenuPrimitive.CheckboxItemIndicator>\n          <CheckIcon\n          />\n        </MenuPrimitive.CheckboxItemIndicator>\n      </span>\n      {children}\n    </MenuPrimitive.CheckboxItem>\n  )\n}\n\nfunction DropdownMenuRadioGroup({ ...props }: MenuPrimitive.RadioGroup.Props) {\n  return (\n    <MenuPrimitive.RadioGroup\n      data-slot=\"dropdown-menu-radio-group\"\n      {...props}\n    />\n  )\n}\n\nfunction DropdownMenuRadioItem({\n  className,\n  children,\n  inset,\n  ...props\n}: MenuPrimitive.RadioItem.Props & {\n  inset?: boolean\n}) {\n  return (\n    <MenuPrimitive.RadioItem\n      data-slot=\"dropdown-menu-radio-item\"\n      data-inset={inset}\n      className={cn(\n        \"relative flex cursor-default items-center gap-1.5 rounded-[12px] py-1.5 pr-8 pl-3 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-7 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 min-h-9\",\n        className\n      )}\n      {...props}\n    >\n      <span\n        className=\"pointer-events-none absolute right-2 flex items-center justify-center\"\n        data-slot=\"dropdown-menu-radio-item-indicator\"\n      >\n        <MenuPrimitive.RadioItemIndicator>\n          <CheckIcon\n          />\n        </MenuPrimitive.RadioItemIndicator>\n      </span>\n      {children}\n    </MenuPrimitive.RadioItem>\n  )\n}\n\nfunction DropdownMenuSeparator({\n  className,\n  ...props\n}: MenuPrimitive.Separator.Props) {\n  return (\n    <MenuPrimitive.Separator\n      data-slot=\"dropdown-menu-separator\"\n      className={cn(\"-mx-1 my-1 h-px bg-border\", className)}\n      {...props}\n    />\n  )\n}\n\nfunction DropdownMenuShortcut({\n  className,\n  ...props\n}: React.ComponentProps<\"span\">) {\n  return (\n    <span\n      data-slot=\"dropdown-menu-shortcut\"\n      className={cn(\n        \"ml-auto text-xs tracking-widest text-muted-foreground group-focus/dropdown-menu-item:text-accent-foreground\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nexport {\n  DropdownMenu,\n  DropdownMenuPortal,\n  DropdownMenuTrigger,\n  DropdownMenuContent,\n  DropdownMenuGroup,\n  DropdownMenuLabel,\n  DropdownMenuItem,\n  DropdownMenuCheckboxItem,\n  DropdownMenuRadioGroup,\n  DropdownMenuRadioItem,\n  DropdownMenuSeparator,\n  DropdownMenuShortcut,\n  DropdownMenuSub,\n  DropdownMenuSubTrigger,\n  DropdownMenuSubContent,\n}\n",
+      "type": "registry:ui",
+      "target": "components/ui/dropdown-menu.tsx"
+    },
+    {
+      "path": "registry/glassyui-shadcn/base-nova/input.tsx",
+      "content": "import * as React from \"react\"\nimport { Input as InputPrimitive } from \"@base-ui/react/input\"\nimport { cn } from \"@/lib/utils\"\n\nfunction Input({ className, type, ...props }: React.ComponentProps<\"input\">) {\n  return (\n    <InputPrimitive\n      type={type}\n      data-slot=\"input\"\n      className={cn(\n        \"h-[52px] w-full min-w-0 rounded-[16px] border px-5 py-3.5 text-base outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-destructive focus-visible:outline-2 focus-visible:outline-offset-2 dark:bg-[rgb(var(--glassy-glass)/var(--glassy-control-alpha))]\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nexport { Input }\n",
+      "type": "registry:ui",
+      "target": "components/ui/input.tsx"
+    },
+    {
+      "path": "registry/glassyui-shadcn/base-nova/popover.tsx",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\nimport { Popover as PopoverPrimitive } from \"@base-ui/react/popover\"\nimport { cn } from \"@/lib/utils\"\nimport { useGlassy } from \"../glassyui/glassy-engine\"\n\nfunction Popover({ ...props }: PopoverPrimitive.Root.Props) {\n  return <PopoverPrimitive.Root data-slot=\"popover\" {...props} />\n}\n\nfunction PopoverTrigger({ ...props }: PopoverPrimitive.Trigger.Props) {\n  return <PopoverPrimitive.Trigger data-slot=\"popover-trigger\" {...props} />\n}\n\nfunction PopoverContent({\n  className,\n  align = \"center\",\n  alignOffset = 0,\n  side = \"bottom\",\n  sideOffset = 4,\n  children,\n  ref,\n  ...props\n}: PopoverPrimitive.Popup.Props &\n  Pick<\n    PopoverPrimitive.Positioner.Props,\n    \"align\" | \"alignOffset\" | \"side\" | \"sideOffset\"\n  >) {\n  const [attach, glass] = useGlassy(ref, \"float\")\n\n  return (\n    <PopoverPrimitive.Portal>\n      <PopoverPrimitive.Positioner\n        align={align}\n        alignOffset={alignOffset}\n        side={side}\n        sideOffset={sideOffset}\n        className=\"isolate z-50\"\n      >\n        <PopoverPrimitive.Popup\n          ref={attach}\n          data-slot=\"popover-content\"\n          className={cn(\n            \"z-50 flex w-72 origin-(--transform-origin) flex-col gap-2.5 rounded-[16px] text-sm text-popover-foreground outline-hidden duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 p-5\",\n            className\n          )}\n          {...props}\n        >\n          {children}\n          {glass}\n        </PopoverPrimitive.Popup>\n      </PopoverPrimitive.Positioner>\n    </PopoverPrimitive.Portal>\n  )\n}\n\nfunction PopoverHeader({ className, ...props }: React.ComponentProps<\"div\">) {\n  return (\n    <div\n      data-slot=\"popover-header\"\n      className={cn(\"flex flex-col gap-0.5 text-sm\", className)}\n      {...props}\n    />\n  )\n}\n\nfunction PopoverTitle({ className, ...props }: PopoverPrimitive.Title.Props) {\n  return (\n    <PopoverPrimitive.Title\n      data-slot=\"popover-title\"\n      className={cn(\"font-medium\", className)}\n      {...props}\n    />\n  )\n}\n\nfunction PopoverDescription({\n  className,\n  ...props\n}: PopoverPrimitive.Description.Props) {\n  return (\n    <PopoverPrimitive.Description\n      data-slot=\"popover-description\"\n      className={cn(\"text-muted-foreground\", className)}\n      {...props}\n    />\n  )\n}\n\nexport {\n  Popover,\n  PopoverContent,\n  PopoverDescription,\n  PopoverHeader,\n  PopoverTitle,\n  PopoverTrigger,\n}\n",
+      "type": "registry:ui",
+      "target": "components/ui/popover.tsx"
+    },
+    {
+      "path": "registry/glassyui-shadcn/base-nova/radio-group.tsx",
+      "content": "\"use client\"\n\nimport { Radio as RadioPrimitive } from \"@base-ui/react/radio\"\nimport { RadioGroup as RadioGroupPrimitive } from \"@base-ui/react/radio-group\"\nimport { cn } from \"@/lib/utils\"\n\nfunction RadioGroup({ className, ...props }: RadioGroupPrimitive.Props) {\n  return (\n    <RadioGroupPrimitive\n      data-slot=\"radio-group\"\n      className={cn(\"grid w-full gap-2\", className)}\n      {...props}\n    />\n  )\n}\n\nfunction RadioGroupItem({ className, ...props }: RadioPrimitive.Root.Props) {\n  return (\n    <RadioPrimitive.Root\n      data-slot=\"radio-group-item\"\n      className={cn(\n        \"group/radio-group-item peer relative flex aspect-square size-5 shrink-0 rounded-full border outline-none group-has-[:focus-visible]/field-label:ring-0 after:absolute after:-inset-x-3 after:-inset-y-2 disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-destructive data-checked:text-primary-foreground group-has-[:focus-visible]/field-label:data-checked:border-primary focus-visible:outline-2 focus-visible:outline-offset-2\",\n        className\n      )}\n      {...props}\n    >\n      <RadioPrimitive.Indicator\n        data-slot=\"radio-group-indicator\"\n        className=\"flex size-4 items-center justify-center\"\n      >\n        <span className=\"absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary-foreground\" />\n      </RadioPrimitive.Indicator>\n    </RadioPrimitive.Root>\n  )\n}\n\nexport { RadioGroup, RadioGroupItem }\n",
+      "type": "registry:ui",
+      "target": "components/ui/radio-group.tsx"
+    },
+    {
+      "path": "registry/glassyui-shadcn/base-nova/select.tsx",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\nimport { Select as SelectPrimitive } from \"@base-ui/react/select\"\nimport { cn } from \"@/lib/utils\"\nimport { useGlassy } from \"../glassyui/glassy-engine\"\nimport { ChevronDownIcon, CheckIcon, ChevronUpIcon } from \"lucide-react\"\n\nconst Select = SelectPrimitive.Root\n\nfunction SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {\n  return (\n    <SelectPrimitive.Group\n      data-slot=\"select-group\"\n      className={cn(\"scroll-my-1 p-1\", className)}\n      {...props}\n    />\n  )\n}\n\nfunction SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {\n  return (\n    <SelectPrimitive.Value\n      data-slot=\"select-value\"\n      className={cn(\"flex flex-1 text-left\", className)}\n      {...props}\n    />\n  )\n}\n\nfunction SelectTrigger({\n  className,\n  size = \"default\",\n  children,\n  ...props\n}: SelectPrimitive.Trigger.Props & {\n  size?: \"sm\" | \"default\"\n}) {\n  return (\n    <SelectPrimitive.Trigger\n      data-slot=\"select-trigger\"\n      data-size={size}\n      className={cn(\n        \"flex w-fit items-center justify-between gap-1.5 rounded-[16px] border py-3.5 pr-4 pl-5 text-base whitespace-nowrap outline-none select-none disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-destructive data-placeholder:text-muted-foreground data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 focus-visible:outline-2 focus-visible:outline-offset-2 data-[size=default]:h-[52px] data-[size=sm]:h-11 dark:bg-[rgb(var(--glassy-glass)/var(--glassy-control-alpha))]\",\n        className\n      )}\n      {...props}\n    >\n      {children}\n      <SelectPrimitive.Icon\n        render={\n          <ChevronDownIcon className=\"pointer-events-none size-4 text-muted-foreground\" />\n        }\n      />\n    </SelectPrimitive.Trigger>\n  )\n}\n\nfunction SelectContent({\n  className,\n  children,\n  side = \"bottom\",\n  sideOffset = 4,\n  align = \"center\",\n  alignOffset = 0,\n  alignItemWithTrigger = true,\n  ref,\n  ...props\n}: SelectPrimitive.Popup.Props &\n  Pick<\n    SelectPrimitive.Positioner.Props,\n    \"align\" | \"alignOffset\" | \"side\" | \"sideOffset\" | \"alignItemWithTrigger\"\n  >) {\n  const [attach, glass] = useGlassy(ref, \"float\")\n\n  return (\n    <SelectPrimitive.Portal>\n      <SelectPrimitive.Positioner\n        side={side}\n        sideOffset={sideOffset}\n        align={align}\n        alignOffset={alignOffset}\n        alignItemWithTrigger={alignItemWithTrigger}\n        className=\"isolate z-50\"\n      >\n        <SelectPrimitive.Popup\n          ref={attach}\n          data-slot=\"select-content\"\n          data-align-trigger={alignItemWithTrigger}\n          className={cn(\"relative isolate z-50 max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-[20px] text-popover-foreground duration-100 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95\", className )}\n          {...props}\n        >\n          <SelectScrollUpButton />\n          <SelectPrimitive.List>{children}</SelectPrimitive.List>\n          <SelectScrollDownButton />\n          {glass}\n        </SelectPrimitive.Popup>\n      </SelectPrimitive.Positioner>\n    </SelectPrimitive.Portal>\n  )\n}\n\nfunction SelectLabel({\n  className,\n  ...props\n}: SelectPrimitive.GroupLabel.Props) {\n  return (\n    <SelectPrimitive.GroupLabel\n      data-slot=\"select-label\"\n      className={cn(\"px-1.5 py-1 text-xs text-muted-foreground\", className)}\n      {...props}\n    />\n  )\n}\n\nfunction SelectItem({\n  className,\n  children,\n  ...props\n}: SelectPrimitive.Item.Props) {\n  return (\n    <SelectPrimitive.Item\n      data-slot=\"select-item\"\n      className={cn(\n        \"relative flex w-full cursor-default items-center gap-1.5 rounded-[12px] py-1.5 pr-8 pl-3 text-[0.95rem] outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2 min-h-9\",\n        className\n      )}\n      {...props}\n    >\n      <SelectPrimitive.ItemText className=\"flex flex-1 shrink-0 gap-2 whitespace-nowrap\">\n        {children}\n      </SelectPrimitive.ItemText>\n      <SelectPrimitive.ItemIndicator\n        render={\n          <span className=\"pointer-events-none absolute right-2 flex size-4 items-center justify-center\" />\n        }\n      >\n        <CheckIcon className=\"pointer-events-none\" />\n      </SelectPrimitive.ItemIndicator>\n    </SelectPrimitive.Item>\n  )\n}\n\nfunction SelectSeparator({\n  className,\n  ...props\n}: SelectPrimitive.Separator.Props) {\n  return (\n    <SelectPrimitive.Separator\n      data-slot=\"select-separator\"\n      className={cn(\"pointer-events-none -mx-1 my-1 h-px bg-border\", className)}\n      {...props}\n    />\n  )\n}\n\nfunction SelectScrollUpButton({\n  className,\n  ...props\n}: React.ComponentProps<typeof SelectPrimitive.ScrollUpArrow>) {\n  return (\n    <SelectPrimitive.ScrollUpArrow\n      data-slot=\"select-scroll-up-button\"\n      className={cn(\n        \"top-0 z-10 flex w-full cursor-default items-center justify-center bg-popover py-1 [&_svg:not([class*='size-'])]:size-4\",\n        className\n      )}\n      {...props}\n    >\n      <ChevronUpIcon\n      />\n    </SelectPrimitive.ScrollUpArrow>\n  )\n}\n\nfunction SelectScrollDownButton({\n  className,\n  ...props\n}: React.ComponentProps<typeof SelectPrimitive.ScrollDownArrow>) {\n  return (\n    <SelectPrimitive.ScrollDownArrow\n      data-slot=\"select-scroll-down-button\"\n      className={cn(\n        \"bottom-0 z-10 flex w-full cursor-default items-center justify-center bg-popover py-1 [&_svg:not([class*='size-'])]:size-4\",\n        className\n      )}\n      {...props}\n    >\n      <ChevronDownIcon\n      />\n    </SelectPrimitive.ScrollDownArrow>\n  )\n}\n\nexport {\n  Select,\n  SelectContent,\n  SelectGroup,\n  SelectItem,\n  SelectLabel,\n  SelectScrollDownButton,\n  SelectScrollUpButton,\n  SelectSeparator,\n  SelectTrigger,\n  SelectValue,\n}\n",
+      "type": "registry:ui",
+      "target": "components/ui/select.tsx"
+    },
+    {
+      "path": "registry/glassyui-shadcn/base-nova/sheet.tsx",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\nimport { Dialog as SheetPrimitive } from \"@base-ui/react/dialog\"\nimport { cn } from \"@/lib/utils\"\nimport { useGlassy } from \"../glassyui/glassy-engine\"\n\nimport { Button } from \"@/components/ui/button\"\nimport { XIcon } from \"lucide-react\"\n\nfunction Sheet({ ...props }: SheetPrimitive.Root.Props) {\n  return <SheetPrimitive.Root data-slot=\"sheet\" {...props} />\n}\n\nfunction SheetTrigger({ ...props }: SheetPrimitive.Trigger.Props) {\n  return <SheetPrimitive.Trigger data-slot=\"sheet-trigger\" {...props} />\n}\n\nfunction SheetClose({ ...props }: SheetPrimitive.Close.Props) {\n  return <SheetPrimitive.Close data-slot=\"sheet-close\" {...props} />\n}\n\nfunction SheetPortal({ ...props }: SheetPrimitive.Portal.Props) {\n  return <SheetPrimitive.Portal data-slot=\"sheet-portal\" {...props} />\n}\n\nfunction SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {\n  return (\n    <SheetPrimitive.Backdrop\n      data-slot=\"sheet-overlay\"\n      className={cn(\n        \"fixed inset-0 z-50 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nfunction SheetContent({\n  className,\n  children,\n  side = \"right\",\n  showCloseButton = true,\n  ref,\n  ...props\n}: SheetPrimitive.Popup.Props & {\n  side?: \"top\" | \"right\" | \"bottom\" | \"left\"\n  showCloseButton?: boolean\n}) {\n  const [attach, glass] = useGlassy(ref, \"float\")\n\n  return (\n    <SheetPortal>\n      <SheetOverlay />\n      <SheetPrimitive.Popup\n        ref={attach}\n        data-slot=\"sheet-content\"\n        data-side={side}\n        className={cn(\n          \"fixed z-50 flex flex-col gap-4 bg-clip-padding text-sm text-popover-foreground transition duration-200 ease-in-out data-ending-style:opacity-0 data-starting-style:opacity-0 data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:h-auto data-[side=bottom]:border-t data-[side=bottom]:data-ending-style:translate-y-[2.5rem] data-[side=bottom]:data-starting-style:translate-y-[2.5rem] data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:w-3/4 data-[side=left]:border-r data-[side=left]:data-ending-style:translate-x-[-2.5rem] data-[side=left]:data-starting-style:translate-x-[-2.5rem] data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:w-3/4 data-[side=right]:border-l data-[side=right]:data-ending-style:translate-x-[2.5rem] data-[side=right]:data-starting-style:translate-x-[2.5rem] data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:h-auto data-[side=top]:border-b data-[side=top]:data-ending-style:translate-y-[-2.5rem] data-[side=top]:data-starting-style:translate-y-[-2.5rem] data-[side=left]:sm:max-w-sm data-[side=right]:sm:max-w-sm\",\n          className\n        )}\n        {...props}\n      >\n        {children}\n        {showCloseButton && (\n          <SheetPrimitive.Close\n            data-slot=\"sheet-close\"\n            render={\n              <Button\n                variant=\"ghost\"\n                className=\"absolute top-3 right-3\"\n                size=\"icon-sm\"\n              />\n            }\n          >\n            <XIcon\n            />\n            <span className=\"sr-only\">Close</span>\n          </SheetPrimitive.Close>\n        )}\n        {glass}\n      </SheetPrimitive.Popup>\n    </SheetPortal>\n  )\n}\n\nfunction SheetHeader({ className, ...props }: React.ComponentProps<\"div\">) {\n  return (\n    <div\n      data-slot=\"sheet-header\"\n      className={cn(\"flex flex-col gap-0.5 p-4\", className)}\n      {...props}\n    />\n  )\n}\n\nfunction SheetFooter({ className, ...props }: React.ComponentProps<\"div\">) {\n  return (\n    <div\n      data-slot=\"sheet-footer\"\n      className={cn(\"mt-auto flex flex-col gap-2 p-4\", className)}\n      {...props}\n    />\n  )\n}\n\nfunction SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {\n  return (\n    <SheetPrimitive.Title\n      data-slot=\"sheet-title\"\n      className={cn(\n        \"font-heading text-base font-medium text-foreground\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nfunction SheetDescription({\n  className,\n  ...props\n}: SheetPrimitive.Description.Props) {\n  return (\n    <SheetPrimitive.Description\n      data-slot=\"sheet-description\"\n      className={cn(\"text-sm text-muted-foreground\", className)}\n      {...props}\n    />\n  )\n}\n\nexport {\n  Sheet,\n  SheetTrigger,\n  SheetClose,\n  SheetContent,\n  SheetHeader,\n  SheetFooter,\n  SheetTitle,\n  SheetDescription,\n}\n",
+      "type": "registry:ui",
+      "target": "components/ui/sheet.tsx"
+    },
+    {
+      "path": "registry/glassyui-shadcn/base-nova/slider.tsx",
+      "content": "import { Slider as SliderPrimitive } from \"@base-ui/react/slider\"\nimport { cn } from \"@/lib/utils\"\n\nfunction Slider({\n  className,\n  defaultValue,\n  value,\n  min = 0,\n  max = 100,\n  ...props\n}: SliderPrimitive.Root.Props) {\n  const _values = Array.isArray(value)\n    ? value\n    : Array.isArray(defaultValue)\n      ? defaultValue\n      : [min, max]\n\n  return (\n    <SliderPrimitive.Root\n      className={cn(\"data-horizontal:w-full data-vertical:h-full\", className)}\n      data-slot=\"slider\"\n      defaultValue={defaultValue}\n      value={value}\n      min={min}\n      max={max}\n      thumbAlignment=\"edge\"\n      {...props}\n    >\n      <SliderPrimitive.Control className=\"relative flex w-full touch-none items-center select-none data-disabled:opacity-50 data-vertical:h-full data-vertical:min-h-40 data-vertical:w-auto data-vertical:flex-col\">\n        <SliderPrimitive.Track\n          data-slot=\"slider-track\"\n          className=\"relative grow overflow-hidden rounded-full select-none data-horizontal:h-1.5 data-horizontal:w-full data-vertical:h-full data-vertical:w-1.5\"\n        >\n          <SliderPrimitive.Indicator\n            data-slot=\"slider-range\"\n            className=\"bg-primary select-none data-horizontal:h-full data-vertical:w-full\"\n          />\n        </SliderPrimitive.Track>\n        {Array.from({ length: _values.length }, (_, index) => (\n          <SliderPrimitive.Thumb\n            data-slot=\"slider-thumb\"\n            key={index}\n            className=\"relative block h-6 shrink-0 rounded-full bg-white select-none after:absolute after:-inset-2 disabled:pointer-events-none disabled:opacity-45 w-[38px] outline-none focus-visible:outline-2 focus-visible:outline-offset-2\"\n          />\n        ))}\n      </SliderPrimitive.Control>\n    </SliderPrimitive.Root>\n  )\n}\n\nexport { Slider }\n",
+      "type": "registry:ui",
+      "target": "components/ui/slider.tsx"
+    },
+    {
+      "path": "registry/glassyui-shadcn/base-nova/switch.tsx",
+      "content": "\"use client\"\n\nimport { Switch as SwitchPrimitive } from \"@base-ui/react/switch\"\nimport { cn } from \"@/lib/utils\"\n\nfunction Switch({\n  className,\n  size = \"default\",\n  ...props\n}: SwitchPrimitive.Root.Props & {\n  size?: \"sm\" | \"default\"\n}) {\n  return (\n    <SwitchPrimitive.Root\n      data-slot=\"switch\"\n      data-size={size}\n      className={cn(\n        \"peer group/switch relative inline-flex shrink-0 items-center rounded-full outline-none group-has-[:focus-visible]/field-label:border-transparent group-has-[:focus-visible]/field-label:ring-0 after:absolute after:-inset-x-3 after:-inset-y-2 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-disabled:cursor-not-allowed data-disabled:opacity-50 px-0.5 data-[size=default]:h-7 data-[size=default]:w-[60px] data-[size=sm]:h-6 data-[size=sm]:w-[46px] focus-visible:outline-2 focus-visible:outline-offset-2\",\n        className\n      )}\n      {...props}\n    >\n      <SwitchPrimitive.Thumb\n        data-slot=\"switch-thumb\"\n        className=\"pointer-events-none block rounded-full ring-0 transition-transform group-data-[size=default]/switch:data-unchecked:translate-x-0 group-data-[size=sm]/switch:data-unchecked:translate-x-0 group-data-[size=default]/switch:h-6 group-data-[size=default]/switch:w-9 group-data-[size=sm]/switch:h-5 group-data-[size=sm]/switch:w-7 group-data-[size=default]/switch:data-checked:translate-x-5 group-data-[size=sm]/switch:data-checked:translate-x-3.5\"\n      />\n    </SwitchPrimitive.Root>\n  )\n}\n\nexport { Switch }\n",
+      "type": "registry:ui",
+      "target": "components/ui/switch.tsx"
+    },
+    {
+      "path": "registry/glassyui-shadcn/base-nova/tabs.tsx",
+      "content": "\"use client\"\n\nimport { Tabs as TabsPrimitive } from \"@base-ui/react/tabs\"\nimport { cva, type VariantProps } from \"class-variance-authority\"\nimport { cn } from \"@/lib/utils\"\nimport { useGlassy } from \"../glassyui/glassy-engine\"\n\nfunction Tabs({\n  className,\n  orientation = \"horizontal\",\n  ...props\n}: TabsPrimitive.Root.Props) {\n  return (\n    <TabsPrimitive.Root\n      data-slot=\"tabs\"\n      data-orientation={orientation}\n      className={cn(\n        \"group/tabs flex gap-2 data-horizontal:flex-col\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nconst tabsListVariants = cva(\n  \"group/tabs-list inline-flex w-fit items-center justify-center text-muted-foreground group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none\",\n  {\n    variants: {\n      variant: {\n        default: \"rounded-full p-1 group-data-horizontal/tabs:h-12\",\n        line: \"gap-1 rounded-lg bg-transparent p-[3px] group-data-horizontal/tabs:h-8\",\n      },\n    },\n    defaultVariants: {\n      variant: \"default\",\n    },\n  }\n)\n\nfunction TabsList({\n  className,\n  variant = \"default\",\n  children,\n  ref,\n  ...props\n}: TabsPrimitive.List.Props & VariantProps<typeof tabsListVariants>) {\n  const [attach, glass] = useGlassy(ref, \"track\")\n\n  return (\n    <TabsPrimitive.List\n      ref={attach}\n      data-slot=\"tabs-list\"\n      data-variant={variant}\n      className={cn(tabsListVariants({ variant }), className)}\n      {...props}\n    >\n      {children}\n      {glass}\n    </TabsPrimitive.List>\n  )\n}\n\nfunction TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {\n  return (\n    <TabsPrimitive.Tab\n      data-slot=\"tabs-trigger\"\n      className={cn(\n        \"relative inline-flex flex-1 items-center justify-center gap-1.5 border border-transparent text-sm whitespace-nowrap text-foreground/60 transition-all group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start hover:text-foreground disabled:pointer-events-none disabled:opacity-45 has-data-[icon=inline-end]:pr-1 has-data-[icon=inline-start]:pl-1 aria-disabled:pointer-events-none aria-disabled:opacity-50 dark:text-muted-foreground dark:hover:text-foreground group-data-[variant=line]/tabs-list:data-active:shadow-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 focus-visible:outline-2 focus-visible:outline-offset-2 group-data-[variant=default]/tabs-list:h-10 group-data-[variant=default]/tabs-list:rounded-full group-data-[variant=default]/tabs-list:px-4 group-data-[variant=default]/tabs-list:font-semibold group-data-[variant=line]/tabs-list:h-[calc(100%-1px)] group-data-[variant=line]/tabs-list:rounded-md group-data-[variant=line]/tabs-list:px-1.5 group-data-[variant=line]/tabs-list:py-0.5 group-data-[variant=line]/tabs-list:font-medium\",\n        \"group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent dark:group-data-[variant=line]/tabs-list:data-active:border-transparent dark:group-data-[variant=line]/tabs-list:data-active:bg-transparent\",\n        \"data-active:text-foreground dark:data-active:text-foreground\",\n        \"after:absolute after:bg-foreground after:opacity-0 after:transition-opacity group-data-horizontal/tabs:after:inset-x-0 group-data-horizontal/tabs:after:bottom-[-5px] group-data-horizontal/tabs:after:h-0.5 group-data-vertical/tabs:after:inset-y-0 group-data-vertical/tabs:after:-right-1 group-data-vertical/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nfunction TabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {\n  return (\n    <TabsPrimitive.Panel\n      data-slot=\"tabs-content\"\n      className={cn(\"flex-1 text-sm outline-none\", className)}\n      {...props}\n    />\n  )\n}\n\nexport { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants }\n",
+      "type": "registry:ui",
+      "target": "components/ui/tabs.tsx"
+    },
+    {
+      "path": "registry/glassyui-shadcn/base-nova/textarea.tsx",
+      "content": "import * as React from \"react\"\nimport { cn } from \"@/lib/utils\"\n\nfunction Textarea({ className, ...props }: React.ComponentProps<\"textarea\">) {\n  return (\n    <textarea\n      data-slot=\"textarea\"\n      className={cn(\n        \"flex field-sizing-content min-h-24 w-full rounded-[16px] border px-5 py-3.5 text-base outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-destructive focus-visible:outline-2 focus-visible:outline-offset-2 dark:bg-[rgb(var(--glassy-glass)/var(--glassy-control-alpha))]\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nexport { Textarea }\n",
+      "type": "registry:ui",
+      "target": "components/ui/textarea.tsx"
+    }
+  ],
+  "cssVars": {
+    "theme": {
+      "ease-glassy-spring": "linear(0, 0.033, 0.115, 0.225, 0.348, 0.47, 0.586, 0.689, 0.778, 0.852, 0.91, 0.955, 0.989, 1.012, 1.026, 1.035, 1.038, 1.038, 1.036, 1.032, 1.027, 1.023, 1.018, 1.014, 1.01, 1.007, 1.004, 1.002, 1)",
+      "ease-glassy-out": "cubic-bezier(0.32, 0.72, 0, 1)"
+    },
+    "light": {
+      "glassy-glass": "255 255 255",
+      "glassy-edge": "0 0 0",
+      "glassy-edge-alpha": "0.14",
+      "glassy-control-alpha": "0.72",
+      "glassy-control-hover-alpha": "0.95",
+      "glassy-control-frost": "blur(16px) brightness(1.06) contrast(1.02) saturate(1.8)",
+      "glassy-control-depth": "inset 0 1px 2px rgb(0 0 0 / 0.08), inset 0 -1px 0 rgb(255 255 255 / 0.8)",
+      "glassy-bevel": "inset 0 0 12px -4px rgb(255 255 255 / 0.14), inset 1.5px 2.5px 1px -2px rgb(255 255 255 / 0.7), inset -1.5px -2px 1px -2px rgb(255 255 255 / 0.55), inset -0.3px -1px 4px 0 rgb(0 0 0 / 0.08), inset -1.5px 2.5px 0 -2px rgb(0 0 0 / 0.114), inset 0 3px 4px -2px rgb(0 0 0 / 0.114), inset 2px 0 3px -1px rgb(80 160 255 / 0.05), inset -2px 0 3px -1px rgb(255 90 150 / 0.05), inset 0 0.5px 3px 0 rgb(255 255 255 / 0.11)",
+      "glassy-specular": "radial-gradient(circle at 50% 30%, rgb(255 255 255 / 0.13), transparent 42%), linear-gradient(to right bottom, rgb(255 255 255 / 0.7) 0%, rgb(255 255 255 / 0.35) 32%, rgb(255 255 255 / 0.35) 68%, rgb(255 255 255 / 0.55) 100%)",
+      "glassy-gloss": "radial-gradient(circle at 50% 30%, rgb(255 255 255 / 0.02), transparent 65%), linear-gradient(rgb(255 255 255 / 0.08), transparent 45%)",
+      "glassy-glass-alpha": "0.08",
+      "glassy-glass-frost": "blur(8px) brightness(1.06) contrast(1.02) saturate(1.8)",
+      "glassy-panel-frost": "blur(14px) brightness(1.06) contrast(1.02) saturate(1.8)",
+      "glassy-raised": "0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px -6px rgb(0 0 0 / 0.14)",
+      "glassy-floating": "0 2px 6px rgb(0 0 0 / 0.06), 0 28px 56px -18px rgb(0 0 0 / 0.26)",
+      "glassy-lift": "0 1.8px 2px -1px rgb(52 62 84 / 0.18), 0 6.7px 10px -5px rgb(52 62 84 / 0.2)",
+      "glassy-bubble": "linear-gradient(rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.82))",
+      "glassy-bubble-depth": "inset 0 1px 0 rgb(255 255 255 / 0.9), 0 1px 3px rgb(0 0 0 / 0.1), 0 4px 12px -4px rgb(0 0 0 / 0.16)",
+      "glassy-track-alpha": "0.2",
+      "glassy-knob-depth": "0 2px 6px rgb(28 28 30 / 0.16), 0 1px 2px rgb(28 28 30 / 0.1), 0 0 0 0.5px rgb(28 28 30 / 0.05)",
+      "glassy-scrim-alpha": "0.16",
+      "glassy-focus": "102 102 106",
+      "glassy-lens-saturation": "1.5",
+      "glassy-danger": "var(--destructive)",
+      "glassy-slab": "80%",
+      "glassy-slab-frost": "3px",
+      "glassy-slab-brightness": "1",
+      "glassy-slab-rim-brightness": "1"
+    },
+    "dark": {
+      "glassy-glass": "245 245 247",
+      "glassy-edge": "245 245 247",
+      "glassy-edge-alpha": "0.22",
+      "glassy-control-alpha": "0.08",
+      "glassy-control-hover-alpha": "0.14",
+      "glassy-control-frost": "blur(16px) brightness(1) contrast(0.9) saturate(1.8)",
+      "glassy-control-depth": "inset 0 1px 2px rgb(0 0 0 / 0.24), inset 0 -1px 0 rgb(255 255 255 / 0.06)",
+      "glassy-bevel": "inset 0 0 12px -4px rgb(255 255 255 / 0.06), inset 1.5px 2.5px 1px -2px rgb(255 255 255 / 0.294), inset -1.5px -2px 1px -2px rgb(255 255 255 / 0.23), inset -0.3px -1px 4px 0 rgb(0 0 0 / 0.14), inset -1.5px 2.5px 0 -2px rgb(0 0 0 / 0.196), inset 0 3px 4px -2px rgb(0 0 0 / 0.196), inset 2px 0 3px -1px rgb(80 160 255 / 0.06), inset -2px 0 3px -1px rgb(255 90 150 / 0.06), inset 0 0 3px 0 rgb(255 255 255 / 0.05)",
+      "glassy-specular": "linear-gradient(to right bottom, rgb(255 255 255 / 0.45) 0%, rgb(255 255 255 / 0.07) 32%, rgb(255 255 255 / 0.07) 68%, rgb(255 255 255 / 0.22) 100%)",
+      "glassy-gloss": "linear-gradient(rgb(255 255 255 / 0.05), transparent 45%)",
+      "glassy-glass-alpha": "0.08",
+      "glassy-glass-frost": "blur(8px) brightness(1) contrast(0.9) saturate(1.8)",
+      "glassy-panel-frost": "blur(14px) brightness(1) contrast(0.9) saturate(1.8)",
+      "glassy-raised": "0 1px 2px rgb(0 0 0 / 0.18), 0 8px 24px -4px rgb(0 0 0 / 0.28)",
+      "glassy-floating": "0 2px 6px rgb(0 0 0 / 0.2), 0 30px 60px -18px rgb(0 0 0 / 0.55)",
+      "glassy-lift": "0 1.8px 2px -1px rgb(0 0 0 / 0.32), 0 6.7px 10px -5px rgb(0 0 0 / 0.36)",
+      "glassy-bubble": "linear-gradient(rgb(255 255 255 / 0.2), rgb(255 255 255 / 0.12))",
+      "glassy-bubble-depth": "inset 0 1px 0 rgb(255 255 255 / 0.22), inset 0 -1px 0 rgb(0 0 0 / 0.12), 0 1px 3px rgb(0 0 0 / 0.24), 0 4px 12px -4px rgb(0 0 0 / 0.4)",
+      "glassy-track-alpha": "0.36",
+      "glassy-knob-depth": "0 2px 6px rgb(28 28 30 / 0.16), 0 1px 2px rgb(28 28 30 / 0.1), 0 0 0 0.5px rgb(28 28 30 / 0.05)",
+      "glassy-scrim-alpha": "0.45",
+      "glassy-focus": "184 184 190",
+      "glassy-lens-saturation": "1.5",
+      "glassy-danger": "color-mix(in oklab, var(--destructive) 60%, var(--background))",
+      "glassy-slab": "30%",
+      "glassy-slab-frost": "3px",
+      "glassy-slab-brightness": "0.38",
+      "glassy-slab-rim-brightness": "0.46"
+    }
+  },
+  "css": {
+    "@layer components": {
+      "@layer glassy": {
+        "svg.lg-refraction-filter": {
+          "position": "absolute",
+          "width": "0",
+          "height": "0",
+          "overflow": "hidden",
+          "pointer-events": "none"
+        },
+        ":root, .dark:not([data-slot])": {
+          "--glassy-src-popover": "var(--popover)",
+          "--glassy-src-popover-foreground": "var(--popover-foreground)",
+          "--glassy-src-background": "var(--background)",
+          "--glassy-src-foreground": "var(--foreground)",
+          "--glassy-src-muted": "var(--muted)",
+          "--glassy-src-destructive": "var(--destructive)"
+        },
+        ":is([data-slot='card'], [data-slot='alert'])": {
+          "position": "relative",
+          "isolation": "isolate",
+          "background": "transparent",
+          "box-shadow": "var(--glassy-raised)"
+        },
+        ":is([data-slot='card'], [data-slot='alert'])::before": {
+          "content": "''",
+          "position": "absolute",
+          "inset": "0",
+          "z-index": "-1",
+          "border-radius": "inherit",
+          "pointer-events": "none",
+          "background-color": "rgb(var(--glassy-glass) / var(--glassy-glass-alpha))",
+          "background-image": "var(--glassy-gloss)",
+          "box-shadow": "var(--glassy-bevel)",
+          "backdrop-filter": "var(--glassy-panel-frost)"
+        },
+        ":is([data-slot='card'], [data-slot='alert'])::after": {
+          "content": "''",
+          "position": "absolute",
+          "inset": "0",
+          "z-index": "-1",
+          "padding": "1px",
+          "border-radius": "inherit",
+          "pointer-events": "none",
+          "background": "var(--glassy-specular)",
+          "mask": "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+          "mask-composite": "exclude"
+        },
+        "[data-slot='alert']:is([data-variant='destructive'], :not([data-variant])[class~='text-destructive'])": {
+          "--destructive": "color-mix(in oklab, var(--glassy-src-destructive), var(--glassy-src-foreground) 50%)",
+          "box-shadow": "var(--glassy-raised), inset 0 0 0 1px color-mix(in oklab, var(--glassy-src-destructive) 40%, transparent)"
+        },
+        "[data-slot='alert']:is([data-variant='destructive'], :not([data-variant])[class~='text-destructive'])::before": {
+          "background-color": "color-mix(in oklab, var(--glassy-src-destructive) 14%, color-mix(in oklab, var(--glassy-src-background) 88%, transparent))"
+        },
+        "[data-slot='badge']": {
+          "--glassy-chip": "var(--primary)",
+          "background": "color-mix(in oklab, var(--glassy-chip) 14%, color-mix(in oklab, var(--glassy-src-background) 88%, transparent))",
+          "color": "color-mix(in oklab, var(--glassy-chip), var(--foreground) 50%)",
+          "box-shadow": "inset 0 1px 0 rgb(255 255 255 / 0.5), inset 0 0 0 0.5px color-mix(in oklab, var(--glassy-chip) 40%, transparent)",
+          "backdrop-filter": "blur(12px) saturate(1.8)"
+        },
+        "[data-slot='badge'][data-variant='secondary']": {
+          "--glassy-chip": "var(--foreground)"
+        },
+        "[data-slot='badge'][data-variant='destructive']": {
+          "--glassy-chip": "var(--destructive)"
+        },
+        "[data-slot='badge']:is([data-variant='outline'], [data-variant='ghost'])": {
+          "background": "rgb(var(--glassy-glass) / var(--glassy-control-alpha))",
+          "color": "var(--foreground)",
+          "box-shadow": "inset 0 1px 0 rgb(255 255 255 / 0.5), inset 0 0 0 1px rgb(var(--glassy-edge) / var(--glassy-edge-alpha))"
+        },
+        "[data-slot='badge'][data-variant='link']": {
+          "background": "none",
+          "box-shadow": "none",
+          "backdrop-filter": "none",
+          "color": "var(--primary)"
+        },
+        ":is([data-slot='popover-content'], [data-slot='dropdown-menu-content'], [data-slot='dropdown-menu-sub-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='sheet-content'])": {
+          "--popover": "color-mix(in oklab, var(--glassy-src-popover) var(--glassy-slab), transparent)",
+          "--background": "color-mix(in oklab, var(--glassy-src-background) var(--glassy-slab), transparent)",
+          "isolation": "isolate",
+          "border-color": "transparent",
+          "background-color": "var(--popover)",
+          "color": "var(--popover-foreground)",
+          "box-shadow": "var(--glassy-floating)",
+          "backdrop-filter": "blur(var(--glassy-slab-frost)) saturate(var(--glassy-lens-saturation)) brightness(var(--glassy-slab-brightness))"
+        },
+        ":is([data-slot='popover-content'], [data-slot='dropdown-menu-content'], [data-slot='dropdown-menu-sub-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='sheet-content'])::before": {
+          "content": "''",
+          "position": "absolute",
+          "inset": "0",
+          "z-index": "-1",
+          "border-radius": "inherit",
+          "pointer-events": "none",
+          "background-image": "var(--glassy-gloss)",
+          "box-shadow": "var(--glassy-bevel)"
+        },
+        ":is([data-slot='popover-content'], [data-slot='dropdown-menu-content'], [data-slot='dropdown-menu-sub-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='sheet-content'])::after": {
+          "content": "''",
+          "position": "absolute",
+          "inset": "0",
+          "z-index": "-1",
+          "padding": "1px",
+          "border-radius": "inherit",
+          "pointer-events": "none",
+          "background": "var(--glassy-specular)",
+          "mask": "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+          "mask-composite": "exclude"
+        },
+        ":is([data-slot='dropdown-menu-item'], [data-slot='dropdown-menu-checkbox-item'], [data-slot='dropdown-menu-radio-item'], [data-slot='dropdown-menu-sub-trigger'], [data-slot='select-item'])": {
+          "--accent": "rgb(var(--glassy-edge) / 0.06)"
+        },
+        ":is([data-slot='dialog-overlay'], [data-slot='sheet-overlay'])": {
+          "background": "rgb(0 0 0 / var(--glassy-scrim-alpha))",
+          "backdrop-filter": "blur(1.5px)"
+        },
+        ":is([data-slot='dialog-close'], [data-slot='sheet-close']):is([class~='absolute'], [data-slot='dialog-content'] > *, [data-slot='sheet-content'] > *)": {
+          "border-color": "rgb(var(--glassy-edge) / var(--glassy-edge-alpha))",
+          "background": "rgb(var(--glassy-glass) / var(--glassy-control-alpha))",
+          "color": "var(--muted-foreground)",
+          "opacity": "1",
+          "box-shadow": "none"
+        },
+        ":is([data-slot='dialog-close'], [data-slot='sheet-close']):is([class~='absolute'], [data-slot='dialog-content'] > *, [data-slot='sheet-content'] > *):hover": {
+          "background": "rgb(var(--glassy-glass) / var(--glassy-control-hover-alpha))",
+          "color": "var(--foreground)"
+        },
+        ":is([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger'])": {
+          "border-color": "rgb(var(--glassy-edge) / var(--glassy-edge-alpha))",
+          "background": "rgb(var(--glassy-glass) / var(--glassy-control-alpha))",
+          "color": "var(--foreground)",
+          "box-shadow": "var(--glassy-control-depth)",
+          "backdrop-filter": "var(--glassy-control-frost)",
+          "transition": "background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease"
+        },
+        ":is([data-slot='input'], [data-slot='textarea'])::placeholder": {
+          "color": "var(--muted-foreground)",
+          "opacity": "0.72"
+        },
+        ":is([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger']):focus": {
+          "border-color": "rgb(var(--glassy-focus))",
+          "background": "rgb(var(--glassy-glass) / var(--glassy-control-hover-alpha))",
+          "box-shadow": "0 0 0 1px rgb(var(--glassy-focus))"
+        },
+        ":is([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger']):focus-visible": {
+          "outline-color": "rgb(var(--glassy-focus))"
+        },
+        ":is([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger'])[aria-invalid='true']": {
+          "border-color": "var(--destructive)"
+        },
+        "[data-slot='switch']": {
+          "background": "rgb(118 118 128 / var(--glassy-track-alpha))",
+          "box-shadow": "inset 0 1px 2px rgb(0 0 0 / 0.1)",
+          "transition": "background-color 250ms ease"
+        },
+        "[data-slot='switch']:is([data-state='checked'], [data-checked]:not([data-checked='false']))": {
+          "background": "var(--primary)"
+        },
+        "[data-slot='switch-thumb']": {
+          "background": "#fff",
+          "box-shadow": "var(--glassy-knob-depth)",
+          "transition": "translate 250ms var(--ease-glassy-spring, ease)"
+        },
+        "[data-slot='switch-thumb']:is([data-state='checked'], [data-checked]:not([data-checked='false']))": {
+          "background": "var(--primary-foreground)"
+        },
+        "[data-slot='switch']:focus-visible": {
+          "outline-color": "rgb(var(--glassy-focus))"
+        },
+        "[data-slot='checkbox']": {
+          "border-color": "rgb(var(--glassy-edge) / 0.6)",
+          "background": "rgb(var(--glassy-glass) / var(--glassy-control-alpha))",
+          "box-shadow": "var(--glassy-control-depth)"
+        },
+        "[data-slot='checkbox']:is([data-state='checked'], [data-state='indeterminate'], [data-checked]:not([data-checked='false']))": {
+          "border-color": "transparent",
+          "background": "linear-gradient(180deg, rgb(255 255 255 / 0.24), rgb(255 255 255 / 0) 62%), var(--primary)",
+          "box-shadow": "inset 0 1px 0 rgb(255 255 255 / 0.4), inset 0 -1px 0 rgb(0 0 0 / 0.14), 0 1px 3px rgb(0 0 0 / 0.28)"
+        },
+        "[data-slot='checkbox']:focus-visible": {
+          "outline-color": "rgb(var(--glassy-focus))"
+        },
+        "[data-slot='radio-group-item']": {
+          "border-color": "rgb(var(--glassy-edge) / 0.6)",
+          "background": "rgb(var(--glassy-glass) / var(--glassy-control-alpha))",
+          "box-shadow": "var(--glassy-control-depth)"
+        },
+        "[data-slot='radio-group-item']:is([data-state='checked'], [data-checked]:not([data-checked='false']))": {
+          "border-color": "transparent",
+          "background": "linear-gradient(180deg, rgb(255 255 255 / 0.24), rgb(255 255 255 / 0) 62%), var(--primary)",
+          "box-shadow": "inset 0 1px 0 rgb(255 255 255 / 0.4), inset 0 -1px 0 rgb(0 0 0 / 0.14), 0 1px 3px rgb(0 0 0 / 0.28)"
+        },
+        "[data-slot='radio-group-item']:focus-visible": {
+          "outline-color": "rgb(var(--glassy-focus))"
+        },
+        "[data-slot='slider-track']": {
+          "background": "rgb(118 118 128 / var(--glassy-track-alpha))"
+        },
+        "[data-slot='slider-thumb']": {
+          "box-shadow": "var(--glassy-knob-depth)"
+        },
+        "[data-slot='slider-thumb']:focus-visible": {
+          "outline-color": "rgb(var(--glassy-focus))"
+        },
+        "[data-slot='tooltip-content']": {
+          "--foreground": "color-mix(in oklab, var(--glassy-src-popover) 82%, transparent)",
+          "--background": "var(--glassy-src-popover-foreground)",
+          "box-shadow": "var(--glassy-bevel), 0 1px 2px rgb(0 0 0 / 0.08), 0 8px 20px -8px rgb(0 0 0 / 0.24)",
+          "backdrop-filter": "blur(16px) saturate(1.8)"
+        },
+        "[data-slot='kbd']": {
+          "--muted": "rgb(var(--glassy-glass) / var(--glassy-control-alpha))",
+          "box-shadow": "inset 0 1px 0 rgb(255 255 255 / 0.5), inset 0 0 0 1px rgb(var(--glassy-edge) / var(--glassy-edge-alpha)), 0 1px 0 rgb(0 0 0 / 0.16)"
+        },
+        "[data-slot='skeleton']": {
+          "--accent": "rgb(var(--glassy-glass) / var(--glassy-control-alpha))"
+        },
+        "[data-slot='avatar-fallback']": {
+          "--muted": "#535359",
+          "--muted-foreground": "#fff",
+          "background-image": "linear-gradient(145deg, #747479, #535359)",
+          "box-shadow": "inset 0 0 0 1px rgb(0 0 0 / 0.1), inset 0 1px 0 rgb(255 255 255 / 0.3)",
+          "color": "#fff",
+          "font-weight": "600",
+          "text-shadow": "0 1px 1px rgb(0 0 0 / 0.22)"
+        },
+        "[data-slot='command-item']": {
+          "--accent": "rgb(var(--glassy-edge) / 0.06)",
+          "--radius": "16px"
+        },
+        "[data-slot='tabs-list'][data-variant='default']": {
+          "position": "relative",
+          "isolation": "isolate",
+          "background": "transparent",
+          "box-shadow": "var(--glassy-raised)"
+        },
+        "[data-slot='tabs-list'][data-variant='default']::after": {
+          "content": "''",
+          "position": "absolute",
+          "inset": "0",
+          "z-index": "-2",
+          "padding": "1px",
+          "border-radius": "inherit",
+          "pointer-events": "none",
+          "background": "var(--glassy-specular)",
+          "mask": "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+          "mask-composite": "exclude"
+        },
+        "[data-slot='tabs-list'][data-variant='default'] [data-slot='tabs-trigger']": {
+          "position": "relative",
+          "z-index": "1",
+          "color": "var(--muted-foreground)"
+        },
+        "[data-slot='tabs-list'][data-variant='default'] [data-slot='tabs-trigger']:is([data-state='active'], [data-active]:not([data-active='false']))": {
+          "color": "var(--foreground)",
+          "background": "var(--glassy-bubble)",
+          "box-shadow": "var(--glassy-bubble-depth)"
+        },
+        "@supports (anchor-name: --a) and (anchor-scope: --a)": {
+          "[data-slot='tabs-list'][data-variant='default']": {
+            "anchor-scope": "--glassy-tab"
+          },
+          "[data-slot='tabs-list'][data-variant='default'] [data-slot='tabs-trigger']:is([data-state='active'], [data-active]:not([data-active='false']))": {
+            "anchor-name": "--glassy-tab",
+            "background": "transparent",
+            "box-shadow": "none"
+          },
+          "[data-slot='tabs-list'][data-variant='default']::before": {
+            "content": "''",
+            "position": "absolute",
+            "position-anchor": "--glassy-tab",
+            "top": "anchor(top)",
+            "left": "anchor(left)",
+            "width": "anchor-size(width)",
+            "height": "anchor-size(height)",
+            "z-index": "0",
+            "border-radius": "999px",
+            "pointer-events": "none",
+            "background": "var(--glassy-bubble)",
+            "box-shadow": "var(--glassy-bubble-depth)",
+            "backdrop-filter": "blur(2px) saturate(1.5) brightness(1.08)",
+            "transition": "left 0.6s var(--ease-glassy-spring, ease), top 0.6s var(--ease-glassy-spring, ease), width 0.6s var(--ease-glassy-spring, ease), height 0.6s var(--ease-glassy-spring, ease)"
+          }
+        },
+        "[data-slot='button']:not([data-variant='link'])": {
+          "position": "relative",
+          "isolation": "isolate",
+          "background": "transparent",
+          "box-shadow": "var(--glassy-lift)",
+          "transition": "box-shadow 160ms ease, translate 160ms ease"
+        },
+        "[data-slot='button']:not([data-variant='link'])::before": {
+          "content": "''",
+          "position": "absolute",
+          "inset": "0",
+          "z-index": "-1",
+          "border-radius": "inherit",
+          "pointer-events": "none",
+          "background-color": "rgb(var(--glassy-glass) / 0.08)",
+          "background-image": "radial-gradient(circle at 50% 43%, rgb(255 255 255 / 0.01), transparent 70%), linear-gradient(rgb(255 255 255 / 0.35), transparent 60%)",
+          "box-shadow": "var(--glassy-bevel)",
+          "backdrop-filter": "var(--glassy-glass-frost)"
+        },
+        "[data-slot='button']:not([data-variant='link'])::after": {
+          "content": "''",
+          "position": "absolute",
+          "inset": "0",
+          "z-index": "-1",
+          "padding": "1px",
+          "border-radius": "inherit",
+          "pointer-events": "none",
+          "background": "var(--glassy-specular)",
+          "mask": "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+          "mask-composite": "exclude"
+        },
+        "[data-slot='button']:is([data-variant='default'], [data-variant='destructive'])": {
+          "--glassy-accent": "var(--primary)",
+          "color": "var(--primary-foreground)",
+          "box-shadow": "0 1.8px 2px -1px color-mix(in oklab, var(--glassy-accent) 40%, rgb(0 0 0 / 0.4)), 0 6.7px 10px -5px color-mix(in oklab, var(--glassy-accent) 40%, rgb(0 0 0 / 0.4))"
+        },
+        "[data-slot='button'][data-variant='destructive']": {
+          "--glassy-accent": "var(--glassy-danger)",
+          "color": "#fff"
+        },
+        "[data-slot='button']:is([data-variant='default'], [data-variant='destructive'])::before": {
+          "background-color": "var(--glassy-accent)",
+          "background-image": "linear-gradient(180deg, rgb(255 255 255 / 0.12), transparent 22%)"
+        },
+        "[data-slot='button'][data-variant='ghost']": {
+          "box-shadow": "none"
+        },
+        "[data-slot='button'][data-variant='ghost']:not(:hover, :focus-visible, [data-state='open'])::before, [data-slot='button'][data-variant='ghost']:not(:hover, :focus-visible, [data-state='open'])::after": {
+          "opacity": "0"
+        },
+        "[data-slot='button']:not([data-variant='link']):active:not(:disabled)": {
+          "translate": "0 1px",
+          "box-shadow": "none"
+        },
+        "[data-slot='button']:focus-visible": {
+          "outline": "2px solid rgb(var(--glassy-focus))",
+          "outline-offset": "2px"
+        },
+        "@supports (-webkit-app-region: drag)": {
+          ":is([data-slot='popover-content'], [data-slot='dropdown-menu-content'], [data-slot='dropdown-menu-sub-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='sheet-content'])": {
+            "--lg-lens-depth": "1",
+            "--lg-lens-blur": "var(--glassy-slab-frost)",
+            "--lg-lens-dispersion": "0.16",
+            "--lg-lens-saturation": "var(--glassy-lens-saturation)",
+            "--lg-lens-body-brightness": "var(--glassy-slab-brightness)",
+            "--lg-lens-rim-brightness": "var(--glassy-slab-rim-brightness)"
+          },
+          ":is([data-slot='popover-content'], [data-slot='dropdown-menu-content'], [data-slot='dropdown-menu-sub-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='sheet-content'])[data-glassy-engine]": {
+            "backdrop-filter": "var(--glassy-measured-lens)"
+          },
+          ":is([data-slot='card'], [data-slot='alert'])": {
+            "--lg-lens-depth": "1",
+            "--lg-lens-blur": "14px",
+            "--lg-lens-dispersion": "0",
+            "--lg-lens-saturation": "var(--glassy-lens-saturation)",
+            "--lg-lens-body-brightness": "1",
+            "--lg-lens-rim-brightness": "1"
+          },
+          ":is([data-slot='card'], [data-slot='alert'])[data-glassy-engine]::before": {
+            "backdrop-filter": "var(--glassy-measured-lens)"
+          },
+          "[data-slot='tabs-list'][data-variant='default']": {
+            "--lg-lens-depth": "1",
+            "--lg-lens-blur": "8px",
+            "--lg-lens-dispersion": "0.16",
+            "--lg-lens-saturation": "var(--glassy-lens-saturation)",
+            "--lg-lens-body-brightness": "1",
+            "--lg-lens-rim-brightness": "1",
+            "backdrop-filter": "var(--glassy-glass-frost)"
+          },
+          "[data-slot='tabs-list'][data-variant='default'][data-glassy-engine]": {
+            "backdrop-filter": "var(--glassy-measured-lens)"
+          },
+          "[data-slot='button']:not([data-variant='link'])": {
+            "--lg-lens-depth": "1",
+            "--lg-lens-blur": "8px",
+            "--lg-lens-dispersion": "0",
+            "--lg-lens-saturation": "1",
+            "--lg-lens-body-brightness": "1",
+            "--lg-lens-rim-brightness": "1"
+          },
+          "[data-slot='button']:not([data-variant='link'])[data-glassy-engine]::before": {
+            "backdrop-filter": "var(--glassy-measured-lens)"
+          },
+          "[data-slot='button']:is([data-variant='default'], [data-variant='destructive'])": {
+            "--lg-lens-depth": "0"
+          }
+        },
+        "@supports not (-webkit-app-region: drag)": {
+          "[data-slot='tabs-list'][data-variant='default']": {
+            "backdrop-filter": "var(--glassy-glass-frost)"
+          }
+        },
+        "@media (prefers-reduced-motion: reduce)": {
+          ":is([data-slot='button'], [data-slot='switch-thumb'], [data-slot='slider-thumb'], [data-slot='tabs-list'], [data-slot='tabs-trigger'], [data-slot='popover-content'], [data-slot='dropdown-menu-content'], [data-slot='dropdown-menu-sub-content'], [data-slot='select-content'], [data-slot='tooltip-content'], [data-slot='dialog-content'], [data-slot='dialog-overlay'], [data-slot='sheet-content'], [data-slot='sheet-overlay'], [data-slot='accordion-trigger'], [data-slot='accordion-trigger'] svg, [data-slot='accordion-content'], [data-slot='skeleton']), :is([data-slot='button'], [data-slot='tabs-list'])::before, [data-slot='button']::after": {
+            "transition": "none !important",
+            "animation": "none !important"
+          }
+        },
+        "@media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active)": {
+          ":is([data-slot='popover-content'], [data-slot='dropdown-menu-content'], [data-slot='dropdown-menu-sub-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='sheet-content'], [data-slot='dialog-overlay'], [data-slot='sheet-overlay'], [data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger'], [data-slot='tabs-list'], [data-slot='button'], [data-slot='checkbox'], [data-slot='card'], [data-slot='alert'], [data-slot='badge'], [data-slot='tooltip-content'], [data-slot='radio-group-item'])": {
+            "--popover": "var(--glassy-src-popover) !important",
+            "--background": "var(--glassy-src-background) !important",
+            "backdrop-filter": "none !important"
+          },
+          ":is([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger'])": {
+            "background": "var(--glassy-src-background) !important"
+          },
+          ":is([data-slot='dialog-overlay'], [data-slot='sheet-overlay'])": {
+            "background": "rgb(0 0 0 / 0.5) !important"
+          },
+          ":is([data-slot='popover-content'], [data-slot='dropdown-menu-content'], [data-slot='dropdown-menu-sub-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='sheet-content'], [data-slot='tabs-list'], [data-slot='button'], [data-slot='card'], [data-slot='alert'])::before": {
+            "backdrop-filter": "none !important"
+          },
+          ":is([data-slot='card'], [data-slot='alert']), [data-slot='button']:is([data-variant='outline'], [data-variant='secondary'])": {
+            "background-color": "var(--glassy-src-background) !important"
+          },
+          "[data-slot='button'][data-variant='default']": {
+            "background-color": "var(--primary) !important"
+          },
+          "[data-slot='button'][data-variant='destructive']": {
+            "background-color": "var(--destructive) !important"
+          },
+          "[data-slot='badge']": {
+            "background": "var(--glassy-src-background) !important"
+          },
+          "[data-slot='tabs-list'][data-variant='default']": {
+            "background": "var(--glassy-src-muted) !important"
+          }
+        }
+      }
+    }
+  },
+  "docs": "Glassy UI components installed over components/ui: Glassy UI's look and lens with shadcn/ui's API. Remove the Glassy UI theme first if you installed it. Install with --overwrite after committing your work: it replaces local edits in those files. Guide: https://glassyui.com/guides/shadcn-theme",
+  "type": "registry:ui"
+}

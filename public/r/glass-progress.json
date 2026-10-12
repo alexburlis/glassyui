@@ -1,0 +1,26 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glass-progress",
+  "title": "Glass Progress",
+  "description": "A glass track with a fill that slides to its value, or sweeps when the length is unknown.",
+  "dependencies": [
+    "clsx"
+  ],
+  "registryDependencies": [
+    "@glassyui/glass-provider"
+  ],
+  "files": [
+    {
+      "path": "registry/glassyui/glass-progress.tsx",
+      "content": "'use client';\n\nimport clsx from 'clsx';\nimport { forwardRef, useId } from 'react';\nimport type { CSSProperties, HTMLAttributes, ReactNode } from 'react';\n\nexport type GlassProgressSize = 'sm' | 'md' | 'lg';\n\nexport type GlassProgressProps = Omit<HTMLAttributes<HTMLDivElement>, 'children'> & {\n  /** Text above the bar. It also names the bar for assistive technology. */\n  label?: ReactNode;\n  /** The value that means done. Defaults to 100. */\n  max?: number;\n  /** Shows the percentage beside the label. */\n  showValue?: boolean;\n  size?: GlassProgressSize;\n  /** How far along. Leave it out, or pass null, when the length is unknown. */\n  value?: number | null;\n};\n\n/**\n * A glass track with a fill that slides to its value. Without a value the fill sweeps\n * along, for work of unknown length.\n */\nexport const GlassProgress = forwardRef<HTMLDivElement, GlassProgressProps>(\n  (\n    {\n      'aria-label': ariaLabel,\n      'aria-labelledby': ariaLabelledBy,\n      className,\n      label,\n      max = 100,\n      showValue = false,\n      size = 'md',\n      value,\n      ...props\n    },\n    forwardedRef,\n  ) => {\n    const labelId = useId();\n    const known = value !== null && value !== undefined && Number.isFinite(value);\n    const clamped = known ? Math.min(Math.max(value, 0), max) : 0;\n    const percent = known && max > 0 ? (clamped / max) * 100 : 0;\n    const state = !known ? 'indeterminate' : percent >= 100 ? 'complete' : 'loading';\n\n    return (\n      <div\n        {...props}\n        ref={forwardedRef}\n        className={clsx('lg-progress', className)}\n        data-size={size}\n        data-state={state}\n      >\n        {label || (showValue && known) ? (\n          <div className=\"lg-progress-header\">\n            <span id={labelId}>{label}</span>\n            {showValue && known ? (\n              <span className=\"lg-progress-value\">{Math.round(percent)}%</span>\n            ) : null}\n          </div>\n        ) : null}\n        <div\n          aria-label={ariaLabel}\n          aria-labelledby={ariaLabelledBy ?? (label ? labelId : undefined)}\n          aria-valuemax={max}\n          aria-valuemin={0}\n          aria-valuenow={known ? clamped : undefined}\n          className=\"lg-progress-track\"\n          role=\"progressbar\"\n        >\n          <div\n            className=\"lg-progress-fill\"\n            // SAFETY: CSSProperties has no custom-property index; this adds one number-valued property.\n            style={{ '--lg-progress': percent } as CSSProperties}\n          />\n        </div>\n      </div>\n    );\n  },\n);\n\nGlassProgress.displayName = 'GlassProgress';\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glass-progress.tsx"
+    }
+  ],
+  "meta": {
+    "sourceModules": [
+      "progress"
+    ]
+  },
+  "type": "registry:ui"
+}

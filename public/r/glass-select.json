@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glass-select",
+  "title": "Glass Select",
+  "description": "A recessed trigger that opens a slab of glass to choose from.",
+  "dependencies": [
+    "@radix-ui/react-select",
+    "clsx"
+  ],
+  "registryDependencies": [
+    "@glassyui/glass-panel"
+  ],
+  "files": [
+    {
+      "path": "registry/glassyui/glass-select.tsx",
+      "content": "'use client';\n\nimport * as SelectPrimitive from '@radix-ui/react-select';\nimport clsx from 'clsx';\nimport { forwardRef } from 'react';\nimport { GlassPanel } from './glass-panel';\n\nconst radixSlotProps = { asChild: true };\n\nexport const GlassSelect = SelectPrimitive.Root;\n\nexport const GlassSelectGroup = SelectPrimitive.Group;\n\nexport const GlassSelectValue = SelectPrimitive.Value;\n\nconst CHEVRON = 'M5 7.5l5 5 5-5';\n\nconst CHECK = 'M4.5 10.5l3.5 3.5 7.5-8';\n\nfunction Icon({ path }: { path: string }) {\n  return (\n    <svg aria-hidden viewBox=\"0 0 20 20\">\n      <path\n        d={path}\n        fill=\"none\"\n        stroke=\"currentColor\"\n        strokeWidth=\"1.7\"\n        strokeLinecap=\"round\"\n        strokeLinejoin=\"round\"\n      />\n    </svg>\n  );\n}\n\nexport type GlassSelectTriggerProps = React.ComponentPropsWithoutRef<\n  typeof SelectPrimitive.Trigger\n>;\n\n/** The closed select: a recessed glass field that shows the chosen option. */\nexport const GlassSelectTrigger = forwardRef<HTMLButtonElement, GlassSelectTriggerProps>(\n  ({ children, className, ...props }, forwardedRef) => (\n    <SelectPrimitive.Trigger\n      {...props}\n      ref={forwardedRef}\n      className={clsx('lg-input lg-select-trigger', className)}\n    >\n      {children}\n      <SelectPrimitive.Icon {...radixSlotProps}>\n        <span className=\"lg-select-chevron\">\n          <Icon path={CHEVRON} />\n        </span>\n      </SelectPrimitive.Icon>\n    </SelectPrimitive.Trigger>\n  ),\n);\n\nGlassSelectTrigger.displayName = 'GlassSelectTrigger';\n\nexport type GlassSelectContentProps = React.ComponentPropsWithoutRef<\n  typeof SelectPrimitive.Content\n>;\n\n/** The open list: a slab of glass under the trigger, as wide as the trigger. */\nexport const GlassSelectContent = forwardRef<HTMLDivElement, GlassSelectContentProps>(\n  (\n    { children, className, onPointerDownOutside, position = 'popper', sideOffset = 8, ...props },\n    forwardedRef,\n  ) => (\n    <SelectPrimitive.Portal>\n      <SelectPrimitive.Content\n        {...props}\n        ref={forwardedRef}\n        position={position}\n        sideOffset={sideOffset}\n        onPointerDownOutside={(event) => {\n          onPointerDownOutside?.(event);\n          // The page is inert while the list is open, so a press outside only closes it. Left to\n          // the browser, the press would also select the nearest word on the page, as Chromium\n          // does on the second press of a double click on the trigger.\n          event.detail.originalEvent.preventDefault();\n        }}\n        {...radixSlotProps}\n      >\n        <GlassPanel\n          elevation=\"raised\"\n          lens\n          preset=\"prominent\"\n          refraction=\"none\"\n          variant=\"card\"\n          className={clsx('lg-select-content', className)}\n        >\n          <SelectPrimitive.ScrollUpButton className=\"lg-select-scroll\">\n            <Icon path=\"M5 12.5l5-5 5 5\" />\n          </SelectPrimitive.ScrollUpButton>\n          <SelectPrimitive.Viewport className=\"lg-select-viewport\">\n            {children}\n          </SelectPrimitive.Viewport>\n          <SelectPrimitive.ScrollDownButton className=\"lg-select-scroll\">\n            <Icon path={CHEVRON} />\n          </SelectPrimitive.ScrollDownButton>\n        </GlassPanel>\n      </SelectPrimitive.Content>\n    </SelectPrimitive.Portal>\n  ),\n);\n\nGlassSelectContent.displayName = 'GlassSelectContent';\n\nexport type GlassSelectItemProps = React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>;\n\nexport const GlassSelectItem = forwardRef<HTMLDivElement, GlassSelectItemProps>(\n  ({ children, className, ...props }, forwardedRef) => (\n    <SelectPrimitive.Item\n      {...props}\n      ref={forwardedRef}\n      className={clsx('lg-menu-item lg-menu-item--inset', className)}\n    >\n      <SelectPrimitive.ItemIndicator className=\"lg-menu-indicator\">\n        <Icon path={CHECK} />\n      </SelectPrimitive.ItemIndicator>\n      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>\n    </SelectPrimitive.Item>\n  ),\n);\n\nGlassSelectItem.displayName = 'GlassSelectItem';\n\nexport const GlassSelectLabel = forwardRef<\n  HTMLDivElement,\n  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>\n>(({ className, ...props }, forwardedRef) => (\n  <SelectPrimitive.Label\n    {...props}\n    ref={forwardedRef}\n    className={clsx('lg-menu-label', className)}\n  />\n));\n\nGlassSelectLabel.displayName = 'GlassSelectLabel';\n\nexport const GlassSelectSeparator = forwardRef<\n  HTMLDivElement,\n  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Separator>\n>(({ className, ...props }, forwardedRef) => (\n  <SelectPrimitive.Separator\n    {...props}\n    ref={forwardedRef}\n    className={clsx('lg-menu-separator', className)}\n  />\n));\n\nGlassSelectSeparator.displayName = 'GlassSelectSeparator';\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glass-select.tsx"
+    }
+  ],
+  "meta": {
+    "sourceModules": [
+      "select"
+    ]
+  },
+  "type": "registry:ui"
+}

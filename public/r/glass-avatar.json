@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glass-avatar",
+  "title": "Glass Avatar",
+  "description": "A round photo that falls back to coloured initials, with a presence dot and stacked groups.",
+  "dependencies": [
+    "@radix-ui/react-avatar",
+    "clsx"
+  ],
+  "registryDependencies": [
+    "@glassyui/glass-provider"
+  ],
+  "files": [
+    {
+      "path": "registry/glassyui/glass-avatar.tsx",
+      "content": "import * as AvatarPrimitive from '@radix-ui/react-avatar';\nimport clsx from 'clsx';\nimport { Children, forwardRef } from 'react';\nimport type { HTMLAttributes, ReactNode } from 'react';\n\nexport type GlassAvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';\n\nexport type GlassAvatarStatus = 'online' | 'away' | 'busy' | 'offline';\n\nexport type GlassAvatarProps = Omit<HTMLAttributes<HTMLSpanElement>, 'children'> & {\n  /** Describes the image. Defaults to `name`. */\n  alt?: string;\n  /** Shown when there is no image or it fails to load. Defaults to the initials of `name`. */\n  fallback?: ReactNode;\n  /** Names the person. Its initials fill in for a missing image and pick the colour. */\n  name?: string;\n  size?: GlassAvatarSize;\n  src?: string;\n  /** A presence dot on the corner. */\n  status?: GlassAvatarStatus;\n};\n\n// The number of colours the stylesheet defines for initials.\nconst TONES = 8;\n\nfunction initialsOf(name: string) {\n  const words = name.trim().split(/\\s+/).filter(Boolean);\n\n  if (words.length === 0) return '';\n\n  const first = Array.from(words[0])[0] ?? '';\n  const last = words.length > 1 ? (Array.from(words[words.length - 1])[0] ?? '') : '';\n\n  return `${first}${last}`.toUpperCase();\n}\n\n// The same name always gets the same colour.\nfunction toneOf(name: string) {\n  let hash = 0;\n\n  for (const character of name) hash = (hash * 31 + (character.codePointAt(0) ?? 0)) >>> 0;\n\n  return hash % TONES;\n}\n\n/** A round photo that falls back to coloured initials. */\nexport const GlassAvatar = forwardRef<HTMLSpanElement, GlassAvatarProps>(\n  ({ alt, className, fallback, name, size = 'md', src, status, ...props }, forwardedRef) => {\n    const described = [alt ?? name, status].filter(Boolean).join(', ');\n\n    return (\n      <span\n        aria-label={described || undefined}\n        role={described ? 'img' : undefined}\n        {...props}\n        ref={forwardedRef}\n        className={clsx('lg-avatar', className)}\n        data-size={size}\n        data-status={status}\n      >\n        <AvatarPrimitive.Root className=\"lg-avatar-face\">\n          {src ? <AvatarPrimitive.Image alt=\"\" className=\"lg-avatar-image\" src={src} /> : null}\n          <AvatarPrimitive.Fallback\n            aria-hidden\n            className=\"lg-avatar-fallback\"\n            data-tone={name ? toneOf(name) : undefined}\n          >\n            {fallback ?? (name ? initialsOf(name) : null)}\n          </AvatarPrimitive.Fallback>\n        </AvatarPrimitive.Root>\n        {status ? <span aria-hidden className=\"lg-avatar-status\" /> : null}\n      </span>\n    );\n  },\n);\n\nGlassAvatar.displayName = 'GlassAvatar';\n\nexport type GlassAvatarGroupProps = HTMLAttributes<HTMLDivElement> & {\n  /** Shows this many avatars, then a \"+N\" for the rest. */\n  max?: number;\n  /** Sizes every avatar in the group. */\n  size?: GlassAvatarSize;\n};\n\n/** Avatars stacked edge to edge, each cut away where the next one overlaps it. */\nexport const GlassAvatarGroup = forwardRef<HTMLDivElement, GlassAvatarGroupProps>(\n  ({ children, className, max, size = 'md', ...props }, forwardedRef) => {\n    const items = Children.toArray(children);\n    const shown = max === undefined ? items : items.slice(0, Math.max(0, max));\n    const hidden = items.length - shown.length;\n\n    return (\n      <div\n        role=\"group\"\n        {...props}\n        ref={forwardedRef}\n        className={clsx('lg-avatar-group', className)}\n        data-size={size}\n      >\n        {shown}\n        {hidden > 0 ? (\n          <span aria-label={`${hidden} more`} className=\"lg-avatar\" data-size={size} role=\"img\">\n            <span aria-hidden className=\"lg-avatar-face lg-avatar-more\">\n              +{hidden}\n            </span>\n          </span>\n        ) : null}\n      </div>\n    );\n  },\n);\n\nGlassAvatarGroup.displayName = 'GlassAvatarGroup';\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glass-avatar.tsx"
+    }
+  ],
+  "meta": {
+    "sourceModules": [
+      "avatar"
+    ]
+  },
+  "type": "registry:ui"
+}

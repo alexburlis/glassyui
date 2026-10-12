@@ -1,0 +1,26 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glass-badge",
+  "title": "Glass Badge",
+  "description": "A small tinted glass label for status, counts and categories.",
+  "dependencies": [
+    "clsx"
+  ],
+  "registryDependencies": [
+    "@glassyui/glass-provider"
+  ],
+  "files": [
+    {
+      "path": "registry/glassyui/glass-badge.tsx",
+      "content": "import './styles/liquid.css';\n\nimport clsx from 'clsx';\nimport { forwardRef } from 'react';\nimport type { HTMLAttributes } from 'react';\n\nexport type GlassBadgeTone = 'neutral' | 'blue' | 'green' | 'orange' | 'red' | 'purple';\n\nexport type GlassBadgeProps = HTMLAttributes<HTMLSpanElement> & {\n  /** Leading status dot in the tone colour. */\n  dot?: boolean;\n  tone?: GlassBadgeTone;\n};\n\nexport const GlassBadge = forwardRef<HTMLSpanElement, GlassBadgeProps>(\n  ({ children, className, dot = false, tone = 'neutral', ...props }, forwardedRef) => (\n    <span ref={forwardedRef} data-tone={tone} className={clsx('lg-badge', className)} {...props}>\n      {dot ? <span aria-hidden className=\"lg-badge-dot\" /> : null}\n      {children}\n    </span>\n  ),\n);\n\nGlassBadge.displayName = 'GlassBadge';\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glass-badge.tsx"
+    }
+  ],
+  "meta": {
+    "sourceModules": [
+      "badge"
+    ]
+  },
+  "type": "registry:ui"
+}

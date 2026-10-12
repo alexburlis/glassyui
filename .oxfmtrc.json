@@ -1,0 +1,30 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "ignorePatterns": [
+    "public/r/",
+    "registry/glassyui-shadcn/*/*.tsx",
+    "!registry/glassyui-shadcn/*/glassy-button-root.tsx",
+    "fixtures/shadcn-theme-consumer/"
+  ],
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "tabWidth": 2,
+  "sortImports": false,
+  "sortPackageJson": false,
+  "overrides": [
+    {
+      "files": ["**/*.{md,mdx,markdown,mdown}"],
+      "options": {
+        "printWidth": 80,
+        "proseWrap": "always"
+      }
+    },
+    {
+      "files": ["AGENTS.md"],
+      "options": {
+        "proseWrap": "preserve"
+      }
+    }
+  ]
+}

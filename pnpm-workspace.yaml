@@ -1,0 +1,7 @@
+minimumReleaseAgeExclude:
+  - shadcn@4.14.1
+
+onlyBuiltDependencies:
+  - '@sentry/cli'
+  - sharp
+  - unrs-resolver

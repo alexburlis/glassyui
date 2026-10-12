@@ -1,0 +1,3996 @@
+@import 'tailwindcss';
+@import '../styles/liquid.css';
+@import '../styles/analytics-consent.css';
+
+/*
+  Site styles. The library owns every --lg-* token and .lg-* class; the site
+  adds the documentation site around it. These rules are unlayered, so they win
+  over the library's layered rules: target site classes, never bare .lg-*.
+*/
+
+:root {
+  color-scheme: dark;
+
+  --site-font:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', Roboto, Inter,
+    system-ui, sans-serif;
+  --site-font-display:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', Roboto,
+    Inter, system-ui, sans-serif;
+  --site-font-mono:
+    ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+
+  /* Charcoal, not black: a pure black page leaves glass nothing to bend and flattens every
+     card. Tiles sit one step above it, and the dimmest text keeps 4.5:1 on both. */
+  --site-bg: #1c1c1e;
+  --site-tile: #2c2c2e;
+  --site-text: #f5f5f7;
+  --site-logo: #fff;
+  --site-text-2: #b8b8be;
+  --site-text-3: #a8a8af;
+  --site-link: #78b7ff;
+  --site-hairline: rgb(255 255 255 / 0.12);
+  --site-fill: rgb(255 255 255 / 0.08);
+  --site-fill-strong: rgb(255 255 255 / 0.14);
+  --site-legible-tint: rgb(28 28 30 / 0.62);
+  --site-wallpaper: url('/wallpapers/vermilion-dark.svg');
+  --site-stage: linear-gradient(#333337, #1d1d20);
+  --lab-wallpaper: url('/wallpapers/vermilion-dark.svg');
+  --site-shadow: 0 30px 80px -30px rgb(0 0 0 / 0.8);
+
+  --site-syntax-plain: #f5f5f7;
+  --site-syntax-keyword: #ff9a76;
+  --site-syntax-string: #ff8170;
+  --site-syntax-comment: #aaaab0;
+  --site-syntax-number: #d9c97c;
+  --site-syntax-tag: #5dd8ff;
+  --site-syntax-attr: #ffc3a4;
+}
+
+:root[data-lg-theme='light'] {
+  color-scheme: light;
+
+  --site-bg: #faf9f7;
+  --site-tile: #fff;
+  --site-text: #222224;
+  --site-logo: #000;
+  --site-text-2: #66666a;
+  --site-text-3: #66666a;
+  --site-link: #005ec6;
+  --site-hairline: rgb(0 0 0 / 0.1);
+  --site-fill: rgb(0 0 0 / 0.05);
+  --site-fill-strong: rgb(0 0 0 / 0.08);
+  --site-legible-tint: rgb(255 255 255 / 0.66);
+  --site-wallpaper: url('/wallpapers/vermilion-light.svg');
+  --site-stage: linear-gradient(#fbfbfc, #e2e4e8);
+  --lab-wallpaper: url('/wallpapers/vermilion-light.svg');
+  --site-shadow: 0 30px 80px -36px rgb(0 0 0 / 0.35);
+
+  --site-syntax-plain: #222224;
+  --site-syntax-keyword: #a5361f;
+  --site-syntax-string: #c41a16;
+  --site-syntax-comment: #707074;
+  --site-syntax-number: #8d5300;
+  --site-syntax-tag: #0b4f79;
+  --site-syntax-attr: #a44122;
+}
+
+/* ------------------------------------------------------------------ base */
+
+body {
+  min-height: 100vh;
+  background: var(--site-bg);
+  color: var(--site-text);
+  font-family: var(--site-font);
+  font-size: 17px;
+  line-height: 1.47059;
+  letter-spacing: -0.01em;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgb(0 103 217 / 0.3);
+}
+
+/* The header is fixed. A control scrolled into view for focus has to stop below it, not behind
+   (WCAG 2.4.11), so its scroll margin clears it. */
+main :focus {
+  scroll-margin-top: 84px;
+}
+
+.skip-link {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1000;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: #0067d9;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-160%);
+}
+
+.skip-link:focus {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: 3px;
+}
+
+/* Site links only: a global rule would outrank the library's own focus styles. */
+:is(
+  .site-brand,
+  .site-footer a,
+  .home-section-link,
+  .docs-sidebar a,
+  .docs-toc a,
+  .docs-pagination a,
+  .docs-mobile-nav summary,
+  .docs-mobile-nav a,
+  .docs-page-header > p a,
+  .docs-section > p a,
+  .docs-platform-pane > p a
+):focus-visible {
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: 2px;
+}
+
+.site-glyph {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+.site-glyph--small {
+  width: 14px;
+  height: 14px;
+}
+
+.app-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ------------------------------------------------------------ navigation */
+
+.site-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px;
+  color: var(--site-text);
+  font-family: var(--site-font-display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.012em;
+  white-space: nowrap;
+}
+
+.site-brand-mark {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  color: var(--site-logo);
+}
+
+.site-nav-github {
+  gap: 6px;
+}
+
+.site-nav-github-mark {
+  width: 15px;
+  height: 15px;
+}
+
+.site-icon-button {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+}
+
+/* The search sits between the links and the theme switch: a quiet pill that shows its shortcut. */
+.site-search {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  margin: 0 4px 0 8px;
+  padding: 0 6px 0 11px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--site-fill);
+  box-shadow: inset 0 0 0 1px var(--site-hairline);
+  color: var(--site-text-2);
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.site-search:hover {
+  background: var(--site-fill-strong);
+  color: var(--site-text);
+}
+
+.site-search:active {
+  scale: 0.97;
+}
+
+.site-search:focus-visible {
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: 2px;
+}
+
+/* The pill's fill greys the header under the label, and what scrolls beneath shows through, so the
+   page's grey text can fall short of 4.5:1 on it. Only the pill needs the deeper grey. */
+@media (min-width: 1024px) {
+  :root[data-lg-theme='light'] .site-search {
+    color: #515154;
+  }
+
+  :root[data-lg-theme='light'] .site-search:hover {
+    color: #222224;
+  }
+}
+
+.site-search-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.site-search-label {
+  min-width: 3.25rem;
+  text-align: start;
+}
+
+.site-search-keys {
+  gap: 3px;
+}
+
+.site-search-keys .lg-kbd {
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.3125rem;
+  border-radius: 0.3125rem;
+  font-size: 0.6875rem;
+}
+
+/* The server draws the command key, and a browser on another system swaps in Ctrl once it has
+   hydrated. The modifier key is as wide as Ctrl either way, so the header does not move. */
+.site-search-keys .lg-kbd:first-child {
+  min-width: 2.25rem;
+}
+
+.site-search-note {
+  margin: 0;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--lg-border);
+  color: var(--lg-muted-foreground);
+  font-size: 13px;
+}
+
+.site-search-hints {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding: 10px 18px;
+  border-top: 1px solid var(--lg-border);
+  color: var(--lg-muted-foreground);
+  font-size: 12px;
+}
+
+.site-search-hints span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.site-search-hints .lg-kbd {
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.3125rem;
+  border-radius: 0.3125rem;
+  font-size: 0.6875rem;
+}
+
+/* Below a laptop the pill is an icon. */
+@media (max-width: 1023px) {
+  .site-search {
+    width: 36px;
+    height: 36px;
+    margin: 0;
+    padding: 0;
+    justify-content: center;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .site-search-icon {
+    width: 17px;
+    height: 17px;
+  }
+
+  .site-search-label,
+  .site-search-keys {
+    display: none;
+  }
+}
+
+/* Sun and moon share one cell, so the theme switch can turn one into the other. */
+.site-theme-icons {
+  display: grid;
+}
+
+.site-theme-icon {
+  grid-area: 1 / 1;
+  width: 17px;
+  height: 17px;
+}
+
+:root:not([data-lg-theme='light']) .site-theme-icon--sun,
+:root[data-lg-theme='light'] .site-theme-icon--moon {
+  opacity: 0;
+  rotate: -90deg;
+  scale: 0.5;
+}
+
+/* ------------------------------------------------------------------ hero */
+
+.home-hero {
+  padding: clamp(88px, 12vh, 124px) 24px clamp(40px, 5vh, 56px);
+  text-align: center;
+}
+
+/* One line above the title says what is new, and links to it. */
+.home-announce {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  margin-bottom: 28px;
+  padding: 0 14px 0 4px;
+  border-radius: 999px;
+  background: var(--site-fill);
+  box-shadow: inset 0 0 0 1px var(--site-hairline);
+  color: var(--site-text-2);
+  font-size: 13px;
+  letter-spacing: -0.006em;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.home-announce-short {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .home-announce {
+    max-width: 100%;
+    font-size: 12.5px;
+  }
+
+  .home-announce-long {
+    display: none;
+  }
+
+  .home-announce-short {
+    display: inline;
+  }
+}
+
+.home-announce:hover {
+  background: var(--site-fill-strong);
+  color: var(--site-text);
+}
+
+/* The pill's own fill is darker than the page, so the page's grey text falls short of 4.5:1. */
+:root[data-lg-theme='light'] .home-announce {
+  color: #515154;
+}
+
+:root[data-lg-theme='light'] .home-announce:hover {
+  color: #222224;
+}
+
+.home-announce:focus-visible {
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: 3px;
+}
+
+.home-announce-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgb(0 103 217 / 0.24);
+  color: #b2d6ff;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+:root[data-lg-theme='light'] .home-announce-tag {
+  background: rgb(0 103 217 / 0.12);
+  color: #0054b3;
+}
+
+.home-title {
+  font-family: var(--site-font-display);
+  font-size: clamp(3rem, 7.2vw, 5rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.home-lead {
+  max-width: 600px;
+  margin: 24px auto 0;
+  color: var(--site-text-2);
+  font-size: clamp(1.1875rem, 1.6vw, 1.3125rem);
+  line-height: 1.381;
+  letter-spacing: 0.011em;
+  text-wrap: pretty;
+}
+
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px 32px;
+  margin-top: 32px;
+}
+
+.home-actions .lg-button {
+  padding: 12px 24px;
+  font-size: 17px;
+  letter-spacing: -0.022em;
+}
+
+.home-actions .home-section-link {
+  margin-top: 0;
+}
+
+/* The command to run, one click from the clipboard. */
+.copy-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  margin-top: 28px;
+  padding: 5px 5px 5px 18px;
+  border-radius: 999px;
+  background: var(--site-fill);
+  box-shadow: inset 0 0 0 1px var(--site-hairline);
+  text-align: start;
+}
+
+.copy-chip-command {
+  min-width: 0;
+  overflow-x: auto;
+  color: var(--site-text);
+  font-family: var(--site-font-mono);
+  font-size: 13px;
+  letter-spacing: 0;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+
+.copy-chip-command::-webkit-scrollbar {
+  display: none;
+}
+
+.copy-chip-prompt {
+  margin-right: 10px;
+  color: var(--site-text-2);
+  user-select: none;
+}
+
+:root[data-lg-theme='light'] .copy-chip-prompt {
+  color: #515154;
+}
+
+.copy-chip-button {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--site-text-2);
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    scale 320ms var(--lg-spring);
+}
+
+.copy-chip-button:hover {
+  background: var(--site-fill-strong);
+  color: var(--site-text);
+}
+
+.copy-chip-button:active {
+  scale: 0.9;
+}
+
+.copy-chip-button:focus-visible {
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: 1px;
+}
+
+.copy-chip-icon {
+  width: 17px;
+  height: 17px;
+  grid-area: 1 / 1;
+  transition:
+    opacity 180ms ease,
+    scale 300ms var(--lg-spring);
+}
+
+.copy-chip-icon--done {
+  color: #30d158;
+  opacity: 0;
+  scale: 0.6;
+}
+
+:root[data-lg-theme='light'] .copy-chip-icon--done {
+  color: #248a3d;
+}
+
+.copy-chip[data-state='copied'] .copy-chip-icon--copy {
+  opacity: 0;
+  scale: 0.6;
+}
+
+.copy-chip[data-state='copied'] .copy-chip-icon--done {
+  opacity: 1;
+  scale: 1;
+}
+
+@media (max-width: 520px) {
+  .copy-chip {
+    border-radius: 22px;
+  }
+
+  .copy-chip-command {
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  /* In the centred hero a wrapped command centres too, in two even lines. */
+  .home-hero .copy-chip-command {
+    text-align: center;
+    text-wrap: balance;
+  }
+}
+
+/* ------------------------------------------------------------------ desk */
+
+/* The desk is never taller than the screen, so the keynote can pin it whole. */
+.home-desk {
+  position: relative;
+  isolation: isolate;
+}
+
+.home-desk-frame {
+  position: relative;
+  container: desk / inline-size;
+  max-width: min(1200px, calc((100svh - 120px) * 1.6));
+  margin: 0 auto;
+}
+
+.home-desk-caption {
+  max-width: 560px;
+  margin: 20px auto 0;
+  color: var(--site-text-3);
+  font-size: 14px;
+  line-height: 1.43;
+  text-align: center;
+}
+
+/* The screen's shadow greys the light page under the caption; a deeper grey
+   keeps it at 4.5:1. */
+:root[data-lg-theme='light'] .home-desk-caption {
+  color: #515154;
+}
+
+/* The desk's own Vermilion runs its ribbons under both widgets and the dock, so every pane of
+   glass on it has an edge to bend. */
+.desk-screen {
+  --desk-wallpaper: url('/wallpapers/vermilion-desk-dark.svg');
+  --desk-highlight: rgb(255 255 255 / 0.16);
+  --desk-chip: rgb(255 255 255 / 0.14);
+
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  /* 16:10 like a laptop display, never shorter than the widgets. Not
+     aspect-ratio: its min-height would become a 960px min-width. */
+  height: max(600px, 62.5cqi);
+  border-radius: clamp(18px, 2.6cqi, 30px);
+  color: var(--lg-foreground);
+  font-size: 13px;
+  line-height: 1.3;
+  letter-spacing: -0.006em;
+  box-shadow:
+    0 0 0 1px var(--site-hairline),
+    var(--site-shadow);
+}
+
+:root[data-lg-theme='light'] .desk-screen {
+  --desk-wallpaper: url('/wallpapers/vermilion-desk-light.svg');
+  --desk-highlight: rgb(0 0 0 / 0.08);
+  --desk-chip: rgb(0 0 0 / 0.08);
+}
+
+/* Ember and Lagoon are Tide with its hue turned, baked into their own files
+   so the glass canvas refracts exactly what the CSS shows. */
+.desk-screen[data-wallpaper='tide'] {
+  --desk-wallpaper: url('/wallpapers/tide-dark.svg');
+}
+:root[data-lg-theme='light'] .desk-screen[data-wallpaper='tide'] {
+  --desk-wallpaper: url('/wallpapers/tide-light.svg');
+}
+
+.desk-screen[data-wallpaper='ember'] {
+  --desk-wallpaper: url('/wallpapers/ember-dark.svg');
+}
+
+.desk-screen[data-wallpaper='lagoon'] {
+  --desk-wallpaper: url('/wallpapers/lagoon-dark.svg');
+}
+
+:root[data-lg-theme='light'] .desk-screen[data-wallpaper='ember'] {
+  --desk-wallpaper: url('/wallpapers/ember-light.svg');
+}
+
+:root[data-lg-theme='light'] .desk-screen[data-wallpaper='lagoon'] {
+  --desk-wallpaper: url('/wallpapers/lagoon-light.svg');
+}
+
+/* Display brightness: a black veil over everything on the screen. */
+.desk-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: #000;
+  opacity: var(--desk-dim, 0);
+  pointer-events: none;
+}
+
+.desk-menubar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 34px;
+  padding: 0 14px 0 8px;
+  font-weight: 500;
+}
+
+:root:not([data-lg-theme='light']) .desk-menubar {
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+}
+
+.desk-menubar-menus {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.desk-menubar-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 24px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: default;
+}
+
+.desk-menubar-item:hover,
+.desk-menubar-item[data-state='open'] {
+  background: var(--desk-highlight);
+}
+
+.desk-menubar-item:focus-visible {
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: 1px;
+}
+
+.desk-menubar-item--app {
+  font-weight: 700;
+}
+
+.desk-menubar-mark {
+  width: 16px;
+  height: 16px;
+  color: var(--site-logo);
+}
+
+.desk-status {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.desk-status-wifi {
+  display: inline-flex;
+  transition: opacity 200ms ease;
+}
+
+.desk-status-wifi .site-glyph {
+  width: 16px;
+  height: 16px;
+}
+
+.desk-status-wifi[data-on='false'] {
+  opacity: 0.35;
+}
+
+.desk-status-battery {
+  width: 25px;
+  height: 12px;
+}
+
+.desk-widgets {
+  position: absolute;
+  top: 56px;
+  right: 28px;
+  left: 28px;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.desk-widget {
+  --lg-panel-radius: 24px;
+
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+/* Without the canvas, frost alone cannot hold the small text over the
+   wallpaper's brightest bands, so the CSS face carries a deeper tint. */
+.desk-widget::before {
+  background-color: var(--site-legible-tint);
+}
+
+.desk-now-playing {
+  width: clamp(240px, 30cqi, 320px);
+}
+
+.desk-now-playing-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.desk-art {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  background-size: cover;
+  box-shadow:
+    0 8px 18px -8px rgb(0 0 0 / 0.55),
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.22);
+}
+
+.desk-track {
+  min-width: 0;
+}
+
+.desk-track-title,
+.desk-track-artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.desk-track-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.016em;
+}
+
+.desk-track-artist {
+  color: var(--lg-muted-foreground);
+}
+
+.desk-progress {
+  --lg-slider-thumb-width: 1.25rem;
+  --lg-slider-thumb-height: 0.875rem;
+  --lg-slider-track-size: 0.25rem;
+}
+
+.desk-times {
+  display: flex;
+  justify-content: space-between;
+  margin-top: -6px;
+  color: var(--lg-muted-foreground);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.desk-transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.desk-transport-button {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+}
+
+.desk-transport-button .site-glyph {
+  width: 22px;
+  height: 22px;
+}
+
+.desk-transport-button--main .site-glyph {
+  width: 28px;
+  height: 28px;
+}
+
+.desk-control-center {
+  width: clamp(260px, 32cqi, 330px);
+  gap: 14px;
+}
+
+.desk-toggles {
+  display: grid;
+  gap: 4px;
+}
+
+.desk-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+}
+
+.desk-toggle-glyph {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--desk-chip);
+  transition:
+    background-color 200ms ease,
+    color 200ms ease;
+}
+
+.desk-toggle-glyph .site-glyph {
+  width: 16px;
+  height: 16px;
+}
+
+.desk-toggle-glyph[data-on='true'] {
+  background: var(--lg-accent);
+  color: #fff;
+}
+
+.desk-toggle-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.desk-toggle-text label {
+  font-weight: 600;
+  user-select: none;
+}
+
+.desk-toggle-text span {
+  color: var(--lg-muted-foreground);
+  font-size: 11px;
+}
+
+.desk-control {
+  display: grid;
+  gap: 6px;
+}
+
+.desk-control-label {
+  color: var(--lg-muted-foreground);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.desk-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.desk-slider-row .site-glyph {
+  width: 16px;
+  height: 16px;
+}
+
+.desk-slider-row .site-glyph--small {
+  width: 12px;
+  height: 12px;
+}
+
+.desk-slider {
+  flex: 1;
+}
+
+.desk-dock {
+  --lg-dock-size: clamp(40px, 5cqi, 56px);
+
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  z-index: 3;
+  translate: -50% 0;
+}
+
+/* On a phone the widgets stack, and the dock keeps four apps. */
+@container desk (width < 720px) {
+  .desk-screen {
+    height: auto;
+  }
+
+  .desk-widgets {
+    position: relative;
+    top: auto;
+    right: auto;
+    left: auto;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px 16px 112px;
+  }
+
+  .desk-widget {
+    width: auto;
+  }
+
+  .desk-dock-extra,
+  .desk-status-day,
+  .desk-status-battery {
+    display: none;
+  }
+}
+
+.desk-settings-title {
+  font-family: var(--site-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.desk-settings-description {
+  margin-top: 4px;
+  color: var(--lg-muted-foreground);
+  font-size: 14px;
+}
+
+.desk-settings-rows {
+  display: grid;
+  margin-top: 20px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--lg-control-surface);
+}
+
+.desk-settings-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  min-height: 52px;
+  padding: 8px 12px 8px 16px;
+  font-size: 15px;
+}
+
+.desk-settings-row + .desk-settings-row {
+  box-shadow: inset 0 0.5px 0 var(--lg-border);
+}
+
+.desk-settings-row label {
+  user-select: none;
+}
+
+.desk-settings-row .lg-segmented {
+  flex: none;
+  width: 200px;
+  max-width: 100%;
+}
+
+.desk-settings-slider {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  width: 200px;
+  max-width: 100%;
+}
+
+.desk-settings-slider .lg-slider {
+  flex: 1;
+}
+
+.desk-settings-value {
+  min-width: 3.4ch;
+  color: var(--lg-muted-foreground);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ----------------------------------------------------------------- phone */
+
+/* The React Native screen on iOS, in a phone drawn to the proportions of a 6.3-inch model: a
+   titanium band, a thin black border, the screen and its island. It stands beside the features
+   the keynote's turn shows when motion is reduced. */
+.home-phone {
+  --phone-width: min(220px, 60cqi);
+  --phone-band: calc(var(--phone-width) * 0.013);
+  --phone-bezel: calc(var(--phone-width) * 0.021);
+  --phone-radius: calc(var(--phone-width) * 0.165);
+  --phone-frame: linear-gradient(140deg, #f2f2f4, #b3b3b8 26%, #ededef 50%, #a2a2a7 76%, #dddde0);
+  --phone-key: #b0b0b5;
+
+  position: relative;
+  z-index: 1;
+  width: var(--phone-width);
+  aspect-ratio: 71.5 / 149.6;
+  margin: 32px auto 0;
+  padding: var(--phone-band);
+  border-radius: var(--phone-radius);
+  background: var(--phone-frame);
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.28),
+    0 16px 28px -14px rgb(0 0 0 / 0.4),
+    0 48px 90px -28px rgb(0 0 0 / 0.42);
+}
+
+:root:not([data-lg-theme='light']) .home-phone {
+  --phone-frame: linear-gradient(140deg, #6c6c72, #2b2b2f 26%, #5c5c62 50%, #1e1e21 76%, #4a4a50);
+  --phone-key: #3a3a3f;
+
+  box-shadow:
+    0 0 0 0.5px rgb(255 255 255 / 0.1),
+    0 16px 28px -14px rgb(0 0 0 / 0.7),
+    0 48px 90px -28px rgb(0 0 0 / 0.75);
+}
+
+/* The keys stand just proud of the band: the action button and volume on the left, the side
+   button on the right. */
+.home-phone-keys::before,
+.home-phone-keys::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: -1;
+  width: calc(var(--phone-width) * 0.012);
+}
+
+.home-phone-keys::before {
+  left: calc(var(--phone-width) * -0.01);
+  background: linear-gradient(
+    transparent 17.6%,
+    var(--phone-key) 17.6% 22.4%,
+    transparent 22.4% 26.6%,
+    var(--phone-key) 26.6% 34.4%,
+    transparent 34.4% 37%,
+    var(--phone-key) 37% 44.8%,
+    transparent 44.8%
+  );
+}
+
+.home-phone-keys::after {
+  right: calc(var(--phone-width) * -0.01);
+  background: linear-gradient(transparent 27%, var(--phone-key) 27% 39.4%, transparent 39.4%);
+}
+
+.home-phone-glass {
+  display: block;
+  height: 100%;
+  padding: var(--phone-bezel);
+  border-radius: calc(var(--phone-radius) - var(--phone-band));
+  background: #000;
+}
+
+.home-phone-screen {
+  position: relative;
+  display: block;
+  height: 100%;
+  overflow: hidden;
+  border-radius: calc(var(--phone-radius) - var(--phone-band) - var(--phone-bezel));
+  background: #000;
+}
+
+/* A faint reflection across the cover glass. */
+.home-phone-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    rgb(255 255 255 / 0.16),
+    rgb(255 255 255 / 0) 32%,
+    rgb(255 255 255 / 0) 64%,
+    rgb(255 255 255 / 0.06)
+  );
+  pointer-events: none;
+}
+
+.home-phone-shot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+:root[data-lg-theme='light'] :is(.home-phone-shot, .mobile-phone-shot)[data-theme='dark'],
+:root:not([data-lg-theme='light']) :is(.home-phone-shot, .mobile-phone-shot)[data-theme='light'] {
+  display: none;
+}
+
+/* The island: 126 by 37 points, 11 points below the top of a screen 402 points wide. */
+.home-phone-island {
+  position: absolute;
+  top: calc(var(--phone-width) * 0.0255);
+  left: 50%;
+  width: 31.3%;
+  height: calc(var(--phone-width) * 0.0858);
+  border-radius: 999px;
+  background: #000;
+  translate: -50% 0;
+}
+
+/* ------------------------------------------------------------------- lab */
+
+.home-lab-frame {
+  container: lab / inline-size;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Drops on the left, the optics that shape them on the right. */
+.lab {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 20px;
+  height: clamp(560px, 50cqi, 640px);
+  padding: 20px;
+  overflow: hidden;
+  border-radius: clamp(18px, 2.6cqi, 30px);
+  color: var(--lg-foreground);
+  box-shadow:
+    0 0 0 1px var(--site-hairline),
+    var(--site-shadow);
+}
+
+.lab-stage {
+  --lab-unit: 1px;
+
+  position: relative;
+}
+
+/* A drop sits at its centre, measured in lab units from the middle of the
+   stage, and never leaves the stage. */
+.lab-drop {
+  position: absolute;
+  top: clamp(
+    0px,
+    calc(50% + (var(--lab-y) - var(--lab-d) / 2) * var(--lab-unit)),
+    calc(100% - var(--lab-d) * var(--lab-unit))
+  );
+  left: clamp(
+    0px,
+    calc(50% + (var(--lab-x) - var(--lab-d) / 2) * var(--lab-unit)),
+    calc(100% - var(--lab-d) * var(--lab-unit))
+  );
+  width: calc(var(--lab-d) * var(--lab-unit));
+  height: calc(var(--lab-d) * var(--lab-unit));
+  border-radius: 50%;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  transition:
+    top 0.6s var(--lg-spring),
+    left 0.6s var(--lg-spring);
+}
+
+.lab-drop[data-dragging] {
+  cursor: grabbing;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-drop {
+    transition: none;
+  }
+}
+
+[data-lg-reduce-motion='1'] .lab-drop {
+  transition: none;
+}
+
+.lab-inspector {
+  --lg-panel-radius: 24px;
+
+  display: grid;
+  align-self: center;
+  gap: 14px;
+  padding: 20px;
+}
+
+/* Without the canvas, frost alone cannot hold the small text above the
+   rings, so the CSS face carries a deeper tint. */
+.lab-inspector::before {
+  background-color: var(--site-legible-tint);
+}
+
+.lab-setting {
+  display: grid;
+  gap: 6px;
+}
+
+.lab-setting-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.lab-setting-value {
+  color: var(--lg-muted-foreground);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.lab-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+/* On a phone the controls go under a shorter stage with smaller drops. */
+@container lab (width < 720px) {
+  .lab {
+    grid-template-rows: 380px auto;
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+  }
+
+  .lab-stage {
+    --lab-unit: 0.68px;
+  }
+
+  .lab-inspector {
+    align-self: stretch;
+  }
+}
+
+/* ---------------------------------------------------------------- window */
+
+/* A band of wallpaper with a glass pane in it. On the home page WebGL draws
+   the pane; the GlassSurface docs show the SVG version. clip-path clips a
+   fixed wallpaper to the band without becoming its containing block, so the
+   wallpaper stays put while the page scrolls. */
+.glass-window {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: clamp(600px, 96vh, 940px);
+  padding: 120px 24px;
+  clip-path: inset(0);
+}
+
+.home-window {
+  margin-top: clamp(96px, 12vw, 160px);
+}
+
+.glass-window--example {
+  margin-bottom: 16px;
+  border-radius: 28px;
+  clip-path: inset(0 round 28px);
+}
+
+.glass-window-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.glass-window-wallpaper {
+  position: absolute;
+  inset: 0;
+  background: var(--site-wallpaper) center / cover no-repeat;
+}
+
+.glass-window-pane {
+  --lg-panel-radius: 44px;
+
+  display: grid;
+  gap: 20px;
+  justify-items: center;
+  width: min(100%, 880px);
+  padding: clamp(48px, 7vw, 88px) clamp(28px, 6vw, 80px);
+  text-align: center;
+}
+
+/* Without the canvas, hold readable text over the artwork while keeping the
+   refracted scene and its rim. The canvas keeps scene text legible itself. */
+.glass-window-pane::before {
+  background-color: var(--site-legible-tint);
+}
+
+.glass-window-title {
+  font-family: var(--site-font-display);
+  font-size: clamp(2.5rem, 5.6vw, 4rem);
+  font-weight: 600;
+  line-height: 1.0625;
+  letter-spacing: -0.009em;
+  text-wrap: balance;
+}
+
+.glass-window-title-accent {
+  display: block;
+}
+
+.glass-window-lead {
+  max-width: 560px;
+  color: var(--lg-foreground);
+  font-size: clamp(1.1875rem, 1.6vw, 1.375rem);
+  line-height: 1.4;
+  letter-spacing: -0.004em;
+  text-wrap: pretty;
+}
+
+@media (max-width: 639px) {
+  .glass-window {
+    min-height: 560px;
+    padding: 96px 16px;
+  }
+
+  .glass-window--example {
+    border-radius: 22px;
+    clip-path: inset(0 round 22px);
+  }
+
+  .glass-window-pane {
+    --lg-panel-radius: 32px;
+  }
+}
+
+/* -------------------------------------------------------------- sections */
+
+.home-section {
+  padding: clamp(96px, 12vw, 160px) 24px 0;
+}
+
+.home-section-header {
+  max-width: 980px;
+  margin: 0 auto 48px;
+  text-align: center;
+}
+
+.home-section-title {
+  font-family: var(--site-font-display);
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  font-weight: 600;
+  line-height: 1.07;
+  letter-spacing: -0.005em;
+  text-wrap: balance;
+}
+
+.home-section-lead {
+  max-width: 680px;
+  margin: 16px auto 0;
+  color: var(--site-text-2);
+  font-size: clamp(1.1875rem, 1.5vw, 1.3125rem);
+  line-height: 1.381;
+  letter-spacing: 0.011em;
+  text-wrap: pretty;
+}
+
+.home-section-link {
+  display: inline-block;
+  margin-top: 16px;
+  color: var(--site-link);
+  font-size: 17px;
+}
+
+.home-section-link:hover {
+  text-decoration: underline;
+}
+
+/* The last word before the footer: one benefit, two ways in. */
+.home-cta {
+  text-align: center;
+}
+
+.home-cta .home-section-title {
+  margin: 0 auto;
+  max-width: 980px;
+}
+
+.home-cta .home-section-lead {
+  margin-top: 16px;
+}
+
+.home-cta-github {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-cta-mark {
+  width: 18px;
+  height: 18px;
+}
+
+/* --------------------------------------------------- template window bar */
+
+.home-template-bar {
+  display: flex;
+  gap: 7px;
+  padding: 12px 14px;
+  background: #2a2a2c;
+}
+
+.home-template-bar i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.2);
+}
+
+:root[data-lg-theme='light'] .home-template-bar {
+  background: #e6e6ea;
+}
+
+:root[data-lg-theme='light'] .home-template-bar i {
+  background: rgb(0 0 0 / 0.16);
+}
+
+/* ----------------------------------------------------------------- bento */
+
+.bento {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.bento-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+  padding: 32px;
+  border-radius: 28px;
+  background: var(--site-tile);
+}
+
+.bento-tile h3 {
+  font-family: var(--site-font-display);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.14;
+  letter-spacing: 0.007em;
+}
+
+.bento-tile > p,
+.bento-copy > p {
+  max-width: 460px;
+  color: var(--site-text-2);
+  text-wrap: pretty;
+}
+
+.bento-tile--lens {
+  grid-column: 1 / 5;
+  grid-row: 1 / 3;
+  padding: 0;
+}
+
+.bento-tile--engines {
+  grid-column: 5 / 7;
+  grid-row: 1;
+  container-type: inline-size;
+}
+
+.bento-tile--settings {
+  grid-column: 5 / 7;
+  grid-row: 2;
+}
+
+.bento-tile--keyboard {
+  grid-column: 1 / 4;
+}
+
+.bento-tile--source {
+  grid-column: 4 / 7;
+}
+
+.bento-copy {
+  display: grid;
+  gap: 12px;
+  padding: 32px 32px 0;
+}
+
+.bento-lens {
+  display: grid;
+  flex: 1;
+  min-height: 340px;
+  margin-top: 12px;
+}
+
+.bento-lens-scene {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background:
+    linear-gradient(rgb(255 255 255 / 0.14) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, rgb(255 255 255 / 0.14) 1px, transparent 1px) 0 0 / 24px 24px,
+    var(--site-wallpaper) center / cover no-repeat;
+}
+
+.bento-lens-scene p {
+  color: #fff;
+  font-family: var(--site-font-display);
+  font-size: clamp(3rem, 6vw, 5rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  text-shadow: 0 2px 24px rgb(0 0 0 / 0.3);
+}
+
+.bento-badges,
+.bento-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+/* Too narrow for all four engines on one row (they need about 300 px), they pair up rather than
+   leave one alone below. */
+@container (max-width: 305px) {
+  .bento-tile--engines .bento-badges {
+    display: grid;
+    grid-template-columns: repeat(2, max-content);
+  }
+}
+
+.bento-switches {
+  display: grid;
+  margin-top: auto;
+}
+
+.bento-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+}
+
+.bento-switch + .bento-switch {
+  border-top: 1px solid var(--site-hairline);
+}
+
+.bento-switch label {
+  font-size: 15px;
+  user-select: none;
+}
+
+/* The keycaps shrink rather than wrap on a phone. */
+.bento-keys {
+  flex-wrap: nowrap;
+}
+
+.bento-key {
+  display: grid;
+  flex: 0 1 56px;
+  place-items: center;
+  min-width: 0;
+  height: 56px;
+  padding: 0 8px;
+  border-radius: 12px;
+  background: linear-gradient(#2c2c2e, #1c1c1e);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    0 1px 0 rgb(0 0 0 / 0.6),
+    0 6px 14px -8px rgb(0 0 0 / 0.8);
+  color: var(--site-text);
+  font-family: var(--site-font);
+  font-size: 17px;
+  font-weight: 500;
+  transition:
+    translate 120ms ease,
+    box-shadow 120ms ease;
+}
+
+:root[data-lg-theme='light'] .bento-key {
+  background: linear-gradient(#fff, #f2f2f4);
+  box-shadow:
+    inset 0 -1px 0 rgb(0 0 0 / 0.08),
+    0 0 0 1px rgb(0 0 0 / 0.08),
+    0 6px 14px -8px rgb(0 0 0 / 0.3);
+}
+
+.bento-key--wide {
+  flex-basis: 88px;
+}
+
+.bento-key[data-pressed] {
+  translate: 0 1px;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.08),
+    0 0 0 2px var(--site-link);
+}
+
+:root[data-lg-theme='light'] .bento-key[data-pressed] {
+  box-shadow: 0 0 0 2px var(--site-link);
+}
+
+.bento-keyboard-demo {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  min-height: 96px;
+}
+
+/* Reads like the CLI's own output: one line per file it writes. */
+.bento-files {
+  display: grid;
+  gap: 2px;
+  margin-top: auto;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: var(--site-bg);
+  font-family: var(--site-font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  letter-spacing: 0;
+}
+
+.bento-files li {
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.bento-files li::before {
+  content: '+';
+  color: #30d158;
+}
+
+:root[data-lg-theme='light'] .bento-files li::before {
+  color: #248a3d;
+}
+
+.bento-files code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1023px) {
+  .bento {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bento-tile--lens {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+
+  .bento-tile--engines,
+  .bento-tile--settings,
+  .bento-tile--keyboard,
+  .bento-tile--source {
+    grid-column: auto;
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 639px) {
+  .bento {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bento-tile {
+    padding: 24px;
+    border-radius: 24px;
+  }
+
+  .bento-tile--lens {
+    padding: 0;
+  }
+
+  .bento-copy {
+    padding: 24px 24px 0;
+  }
+
+  .bento-tile h3 {
+    font-size: 24px;
+  }
+
+  .bento-lens {
+    min-height: 280px;
+  }
+}
+
+/* ------------------------------------------------------- component cards */
+
+.component-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.component-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 28px;
+  background: var(--site-tile);
+}
+
+.component-card-stage {
+  position: relative;
+  display: grid;
+  flex: 1;
+  place-items: center;
+  min-height: 260px;
+  padding: 28px 20px;
+  container-type: inline-size;
+  isolation: isolate;
+  background: var(--site-stage);
+}
+
+/* Each stage holds one sculpted form (card-backdrop.tsx) on the wallpaper's canvas: the
+   ribbon from one of six directions, or a drop, in one of four materials. */
+.card-backdrop {
+  --card-shadow: rgb(0 0 0 / 0.42);
+
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+:root[data-lg-theme='light'] .card-backdrop {
+  --card-shadow: rgb(20 20 30 / 0.16);
+}
+
+/* Each material stays within 3:1 of the demos' ink in its appearance: forms run light under
+   dark text and deep under light text, so a label never sinks into the form behind it. Graphite
+   keeps the logo's Vermilion edge. */
+.card-backdrop[data-material='vermilion'] {
+  --card-highlight: #e8643f;
+  --card-0: #e8643f;
+  --card-1: #e04a26;
+  --card-2: #c43a1c;
+  --card-3: #93290f;
+  --card-lip: #ffb08c;
+}
+
+.card-backdrop[data-material='apricot'] {
+  --card-highlight: #cc7048;
+  --card-0: #cc7048;
+  --card-1: #b85e38;
+  --card-2: #9a4826;
+  --card-3: #723218;
+  --card-lip: #ffc9a9;
+}
+
+.card-backdrop[data-material='silver'] {
+  --card-highlight: #75757d;
+  --card-0: #707078;
+  --card-1: #5a5a61;
+  --card-2: #45454b;
+  --card-3: #333338;
+  --card-lip: #a8a8af;
+}
+
+.card-backdrop[data-material='graphite'] {
+  --card-highlight: #7c7c84;
+  --card-0: #5a5a61;
+  --card-1: #2c2c30;
+  --card-2: #141416;
+  --card-3: #08080a;
+  --card-lip: #ff8a5c;
+}
+
+:root[data-lg-theme='light'] .card-backdrop[data-material='vermilion'] {
+  --card-highlight: #ffe4d2;
+  --card-0: #ffbd91;
+  --card-1: #ff754c;
+  --card-2: #f04a28;
+  --card-3: #c9361a;
+  --card-lip: #fff5eb;
+}
+
+:root[data-lg-theme='light'] .card-backdrop[data-material='apricot'] {
+  --card-highlight: #fff;
+  --card-0: #fff2e8;
+  --card-1: #ffd0b0;
+  --card-2: #ffa97e;
+  --card-3: #f98a5c;
+  --card-lip: #fff;
+}
+
+:root[data-lg-theme='light'] .card-backdrop[data-material='silver'] {
+  --card-highlight: #fff;
+  --card-0: #fff;
+  --card-1: #e6e8eb;
+  --card-2: #bfc3c9;
+  --card-3: #9da2aa;
+  --card-lip: #fff;
+}
+
+:root[data-lg-theme='light'] .card-backdrop[data-material='graphite'] {
+  --card-highlight: #fff;
+  --card-0: #ececef;
+  --card-1: #d4d4d9;
+  --card-2: #bcbcc2;
+  --card-3: #a9a9b0;
+}
+
+.card-backdrop-highlight {
+  stop-color: var(--card-highlight);
+}
+
+.card-backdrop-0 {
+  stop-color: var(--card-0);
+}
+
+.card-backdrop-1 {
+  stop-color: var(--card-1);
+}
+
+.card-backdrop-2 {
+  stop-color: var(--card-2);
+}
+
+.card-backdrop-3 {
+  stop-color: var(--card-3);
+}
+
+.card-backdrop-lip {
+  stroke: var(--card-lip);
+}
+
+.card-backdrop-shadow {
+  fill: var(--card-shadow);
+}
+
+/* The laptop and the scene bring their own backdrops. */
+.component-card-stage:has(.laptop-showcase) > .card-backdrop,
+.component-card-stage:has(.glassy-scene-example) > .card-backdrop {
+  display: none;
+}
+
+/* Forced colors would repaint the forms as flat system colour; they are only decoration. */
+@media (forced-colors: active) {
+  .card-backdrop {
+    display: none;
+  }
+}
+
+.component-card-meta {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  padding: 20px 24px 24px;
+}
+
+.component-card-meta h3 {
+  font-family: var(--site-font-display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.component-card-meta h3 a {
+  transition: color 150ms ease;
+}
+
+/* The whole caption is the link; the live demo above stays interactive. */
+.component-card-meta h3 a::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.component-card-meta h3 a:focus-visible {
+  outline: none;
+}
+
+.component-card-meta h3 a:focus-visible::after {
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: -4px;
+  border-radius: 0 0 24px 24px;
+}
+
+.component-card-meta:hover h3 a {
+  color: var(--site-link);
+}
+
+.component-card-meta p {
+  color: var(--site-text-2);
+  font-size: 14px;
+  line-height: 1.43;
+}
+
+/* Marks a component added since the last release. */
+.new-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  margin-inline-start: 8px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgb(0 103 217 / 0.22);
+  color: #b2d6ff;
+  font-family: var(--site-font);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  vertical-align: 2px;
+}
+
+:root[data-lg-theme='light'] .new-tag {
+  background: rgb(0 103 217 / 0.1);
+  color: #0054b3;
+}
+
+/* Compositions made for the home page's showcase tiles. */
+.tile-command {
+  width: min(100%, 300px);
+  padding: 0;
+  --lg-panel-radius: 1.25rem;
+}
+
+.tile-command .lg-command-list {
+  max-height: 11rem;
+}
+
+.tile-stack {
+  display: grid;
+  gap: 10px;
+  width: min(100%, 320px);
+}
+
+.tile-stack--center {
+  justify-items: center;
+}
+
+/* ------------------------------------------------------------------ demos */
+
+.docs-release-demo {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  place-items: center;
+}
+
+.docs-release-demo > *,
+.docs-release-demo .docs-glass-tabs,
+.docs-release-demo .docs-glass-accordion {
+  max-width: 100%;
+}
+
+.docs-release-demo .lg-button {
+  max-width: 100%;
+  white-space: normal;
+}
+
+.docs-release-demo .lg-input {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.docs-release-feedback,
+.docs-copy-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.cpreview-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.cpreview-surface {
+  --lg-panel-radius: 28px;
+
+  display: grid;
+  place-items: center;
+  width: min(100%, 260px);
+  height: 136px;
+}
+
+.cpreview-refraction-backdrop {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background:
+    linear-gradient(rgb(255 255 255 / 0.22) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.22) 1px, transparent 1px),
+    var(--site-wallpaper) center / cover no-repeat;
+  background-size:
+    12px 12px,
+    12px 12px,
+    cover;
+}
+
+.cpreview-panel {
+  display: grid;
+  place-items: center;
+  width: min(100%, 260px);
+  min-height: 136px;
+}
+
+/* The field's wrapper dissolves into the grid, so Save sits beside the field
+   and stretches to exactly its height. */
+.cpreview-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 10px;
+  width: min(100%, 320px);
+}
+
+.cpreview-form > div {
+  display: contents;
+}
+
+.cpreview-form label {
+  grid-column: 1 / -1;
+}
+
+.cpreview-form .lg-button {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.cpreview-list {
+  width: min(100%, 300px);
+  padding: 6px 16px;
+}
+
+.cpreview-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.cpreview-list-row + .cpreview-list-row {
+  box-shadow: inset 0 0.5px 0 var(--lg-border);
+}
+
+/* The switch demo's labels toggle their switches; the keycap demo's row names stay selectable. */
+.cpreview-list-row label {
+  user-select: none;
+}
+
+.cpreview-slider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 300px);
+}
+
+.cpreview-slider .site-glyph {
+  width: 22px;
+  height: 22px;
+}
+
+.cpreview-slider .site-glyph--small {
+  width: 16px;
+  height: 16px;
+}
+
+.cpreview-slider-control {
+  flex: 1;
+}
+
+.cpreview-segmented {
+  width: min(100%, 280px);
+}
+
+.cpreview-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  max-width: 300px;
+}
+
+/* Choice groups sit on one card, with the members of a group indented under it. */
+.cpreview-choices {
+  display: grid;
+  gap: 14px;
+  width: min(100%, 300px);
+  padding: 18px 20px;
+}
+
+.cpreview-choices-nested {
+  display: grid;
+  gap: 12px;
+  padding-inline-start: 32px;
+}
+
+.cpreview-stack {
+  display: grid;
+  gap: 18px;
+  width: min(100%, 320px);
+}
+
+.cpreview-stack > .lg-button {
+  justify-self: start;
+}
+
+.cpreview-stack--wide {
+  width: min(100%, 420px);
+}
+
+.cpreview-stack--center {
+  justify-items: center;
+}
+
+/* Space between stacked alerts is each alert's own margin, not the stack's gap, so it folds away
+   with a dismissed one instead of vanishing when the alert is removed. */
+.cpreview-stack--alerts {
+  gap: 0;
+}
+
+.cpreview-stack--alerts > .lg-alert-fold:not(:first-child) .lg-alert {
+  margin-top: 18px;
+}
+
+.cpreview-row--center {
+  align-items: center;
+}
+
+.cpreview-bar {
+  max-width: 100%;
+  padding: 6px 12px;
+}
+
+/* A narrow tile tightens the pagination and breadcrumb pills, so each stays one line. */
+@container (max-width: 320px) {
+  .cpreview-bar {
+    padding-inline: 6px;
+  }
+
+  .cpreview-bar .lg-pagination-list {
+    gap: 2px;
+  }
+
+  .cpreview-bar .lg-page {
+    min-width: 2rem;
+    padding-inline: 0.5rem;
+  }
+
+  .cpreview-bar .lg-breadcrumb-link,
+  .cpreview-bar .lg-breadcrumb-page {
+    padding-inline: 0.5rem;
+  }
+}
+
+@container (max-width: 250px) {
+  .cpreview-bar {
+    padding-inline: 4px;
+  }
+
+  .cpreview-bar .lg-page {
+    min-width: 1.875rem;
+    padding-inline: 0.375rem;
+  }
+
+  .cpreview-bar .lg-breadcrumb {
+    font-size: 0.875rem;
+  }
+
+  .cpreview-bar .lg-breadcrumb-link,
+  .cpreview-bar .lg-breadcrumb-page {
+    padding-inline: 0.375rem;
+  }
+
+  .cpreview-bar .lg-breadcrumb-ellipsis {
+    padding-inline: 0.25rem;
+  }
+}
+
+.cpreview-card {
+  padding: 16px 18px;
+}
+
+.cpreview-profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.cpreview-profile-text {
+  display: grid;
+  flex: 1;
+  gap: 8px;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.cpreview-profile-text span {
+  color: var(--lg-muted-foreground);
+}
+
+/* The portable scene supplies its own backdrop and fills the preview. */
+.docs-preview:has(.glassy-scene-example),
+.component-card-stage:has(.glassy-scene-example) {
+  padding: 0;
+}
+
+.cpreview-sheet {
+  padding-bottom: 32px;
+}
+
+.cpreview-sheet-title {
+  font-family: var(--site-font-display);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.cpreview-sheet-description {
+  margin-top: 4px;
+  color: var(--lg-muted-foreground);
+  font-size: 15px;
+}
+
+.docs-glass-tabs,
+.docs-glass-accordion {
+  display: grid;
+  gap: 12px;
+  width: min(100%, 360px);
+}
+
+.docs-glass-tab-list {
+  display: flex;
+  overflow: hidden;
+  justify-self: center;
+  width: max-content;
+  max-width: 100%;
+  gap: 4px;
+  border-radius: 999px;
+  padding: 4px;
+}
+
+.docs-glass-tab-list button {
+  min-height: 40px;
+  min-width: 108px;
+  border-radius: 999px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.docs-glass-tab-panel {
+  min-height: 88px;
+}
+
+/* ------------------------------------------------------ components index */
+
+/* The index shares the docs column with the sidebar, so it fits more, narrower cards than the
+   home page. A demo already fits a phone's 288 px card. */
+.components-category > .component-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  margin-top: 20px;
+}
+
+/* -------------------------------------------------------- install steps */
+
+/* One row per step: the words, then the command. */
+.home-steps {
+  display: grid;
+  gap: 16px;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.home-step {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+  align-items: center;
+  gap: 20px 40px;
+  padding: 28px 28px 28px 32px;
+  border-radius: 28px;
+  background: var(--site-tile);
+}
+
+.home-step-text {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+
+.home-step-number {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  background: var(--site-fill-strong);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.home-step h3 {
+  font-family: var(--site-font-display);
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: 0.011em;
+}
+
+.home-step p {
+  color: var(--site-text-2);
+  font-size: 15px;
+  line-height: 1.47;
+}
+
+.home-step .docs-code-block {
+  margin-top: 0;
+  background: var(--site-bg);
+}
+
+@media (max-width: 767px) {
+  .home-step {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 24px;
+    border-radius: 24px;
+  }
+}
+
+/* ------------------------------------------------------------------ docs */
+
+.docs-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) 200px;
+  gap: 56px;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 92px 32px 96px;
+}
+
+.docs-layout--no-toc {
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+
+.docs-sidebar {
+  position: sticky;
+  top: 84px;
+  display: grid;
+  align-self: start;
+  align-content: start;
+  gap: 24px;
+  max-height: calc(100vh - 108px);
+  overflow-y: auto;
+  padding-bottom: 24px;
+  scrollbar-width: thin;
+}
+
+.docs-sidebar-section {
+  display: grid;
+  gap: 2px;
+}
+
+.docs-sidebar-section > p,
+.docs-toc > p {
+  margin-bottom: 6px;
+  color: var(--site-text-3);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.docs-sidebar-section > p {
+  padding: 0 10px;
+}
+
+.docs-sidebar a {
+  display: block;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: var(--site-text-2);
+  font-size: 14px;
+  line-height: 1.3;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.docs-sidebar a:hover {
+  background: var(--site-fill);
+  color: var(--site-text);
+}
+
+.docs-sidebar a[aria-current='page'] {
+  background: var(--site-fill);
+  color: var(--site-text);
+  font-weight: 600;
+}
+
+.docs-main {
+  min-width: 0;
+}
+
+.docs-toc {
+  position: sticky;
+  top: 92px;
+  display: grid;
+  align-self: start;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.docs-toc a {
+  color: var(--site-text-2);
+  transition: color 150ms ease;
+}
+
+.docs-toc a:hover {
+  color: var(--site-text);
+}
+
+/* Ways to help, under the table of contents: each one opens a prefilled GitHub form. */
+.docs-contribute {
+  display: grid;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--site-hairline);
+}
+
+.docs-contribute > p {
+  margin-bottom: 6px;
+  color: var(--site-text-3);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.docs-page-header {
+  display: grid;
+  gap: 12px;
+}
+
+.docs-page-header > .docs-eyebrow {
+  color: var(--site-link);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.docs-page-header h1 {
+  font-family: var(--site-font-display);
+  font-size: clamp(2.25rem, 4vw, 3rem);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.003em;
+  text-wrap: balance;
+}
+
+.docs-page-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+.docs-page-links a {
+  color: var(--site-link);
+}
+
+.docs-page-links a:hover {
+  text-decoration: underline;
+}
+
+.docs-page-header .copy-chip {
+  justify-self: start;
+  margin-top: 8px;
+}
+
+.docs-page-header > p:not(.docs-eyebrow) {
+  max-width: 680px;
+  color: var(--site-text-2);
+  font-size: 19px;
+  line-height: 1.42;
+  text-wrap: pretty;
+}
+
+.docs-section {
+  margin-top: 56px;
+  scroll-margin-top: 84px;
+}
+
+.docs-section > h2 {
+  font-family: var(--site-font-display);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.14;
+  letter-spacing: 0.007em;
+}
+
+/* A linked preview image sits on its own line with room around it. */
+.docs-figure {
+  display: block;
+  margin: 20px 0 24px;
+  line-height: 0;
+}
+
+/* A guide screenshot fills the column; its caption reads as quiet body text. */
+.docs-figure img {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--site-hairline);
+  border-radius: 16px;
+}
+
+.docs-figure figcaption {
+  margin-top: 10px;
+  color: var(--site-text-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.docs-section > h3 {
+  margin-top: 28px;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+:is(.docs-section, .docs-platform-pane) > p {
+  max-width: 700px;
+  margin-top: 12px;
+  color: var(--site-text-2);
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+/* Links in running text need a cue besides colour, so they keep a quiet underline. */
+:is(.docs-page-header > p, .docs-section > p, .docs-platform-pane > p) a {
+  color: var(--site-link);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+:is(.docs-page-header > p, .docs-section > p, .docs-platform-pane > p) a:hover {
+  text-decoration-color: currentColor;
+}
+
+:is(.docs-section > p, .docs-platform-pane > p, .docs-registry-facts, .docs-note-grid) code,
+.docs-registry-facts li > code {
+  padding: 0.12em 0.4em;
+  border-radius: 6px;
+  background: var(--site-fill);
+  color: var(--site-text);
+  font-family: var(--site-font-mono);
+  font-size: 0.86em;
+  letter-spacing: 0;
+}
+
+.docs-preview {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 360px;
+  margin-top: 20px;
+  padding: 48px 24px;
+  overflow: hidden;
+  border-radius: 28px;
+  background: var(--site-wallpaper) center / cover no-repeat;
+  container-type: inline-size;
+  isolation: isolate;
+}
+
+.docs-code-block {
+  margin-top: 16px;
+  overflow: hidden;
+  border: 1px solid var(--site-hairline);
+  border-radius: 16px;
+  background: var(--site-tile);
+}
+
+.docs-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 8px 0 16px;
+  border-bottom: 1px solid var(--site-hairline);
+  color: var(--site-text-3);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.docs-code-header span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.docs-code-header button {
+  flex: none;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--site-fill);
+  color: var(--site-text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.docs-code-header button:hover {
+  background: var(--site-fill-strong);
+}
+
+.docs-code-header button:disabled {
+  cursor: progress;
+}
+
+.docs-code-header button:focus-visible {
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: 2px;
+}
+
+.docs-code-block pre {
+  margin: 0;
+  overflow-x: auto;
+  padding: 16px 18px 18px;
+  color: var(--site-syntax-plain);
+  font-family: var(--site-font-mono);
+  font-size: 13px;
+  line-height: 1.65;
+  letter-spacing: 0;
+  tab-size: 2;
+}
+
+.docs-code-block pre:focus-visible {
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: -2px;
+  border-radius: 0 0 15px 15px;
+}
+
+.docs-code-block code {
+  font: inherit;
+}
+
+.tok-keyword {
+  color: var(--site-syntax-keyword);
+}
+
+.tok-string {
+  color: var(--site-syntax-string);
+}
+
+.tok-comment {
+  color: var(--site-syntax-comment);
+  font-style: italic;
+}
+
+.tok-number {
+  color: var(--site-syntax-number);
+}
+
+.tok-tag {
+  color: var(--site-syntax-tag);
+}
+
+.tok-attr {
+  color: var(--site-syntax-attr);
+}
+
+/* The file list is there when someone wants it, and out of the way when they do not. */
+.docs-files {
+  margin-top: 20px;
+  border-radius: 18px;
+  background: var(--site-tile);
+}
+
+.docs-files > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 52px;
+  padding: 0 20px;
+  border-radius: 18px;
+  color: var(--site-text);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.docs-files > summary::-webkit-details-marker {
+  display: none;
+}
+
+.docs-files > summary > span {
+  color: var(--site-text-3);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.docs-files > summary::after {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-inline-start: 4px;
+  border-right: 1.6px solid var(--site-text-3);
+  border-bottom: 1.6px solid var(--site-text-3);
+  rotate: 45deg;
+  translate: 0 -2px;
+  transition: rotate 220ms var(--lg-ease-out);
+}
+
+.docs-files[open] > summary::after {
+  rotate: 225deg;
+  translate: 0 2px;
+}
+
+.docs-files > summary:focus-visible {
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: 2px;
+}
+
+.docs-files .docs-registry-facts {
+  margin-top: 0;
+  padding: 0 12px 12px;
+}
+
+.docs-files .docs-registry-facts > div {
+  background: var(--site-fill);
+}
+
+.docs-registry-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.docs-registry-facts > div {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 18px;
+  background: var(--site-tile);
+}
+
+.docs-registry-facts h3 {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.docs-registry-facts p {
+  color: var(--site-text-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.docs-registry-facts h4 {
+  color: var(--site-text-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.docs-registry-facts ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.docs-registry-facts li > code {
+  display: inline-block;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.docs-api-list {
+  margin-top: 16px;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--site-tile);
+}
+
+.docs-api-list > div {
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) minmax(0, 1fr);
+  gap: 16px;
+  padding: 14px 20px;
+}
+
+.docs-api-list > div + div {
+  border-top: 1px solid var(--site-hairline);
+}
+
+.docs-api-list code {
+  color: var(--site-text);
+  font-family: var(--site-font-mono);
+  font-size: 13px;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+.docs-api-list p {
+  color: var(--site-text-2);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.docs-note-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.docs-note-grid > div {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 20px;
+  border-radius: 18px;
+  background: var(--site-tile);
+}
+
+.docs-note-grid h3 {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.docs-note-grid p {
+  color: var(--site-text-2);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.docs-pagination {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 72px;
+  padding-top: 24px;
+  border-top: 1px solid var(--site-hairline);
+}
+
+.docs-pagination a {
+  color: var(--site-link);
+}
+
+.docs-pagination a:hover {
+  text-decoration: underline;
+}
+
+.docs-mobile-nav {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .docs-layout,
+  .docs-layout--no-toc {
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 40px;
+  }
+
+  .docs-toc {
+    display: none;
+  }
+}
+
+@media (max-width: 859px) {
+  .docs-mobile-nav {
+    display: block;
+    margin: 76px 16px 0;
+    border-radius: 16px;
+    background: var(--site-tile);
+  }
+
+  .docs-mobile-nav summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 0 16px;
+    border-radius: 16px;
+    font-size: 15px;
+    font-weight: 600;
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .docs-mobile-nav summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .docs-mobile-nav summary span {
+    margin-left: auto;
+    color: var(--site-text-2);
+    font-weight: 400;
+  }
+
+  .docs-mobile-nav summary::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    margin: -4px 4px 0 4px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(45deg);
+    transition:
+      transform 200ms ease,
+      margin 200ms ease;
+  }
+
+  .docs-mobile-nav[open] summary::after {
+    margin-top: 4px;
+    transform: rotate(-135deg);
+  }
+
+  .docs-mobile-nav nav {
+    display: grid;
+    gap: 16px;
+    padding: 4px 16px 16px;
+  }
+
+  .docs-mobile-nav nav > div {
+    display: grid;
+    gap: 2px;
+  }
+
+  .docs-mobile-nav nav p {
+    margin-bottom: 4px;
+    color: var(--site-text-3);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .docs-mobile-nav a {
+    padding: 6px 0;
+    color: var(--site-text-2);
+    font-size: 15px;
+  }
+
+  .docs-mobile-nav a[aria-current='page'] {
+    color: var(--site-text);
+    font-weight: 600;
+  }
+
+  .docs-sidebar {
+    display: none;
+  }
+
+  .docs-layout,
+  .docs-layout--no-toc {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 40px 16px 72px;
+  }
+}
+
+@media (max-width: 639px) {
+  .docs-api-list > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .docs-preview {
+    padding: 40px 16px;
+    border-radius: 22px;
+  }
+
+  .docs-code-block pre {
+    padding: 14px;
+    font-size: 12px;
+  }
+
+  /* A one-line command reads better wrapped than cut off at the edge of a phone. */
+  .docs-code-block[data-language='shell'] pre {
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+}
+
+/* ---------------------------------------------------------------- footer */
+
+.site-footer {
+  margin-top: clamp(96px, 12vw, 160px);
+  padding: 32px 24px 40px;
+  border-top: 1px solid var(--site-hairline);
+  color: var(--site-text-3);
+  font-size: 12px;
+  line-height: 1.33;
+}
+
+.site-footer-inner {
+  display: grid;
+  gap: 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.site-footer-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px 48px;
+}
+
+.site-footer-brand {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+
+.site-footer-project {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  max-width: 760px;
+  font-size: 13px;
+}
+
+.site-footer-project a {
+  padding: 2px 0;
+  color: var(--site-text-2);
+}
+
+.site-footer-project a:hover {
+  color: var(--site-text);
+  text-decoration: underline;
+}
+
+.site-footer-project a.site-footer-github {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--site-text);
+  font-weight: 600;
+}
+
+.site-footer-github-mark {
+  width: 14px;
+  height: 14px;
+}
+
+.site-footer-brand .site-brand {
+  font-size: 15px;
+}
+
+.site-footer-brand .site-brand-mark {
+  width: 22px;
+  height: 22px;
+}
+
+.site-footer-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 24px;
+}
+
+.site-footer-columns > div {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 6px;
+}
+
+.site-footer-columns h2 {
+  margin-bottom: 4px;
+  color: var(--site-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.site-footer-columns a {
+  padding: 2px 0;
+  color: var(--site-text-2);
+}
+
+.site-footer-columns a:hover {
+  color: var(--site-text);
+  text-decoration: underline;
+}
+
+.site-footer-legal {
+  padding-top: 16px;
+  border-top: 1px solid var(--site-hairline);
+}
+
+.site-footer-legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  font-size: 13px;
+}
+
+.site-footer-legal-links a {
+  padding: 2px 0;
+  color: var(--site-text-2);
+}
+
+.site-footer-legal-links a:hover {
+  color: var(--site-text);
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------------------ pro */
+
+/* The Pro card beside the gallery: the one card on the site in Vermilion, so it reads as the way
+   into Pro rather than another component. It stays in the right column, which folds away below
+   1024 px with the table of contents it replaces. */
+.docs-rail {
+  gap: 0;
+}
+
+/* The same in both themes. The copy is white, and the red deepens down the card so the copy
+   keeps 5:1 against the lightest red behind it. */
+.pro-card {
+  display: grid;
+  overflow: hidden;
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 60% at 12% 0%, rgb(255 205 175 / 0.6), transparent 62%),
+    linear-gradient(170deg, #ff8656 0%, #f0502b 34%, #cc391b 58%, #b02d14 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.28),
+    0 0 0 1px rgb(150 30 10 / 0.25),
+    0 24px 48px -26px rgb(190 50 20 / 0.65);
+  color: #fff;
+}
+
+/* A Pro site in a glass window, rising out of the card's lower edge in front of a pale ribbon.
+   The window bends the ribbon where it passes behind; the motion section drifts both. */
+.pro-card-art {
+  position: relative;
+  display: block;
+  height: 232px;
+  overflow: hidden;
+}
+
+/* The ribbon is 12 px larger than the art on every side, so the drift never shows its edge. */
+.pro-card-ribbon {
+  position: absolute;
+  top: -12px;
+  left: -12px;
+}
+
+.pro-card-ribbon-shadow {
+  fill: rgb(110 20 0 / 0.3);
+}
+
+.pro-card-window {
+  position: absolute;
+  top: 100px;
+  right: 30px;
+  bottom: -28px;
+  left: 30px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  border-radius: 12px;
+  background: linear-gradient(rgb(255 255 255 / 0.3), rgb(255 255 255 / 0.16));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.55),
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.55),
+    0 0 0 0.5px rgb(110 20 0 / 0.2),
+    0 18px 36px -18px rgb(100 15 0 / 0.45);
+  backdrop-filter: blur(9px) saturate(1.7);
+}
+
+/* Light catching the glass at its top-left corner. */
+.pro-card-window::before {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(140deg, rgb(255 255 255 / 0.5), transparent 34%);
+  content: '';
+  pointer-events: none;
+}
+
+.pro-card-window-bar {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 15px;
+  padding: 0 8px;
+  border-bottom: 0.5px solid rgb(255 255 255 / 0.25);
+}
+
+.pro-card-window-bar > i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.55);
+}
+
+/* The Launch template in miniature: navigation, a hero with its button, and feature cards. */
+.pro-card-page {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  padding: 9px 10px;
+}
+
+.pro-card-page-nav {
+  display: flex;
+  align-items: center;
+  justify-self: stretch;
+  gap: 6px;
+  height: 12px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.2);
+  box-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.2);
+}
+
+.pro-card-page-nav > i {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  background: rgb(255 255 255 / 0.55);
+}
+
+.pro-card-page-nav > i:first-child {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.92);
+}
+
+.pro-card-page-nav > i:nth-child(3) {
+  width: 11px;
+}
+
+.pro-card-page-nav > i:last-child {
+  width: 14px;
+  height: 5px;
+  margin-left: auto;
+  border-radius: 999px;
+  background: #fff;
+}
+
+.pro-card-page-title {
+  width: 64%;
+  height: 6px;
+  margin-top: 16px;
+  border-radius: 3px;
+  background: rgb(255 255 255 / 0.92);
+}
+
+.pro-card-page-lead {
+  width: 44%;
+  height: 3px;
+  margin-top: 5px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 0.55);
+}
+
+.pro-card-page-button {
+  width: 32px;
+  height: 8px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: #fff;
+}
+
+.pro-card-page-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  justify-self: stretch;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.pro-card-page-cards > i {
+  height: 44px;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.2);
+  box-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.2);
+}
+
+.pro-card-body {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px 16px;
+}
+
+/* The rail styles every link in it as secondary text, so the copy sets its own colour. */
+.pro-card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #fff;
+  font-family: var(--site-font-display);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.pro-card-text,
+.pro-card-price {
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.pro-card-price strong {
+  font-weight: 600;
+}
+
+.pro-card-action {
+  margin-top: 2px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pro-card:hover .pro-card-action {
+  text-decoration: underline;
+}
+
+.pro-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--site-fill-strong);
+  color: var(--site-text);
+  font-family: var(--site-font);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.site-brand .pro-badge {
+  margin-left: 4px;
+}
+
+/* White text on a lighter red falls short of 4.5:1, so on the Pro card the badge turns over. */
+.pro-card .pro-badge {
+  background: #fff;
+  color: #b02d14;
+}
+
+/* The gallery's last chapter: Glassy UI Pro's templates. */
+.components-templates > .template-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 24px 20px;
+  margin-top: 20px;
+}
+
+.template-card {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  border-radius: 18px;
+  color: var(--site-text);
+}
+
+.template-card-window {
+  display: block;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--site-bg);
+  box-shadow:
+    0 0 0 1px var(--site-hairline),
+    var(--site-shadow);
+}
+
+.template-card-window {
+  transition: translate 500ms var(--lg-ease-out);
+}
+
+.template-card:hover .template-card-window {
+  translate: 0 -4px;
+}
+
+.template-card-pro {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1800 / 1209;
+  background: var(--site-wallpaper) no-repeat;
+  background-position: 70% 30%;
+  background-size: 220% auto;
+}
+
+.template-card-pro-pane {
+  display: grid;
+  gap: 6px;
+  padding: 16px 28px;
+  border-radius: 16px;
+  background: var(--site-legible-tint);
+  box-shadow: inset 0 0 0 1px var(--site-hairline);
+  font-family: var(--site-font-display);
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  backdrop-filter: blur(18px) saturate(1.5);
+}
+
+.template-card-meta {
+  display: grid;
+  gap: 4px;
+}
+
+.template-card-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--site-font-display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  transition: color 150ms ease;
+}
+
+.template-card:hover .template-card-title {
+  color: var(--site-link);
+}
+
+.template-card-text {
+  color: var(--site-text-2);
+  font-size: 14px;
+  line-height: 1.43;
+}
+
+.template-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--site-fill-strong);
+  color: var(--site-text);
+  font-family: var(--site-font);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.template-tag--pro {
+  background: rgb(0 103 217 / 0.24);
+  color: #b2d6ff;
+}
+
+:root[data-lg-theme='light'] .template-tag--pro {
+  background: rgb(0 103 217 / 0.12);
+  color: #0054b3;
+}
+
+/* Glass that cannot be drawn becomes a plain tile. */
+:root[data-lg-reduce-transparency='1'] .template-card-pro-pane {
+  background: var(--site-tile);
+  backdrop-filter: none;
+}
+
+/* ---------------------------------------------------------------- legal */
+
+.legal-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 124px 24px 96px;
+}
+
+.docs-page-header > p.legal-date {
+  color: var(--site-text-3);
+  font-size: 14px;
+}
+
+.legal-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 0 48px;
+}
+
+.legal-section {
+  margin-top: 40px;
+}
+
+:is(.pro-card, .template-card, .site-footer-legal-links a):focus-visible {
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: 3px;
+}
+
+/* ---------------------------------------------------------------- motion */
+
+/* Motion on the site is one short entrance, sections rising into place as they scroll in,
+   controls answering the pointer and one slow drift in the Pro card's art. It moves translate,
+   scale and opacity, never layout, and it never fades or filters anything glass looks through:
+   an ancestor that fades cuts the glass off from the page it bends until the fade ends. Reduced
+   motion, from the system or the preference, keeps every end state and drops the movement. */
+
+@keyframes site-rise {
+  from {
+    opacity: 0;
+    translate: 0 var(--site-rise, 12px);
+  }
+}
+
+@keyframes site-lift {
+  from {
+    translate: 0 var(--site-rise, 12px);
+  }
+}
+
+/* The dock is centred with translate, so it rises through transform. */
+@keyframes site-dock-in {
+  from {
+    transform: translateY(var(--site-rise, 16px));
+  }
+}
+
+/* A slab lifts off the page: its shadow and the light under it grow from nothing. */
+@keyframes site-slab-lift {
+  from {
+    --lg-button-rise: 0;
+
+    translate: 0 var(--site-rise, 12px);
+  }
+}
+
+@keyframes site-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes site-confirm {
+  from {
+    scale: 0.92;
+  }
+}
+
+/* The Pro card's ribbon sways a few pixels and its window floats, on different clocks so the
+   two never move in step. */
+@keyframes pro-card-drift {
+  to {
+    translate: -4px 3px;
+    rotate: -1deg;
+  }
+}
+
+@keyframes pro-card-float {
+  to {
+    translate: 0 -2.5px;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The entrance runs once, top to bottom, and is done in about a second and a half. The
+     headline paints at once. The glass button tints the page behind it, so it cannot fade as a
+     whole: it lifts off the page while each of its layers fades on its own. When the keynote
+     plays (html[data-keynote]), its opener is the entrance instead. */
+  :root:not([data-lg-reduce-motion='1'], [data-keynote]) .home-announce {
+    --site-rise: 8px;
+
+    animation: site-rise 700ms var(--lg-ease-out) backwards;
+  }
+
+  :root:not([data-lg-reduce-motion='1'], [data-keynote]) .home-title {
+    --site-rise: 16px;
+
+    animation: site-rise 900ms var(--lg-ease-out) backwards;
+  }
+
+  :root:not([data-lg-reduce-motion='1'], [data-keynote]) .home-lead {
+    animation: site-rise 900ms var(--lg-ease-out) 90ms backwards;
+  }
+
+  :root:not([data-lg-reduce-motion='1'], [data-keynote]) .home-hero .home-actions > .lg-button {
+    animation: site-slab-lift 900ms var(--lg-ease-out) 160ms backwards;
+  }
+
+  :root:not([data-lg-reduce-motion='1'], [data-keynote])
+    .home-hero
+    .home-actions
+    > .lg-button
+    > .lg-button__layers
+    > *,
+  :root:not([data-lg-reduce-motion='1'], [data-keynote])
+    .home-hero
+    .home-actions
+    > .lg-button
+    > .lg-button__label {
+    animation: site-fade 700ms var(--lg-ease-out) 160ms backwards;
+  }
+
+  :root:not([data-lg-reduce-motion='1'], [data-keynote])
+    .home-hero
+    .home-actions
+    > .home-section-link {
+    animation: site-rise 900ms var(--lg-ease-out) 180ms backwards;
+  }
+
+  :root:not([data-lg-reduce-motion='1'], [data-keynote]) .home-hero .copy-chip {
+    animation: site-rise 900ms var(--lg-ease-out) 240ms backwards;
+  }
+
+  /* The desk frame fades as a whole: its glass bends its own wallpaper, inside the frame. */
+  :root:not([data-lg-reduce-motion='1'], [data-keynote]) .home-desk-frame {
+    --site-rise: 28px;
+
+    animation: site-rise 1000ms var(--lg-ease-out) 320ms backwards;
+  }
+
+  /* Then its pieces settle, only while the desk first arrives: widgets or a dock shown again
+     from the View menu appear at once. */
+  :root:not([data-lg-reduce-motion='1'], [data-keynote])
+    .desk-screen[data-settling]
+    .desk-widgets
+    > * {
+    animation: site-lift 800ms var(--lg-ease-out) 560ms backwards;
+  }
+
+  :root:not([data-lg-reduce-motion='1'], [data-keynote])
+    .desk-screen[data-settling]
+    .desk-widgets
+    > :nth-child(2) {
+    animation-delay: 640ms;
+  }
+
+  :root:not([data-lg-reduce-motion='1'], [data-keynote]) .desk-screen[data-settling] .desk-dock {
+    animation: site-dock-in 800ms var(--lg-ease-out) 700ms backwards;
+  }
+
+  :root:not([data-lg-reduce-motion='1'], [data-keynote]) .home-desk-caption {
+    --site-rise: 6px;
+
+    animation: site-rise 700ms var(--lg-ease-out) 800ms backwards;
+  }
+
+  /* A link's arrow leans the way it goes. */
+  :root:not([data-lg-reduce-motion='1']) .home-section-link > span[aria-hidden],
+  :root:not([data-lg-reduce-motion='1']) .home-announce > span[aria-hidden]:last-child,
+  :root:not([data-lg-reduce-motion='1']) .pro-card-action > span[aria-hidden] {
+    position: relative;
+    left: 0;
+    transition: left 240ms var(--lg-ease-out);
+  }
+
+  :root:not([data-lg-reduce-motion='1']) .home-section-link:hover > span[aria-hidden],
+  :root:not([data-lg-reduce-motion='1']) .home-announce:hover > span[aria-hidden]:last-child,
+  :root:not([data-lg-reduce-motion='1']) .pro-card:hover .pro-card-action > span[aria-hidden] {
+    left: 3px;
+  }
+
+  /* The Pro card's art never stops, but only just moves: the ribbon sways over 16 seconds and
+     the window floats over 7. Pointing at the card raises the window further out of it. */
+  :root:not([data-lg-reduce-motion='1']) .pro-card-ribbon {
+    animation: pro-card-drift 16s ease-in-out infinite alternate;
+  }
+
+  :root:not([data-lg-reduce-motion='1']) .pro-card-window {
+    animation: pro-card-float 7s ease-in-out infinite alternate;
+    transition: transform 600ms var(--lg-ease-out);
+  }
+
+  :root:not([data-lg-reduce-motion='1']) .pro-card:hover .pro-card-window {
+    transform: translateY(-6px);
+  }
+
+  :root:not([data-lg-reduce-motion='1']) .site-search {
+    transition:
+      background-color 180ms ease,
+      color 180ms ease,
+      scale 320ms var(--lg-spring);
+  }
+
+  /* The theme switch turns its sun into a moon. */
+  :root:not([data-lg-reduce-motion='1']) .site-theme-icon {
+    transition:
+      opacity 200ms ease,
+      rotate 480ms var(--lg-ease-out),
+      scale 480ms var(--lg-ease-out);
+  }
+
+  :root:not([data-lg-reduce-motion='1']) .docs-code-header button[data-state='copied'] {
+    animation: site-confirm 420ms var(--lg-spring);
+  }
+
+  /* The page crossfades into a new theme. */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 280ms;
+    animation-timing-function: ease-out;
+  }
+}
+
+/* Sections rise into place as they scroll in, where scroll-driven animations exist. They only
+   move: a reveal never hides content, so engines without them show it in place. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    :root:not([data-lg-reduce-motion='1']) .home-section-header,
+    :root:not([data-lg-reduce-motion='1']) .component-card,
+    :root:not([data-lg-reduce-motion='1']) .bento-tile,
+    :root:not([data-lg-reduce-motion='1']) .home-step,
+    :root:not([data-lg-reduce-motion='1']) .home-cta > * {
+      --site-rise: 28px;
+
+      animation: site-lift var(--lg-ease-out) both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 80%;
+    }
+  }
+}
+
+/* Disclosures open and close to their height where the browser can size to auto. */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-lg-reduce-motion='1']) .docs-files,
+  :root:not([data-lg-reduce-motion='1']) .docs-mobile-nav {
+    interpolate-size: allow-keywords;
+  }
+
+  :root:not([data-lg-reduce-motion='1']) .docs-files::details-content,
+  :root:not([data-lg-reduce-motion='1']) .docs-mobile-nav::details-content {
+    height: 0;
+    overflow: clip;
+    transition:
+      height 320ms var(--lg-ease-out),
+      content-visibility 320ms allow-discrete;
+  }
+
+  :root:not([data-lg-reduce-motion='1']) .docs-files[open]::details-content,
+  :root:not([data-lg-reduce-motion='1']) .docs-mobile-nav[open]::details-content {
+    height: auto;
+  }
+}
+
+/* ------------------------------------------------------------- platforms */
+
+/* Component pages with a React Native version switch their install and usage to it. */
+.docs-platform-switch {
+  width: min(100%, 320px);
+  margin-top: 4px;
+}
+
+/* --------------------------------------------------------------- mobile */
+
+/* The same React Native screen on each platform, in a plain phone frame. */
+.mobile-phones {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 8px 20px 0;
+}
+
+.mobile-phones:focus-visible {
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: 4px;
+  border-radius: 28px;
+}
+
+.mobile-phone {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  width: 300px;
+  margin: 0;
+}
+
+.mobile-phone-frame {
+  display: block;
+  overflow: hidden;
+  width: 100%;
+  padding: 9px;
+  border-radius: 46px;
+  background: #0a0a0b;
+  box-shadow:
+    0 0 0 1px var(--site-hairline),
+    var(--site-shadow);
+}
+
+.mobile-phone-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 37px;
+}
+
+/* Android phones round their corners less. */
+.mobile-phone[data-platform='android'] .mobile-phone-frame {
+  border-radius: 26px;
+}
+
+.mobile-phone[data-platform='android'] .mobile-phone-frame img {
+  border-radius: 17px;
+}
+
+.mobile-phone figcaption {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.mobile-phone figcaption strong {
+  font-family: var(--site-font-display);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.mobile-phone figcaption span {
+  color: var(--site-text-2);
+  font-size: 14px;
+}
+
+@media (max-width: 900px) {
+  .mobile-phones {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 16px;
+    scroll-snap-type: x mandatory;
+  }
+
+  .mobile-phone {
+    flex: none;
+    width: 240px;
+    scroll-snap-align: center;
+  }
+}
+
+/* React beside React Native: one component from each registry. */
+.mobile-platforms {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.mobile-platform {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 28px;
+  border-radius: 28px;
+  background: var(--site-tile);
+}
+
+.mobile-platform h3 {
+  font-family: var(--site-font-display);
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: 0.011em;
+}
+
+.mobile-platform p {
+  color: var(--site-text-2);
+  font-size: 15px;
+  line-height: 1.47;
+}
+
+.mobile-platform .docs-code-block {
+  margin-top: 4px;
+  background: var(--site-bg);
+}
+
+@media (max-width: 767px) {
+  .mobile-platforms {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mobile-platform {
+    padding: 24px;
+  }
+}
+
+/* Every component with a React Native version, linking to its React Native page. */
+.mobile-components {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.mobile-components a {
+  display: block;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--site-fill);
+  color: var(--site-text);
+  font-size: 15px;
+  text-decoration: none;
+  transition: background-color var(--lg-motion-duration) ease;
+}
+
+.mobile-components a:hover {
+  background: var(--site-fill-strong);
+}
+
+.mobile-components a:focus-visible {
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: 2px;
+}

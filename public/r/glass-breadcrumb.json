@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glass-breadcrumb",
+  "title": "Glass Breadcrumb",
+  "description": "The trail to the current page, with links that lift on hover and folded steps in a menu.",
+  "dependencies": [
+    "@radix-ui/react-slot",
+    "clsx"
+  ],
+  "registryDependencies": [
+    "@glassyui/glass-provider"
+  ],
+  "files": [
+    {
+      "path": "registry/glassyui/glass-breadcrumb.tsx",
+      "content": "import { Slot } from '@radix-ui/react-slot';\nimport clsx from 'clsx';\nimport { forwardRef } from 'react';\nimport type {\n  AnchorHTMLAttributes,\n  ButtonHTMLAttributes,\n  HTMLAttributes,\n  LiHTMLAttributes,\n} from 'react';\n\n/** The trail's `nav` landmark and its list. Put a `GlassBreadcrumbItem` inside for each step. */\nexport const GlassBreadcrumb = forwardRef<HTMLElement, HTMLAttributes<HTMLElement>>(\n  ({ children, className, ...props }, forwardedRef) => (\n    <nav\n      aria-label=\"Breadcrumb\"\n      {...props}\n      ref={forwardedRef}\n      className={clsx('lg-breadcrumb', className)}\n    >\n      <ol className=\"lg-breadcrumb-list\">{children}</ol>\n    </nav>\n  ),\n);\n\nGlassBreadcrumb.displayName = 'GlassBreadcrumb';\n\n/** One step. It draws the chevron after itself, except on the last. */\nexport const GlassBreadcrumbItem = forwardRef<HTMLLIElement, LiHTMLAttributes<HTMLLIElement>>(\n  ({ children, className, ...props }, forwardedRef) => (\n    <li {...props} ref={forwardedRef} className={clsx('lg-breadcrumb-item', className)}>\n      {children}\n      <span aria-hidden className=\"lg-breadcrumb-separator\">\n        <svg viewBox=\"0 0 20 20\">\n          <path\n            d=\"M7.5 4.5l5.5 5.5-5.5 5.5\"\n            fill=\"none\"\n            stroke=\"currentColor\"\n            strokeLinecap=\"round\"\n            strokeLinejoin=\"round\"\n            strokeWidth=\"1.6\"\n          />\n        </svg>\n      </span>\n    </li>\n  ),\n);\n\nGlassBreadcrumbItem.displayName = 'GlassBreadcrumbItem';\n\nexport type GlassBreadcrumbLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {\n  /** Renders your own link, such as a router's, with these styles. */\n  asChild?: boolean;\n};\n\nexport const GlassBreadcrumbLink = forwardRef<HTMLAnchorElement, GlassBreadcrumbLinkProps>(\n  ({ asChild = false, className, ...props }, forwardedRef) => {\n    const Component = asChild ? Slot : 'a';\n\n    return (\n      <Component {...props} ref={forwardedRef} className={clsx('lg-breadcrumb-link', className)} />\n    );\n  },\n);\n\nGlassBreadcrumbLink.displayName = 'GlassBreadcrumbLink';\n\n/** The page you are on. It is text, not a link. */\nexport const GlassBreadcrumbPage = forwardRef<HTMLSpanElement, HTMLAttributes<HTMLSpanElement>>(\n  ({ className, ...props }, forwardedRef) => (\n    <span\n      aria-current=\"page\"\n      {...props}\n      ref={forwardedRef}\n      className={clsx('lg-breadcrumb-page', className)}\n    />\n  ),\n);\n\nGlassBreadcrumbPage.displayName = 'GlassBreadcrumbPage';\n\n/** Stands in for steps you have folded away. It is a button, so it can open a menu of them. */\nexport const GlassBreadcrumbEllipsis = forwardRef<\n  HTMLButtonElement,\n  ButtonHTMLAttributes<HTMLButtonElement>\n>(({ className, ...props }, forwardedRef) => (\n  <button\n    aria-label=\"Show hidden pages\"\n    type=\"button\"\n    {...props}\n    ref={forwardedRef}\n    className={clsx('lg-breadcrumb-ellipsis', className)}\n  >\n    <svg aria-hidden viewBox=\"0 0 20 20\">\n      <path\n        d=\"M4.5 10h.01M10 10h.01M15.5 10h.01\"\n        fill=\"none\"\n        stroke=\"currentColor\"\n        strokeLinecap=\"round\"\n        strokeWidth=\"2.4\"\n      />\n    </svg>\n  </button>\n));\n\nGlassBreadcrumbEllipsis.displayName = 'GlassBreadcrumbEllipsis';\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glass-breadcrumb.tsx"
+    }
+  ],
+  "meta": {
+    "sourceModules": [
+      "breadcrumb"
+    ]
+  },
+  "type": "registry:ui"
+}

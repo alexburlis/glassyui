@@ -1,0 +1,24 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glass-spinner",
+  "title": "Glass Spinner",
+  "description": "A ring with a fading tail, for waiting on something short.",
+  "registryDependencies": [
+    "@glassyui-native/glass-provider"
+  ],
+  "files": [
+    {
+      "path": "registry/glassyui-native/glass-spinner.tsx",
+      "content": "import { forwardRef, useMemo } from 'react';\nimport { Animated, StyleSheet, View, type ViewProps } from 'react-native';\nimport { useGlassTheme } from './glass-provider';\nimport { GLASS_RADIUS } from './lib/tokens';\nimport { useLoop } from './lib/use-loop';\n\nexport type GlassSpinnerSize = 'sm' | 'md' | 'lg';\n\nexport type GlassSpinnerProps = Omit<ViewProps, 'children'> & {\n  /** The ring's colour. Defaults to the theme's text colour, as the web spinner takes its text's. */\n  color?: string;\n  /** Read out by screen readers. Defaults to \"Loading\". */\n  label?: string;\n  size?: GlassSpinnerSize;\n};\n\nconst SIZE = {\n  sm: { diameter: 16, stroke: 1.5 },\n  md: { diameter: 24, stroke: 2 },\n  lg: { diameter: 36, stroke: 3 },\n} as const;\n\n// The tail fades in this many steps, from clear behind it to the full colour at its head.\nconst STEPS = 30;\n\nconst TURN_MS = 900;\n\n/**\n * A ring with a fading tail that turns while something short loads. Reduce Motion holds it\n * still, its head at the top.\n */\nexport const GlassSpinner = forwardRef<View, GlassSpinnerProps>(\n  ({ color, label = 'Loading', size = 'md', style, ...rest }, ref) => {\n    const { colors, preferences } = useGlassTheme();\n    const turn = useLoop(TURN_MS, !preferences.reduceMotion);\n    const { diameter, stroke } = SIZE[size];\n    const ink = color ?? colors.foreground;\n\n    // React Native has no conic gradient, so short arcs of rising opacity draw the tail.\n    const tail = useMemo(() => {\n      const arc = (Math.PI * (diameter - stroke)) / STEPS;\n\n      return Array.from({ length: STEPS }, (_, step) => (\n        <View\n          key={step}\n          style={{\n            backgroundColor: ink,\n            height: stroke,\n            left: (diameter - arc) / 2,\n            opacity: (step + 0.5) / STEPS,\n            position: 'absolute',\n            top: 0,\n            transform: [{ rotate: `${((step + 0.5) * 360) / STEPS}deg` }],\n            transformOrigin: [arc / 2, diameter / 2, 0],\n            width: arc,\n          }}\n        />\n      ));\n    }, [diameter, ink, stroke]);\n\n    return (\n      <View\n        ref={ref}\n        accessible\n        accessibilityLabel={label}\n        accessibilityRole=\"progressbar\"\n        style={[{ height: diameter, width: diameter }, style]}\n        {...rest}\n      >\n        <View\n          style={[\n            StyleSheet.absoluteFill,\n            styles.ring,\n            { borderColor: ink, borderWidth: stroke, opacity: 0.2 },\n          ]}\n        />\n        <Animated.View\n          style={[\n            StyleSheet.absoluteFill,\n            styles.ring,\n            {\n              transform: [\n                {\n                  rotate: turn.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }),\n                },\n              ],\n            },\n          ]}\n        >\n          {tail}\n        </Animated.View>\n      </View>\n    );\n  },\n);\n\nGlassSpinner.displayName = 'GlassSpinner';\n\nconst styles = StyleSheet.create({\n  ring: { borderRadius: GLASS_RADIUS.capsule, pointerEvents: 'none' },\n});\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glass-spinner.tsx"
+    },
+    {
+      "path": "registry/glassyui-native/lib/use-loop.ts",
+      "content": "import { useEffect, useState } from 'react';\nimport { Animated, Easing } from 'react-native';\nimport { GLASS_MOTION } from './tokens';\n\n/**\n * A value that runs from 0 to 1 over `duration`, then starts again, for the library's only loops:\n * progress, spinners and skeletons. It rests at 0 while `running` is false and stops on unmount.\n */\nexport function useLoop(duration: number, running: boolean) {\n  // State, not a ref, holds the value: render reads it, and it never changes identity.\n  const [progress] = useState(() => new Animated.Value(0));\n\n  useEffect(() => {\n    progress.setValue(0);\n\n    if (!running) return;\n\n    const loop = Animated.loop(\n      Animated.timing(progress, {\n        duration,\n        easing: Easing.linear,\n        toValue: 1,\n        useNativeDriver: GLASS_MOTION.nativeDriver,\n      }),\n    );\n\n    loop.start();\n\n    return () => loop.stop();\n  }, [duration, progress, running]);\n\n  return progress;\n}\n",
+      "type": "registry:lib",
+      "target": "components/glassyui/lib/use-loop.ts"
+    }
+  ],
+  "type": "registry:ui"
+}

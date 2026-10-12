@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glass-dialog",
+  "title": "Glass Dialog",
+  "description": "A modal on raised glass that holds focus until it closes.",
+  "dependencies": [
+    "@radix-ui/react-dialog",
+    "clsx"
+  ],
+  "registryDependencies": [
+    "@glassyui/glass-panel"
+  ],
+  "files": [
+    {
+      "path": "registry/glassyui/glass-dialog.tsx",
+      "content": "'use client';\n\nimport * as DialogPrimitive from '@radix-ui/react-dialog';\nimport clsx from 'clsx';\nimport { GlassPanel } from './glass-panel';\n\nconst radixSlotProps = { asChild: true };\n\nexport const GlassDialog = DialogPrimitive.Root;\n\nexport const GlassDialogTrigger = DialogPrimitive.Trigger;\n\nexport const GlassDialogPortal = DialogPrimitive.Portal;\n\nexport function GlassDialogOverlay(\n  props: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>,\n) {\n  const { className, ...rest } = props;\n\n  return <DialogPrimitive.Overlay className={clsx('lg-dialog-overlay', className)} {...rest} />;\n}\n\nexport type GlassDialogContentProps = React.ComponentPropsWithoutRef<\n  typeof DialogPrimitive.Content\n> & {\n  closeLabel?: string;\n  /** How thick the glass is, as a multiple of regular. See GlassSurface. */\n  thickness?: number;\n};\n\nexport function GlassDialogContent({\n  className,\n  children,\n  closeLabel = 'Close dialog',\n  ...props\n}: GlassDialogContentProps) {\n  return (\n    <GlassDialogPortal>\n      <GlassDialogOverlay />\n      <DialogPrimitive.Content {...props} {...radixSlotProps}>\n        <GlassPanel\n          lens\n          preset=\"prominent\"\n          refraction=\"none\"\n          variant=\"panel\"\n          elevation=\"raised\"\n          className={clsx('lg-dialog-content', className)}\n        >\n          {children}\n          <DialogPrimitive.Close\n            aria-label={closeLabel}\n            className=\"absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--lg-border)] bg-[var(--lg-control-surface)] text-[var(--lg-muted-foreground)] hover:bg-[var(--lg-control-surface-hover)] hover:text-[var(--lg-foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lg-focus-ring)]\"\n          >\n            <svg viewBox=\"0 0 20 20\" className=\"h-4 w-4\" aria-hidden>\n              <path\n                d=\"M5 5l10 10m0-10L5 15\"\n                stroke=\"currentColor\"\n                strokeWidth=\"1.6\"\n                strokeLinecap=\"round\"\n              />\n            </svg>\n          </DialogPrimitive.Close>\n        </GlassPanel>\n      </DialogPrimitive.Content>\n    </GlassDialogPortal>\n  );\n}\n\nexport const GlassDialogTitle = DialogPrimitive.Title;\n\nexport const GlassDialogDescription = DialogPrimitive.Description;\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glass-dialog.tsx"
+    }
+  ],
+  "meta": {
+    "sourceModules": [
+      "dialog"
+    ]
+  },
+  "type": "registry:ui"
+}

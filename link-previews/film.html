@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Glassy UI link previews</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #1c1c1e;
+        overflow: hidden;
+      }
+
+      canvas {
+        display: block;
+        width: 480px;
+        height: 270px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="film" width="1200" height="632"></canvas>
+    <script type="module">
+      import { createFilm } from './film.mjs';
+
+      try {
+        const response = await fetch('./mark.svg');
+        if (!response.ok) throw new Error(`Mark failed to load: ${response.status}`);
+        window.film = await createFilm(document.getElementById('film'), await response.text());
+        window.filmReady = 'ready';
+      } catch (error) {
+        window.filmReady = `failed: ${error.message}`;
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glass-tooltip",
+  "title": "Glass Tooltip",
+  "description": "A small glass label that appears on hover and keyboard focus.",
+  "dependencies": [
+    "@radix-ui/react-tooltip",
+    "clsx"
+  ],
+  "registryDependencies": [
+    "@glassyui/glass-panel"
+  ],
+  "files": [
+    {
+      "path": "registry/glassyui/glass-tooltip.tsx",
+      "content": "'use client';\n\nimport * as TooltipPrimitive from '@radix-ui/react-tooltip';\nimport clsx from 'clsx';\nimport { GlassPanel } from './glass-panel';\n\nconst radixSlotProps = { asChild: true };\n\nexport const GlassTooltipProvider = TooltipPrimitive.Provider;\n\nexport const GlassTooltip = TooltipPrimitive.Root;\n\nexport const GlassTooltipTrigger = TooltipPrimitive.Trigger;\n\nexport function GlassTooltipContent(\n  props: React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content>,\n) {\n  const { className, sideOffset = 6, ...rest } = props;\n\n  return (\n    <TooltipPrimitive.Portal>\n      <TooltipPrimitive.Content sideOffset={sideOffset} {...rest} {...radixSlotProps}>\n        <GlassPanel\n          variant=\"card\"\n          elevation=\"raised\"\n          refraction=\"none\"\n          className={clsx('lg-tooltip-content', className)}\n        >\n          {props.children}\n        </GlassPanel>\n      </TooltipPrimitive.Content>\n    </TooltipPrimitive.Portal>\n  );\n}\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glass-tooltip.tsx"
+    }
+  ],
+  "meta": {
+    "sourceModules": [
+      "tooltip"
+    ]
+  },
+  "type": "registry:ui"
+}

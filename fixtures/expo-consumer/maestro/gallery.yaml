@@ -1,0 +1,166 @@
+# Walks the gallery: each section, every overlay open, then the light theme and the opaque
+# fallback. Screenshots are named for the platform and step, so runs can be compared. Pass every
+# variable; Maestro gives a flow's own env block precedence over -e.
+#
+# iOS development build:
+#   maestro test -e PLATFORM=ios -e APP_ID=com.glassyui.expoconsumer -e EXPO_URL= maestro/gallery.yaml
+# Android in Expo Go, with `adb reverse tcp:8081 tcp:8081`:
+#   maestro test -e PLATFORM=android -e APP_ID=host.exp.exponent \
+#     -e EXPO_URL=exp://127.0.0.1:8081 maestro/gallery.yaml
+appId: ${APP_ID}
+---
+- runFlow:
+    when:
+      true: ${EXPO_URL == ''}
+    commands:
+      - launchApp:
+          stopApp: true
+- runFlow:
+    when:
+      true: ${EXPO_URL != ''}
+    commands:
+      - openLink: ${EXPO_URL}
+- extendedWaitUntil:
+    visible: 'Glassy UI for Expo'
+    timeout: 120000
+- takeScreenshot: ${PLATFORM}-01-material
+
+# Controls: type, tick, choose, switch tabs and drag
+- scrollUntilVisible:
+    element:
+      id: 'controls-input'
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: 'controls-input'
+- inputText: 'Morgan'
+- pressKey: Enter
+- scrollUntilVisible:
+    element:
+      id: 'controls-checkbox-email'
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: 'controls-checkbox-email'
+- tapOn:
+    id: 'controls-radio-express'
+- takeScreenshot: ${PLATFORM}-02-controls
+- scrollUntilVisible:
+    element:
+      id: 'controls-segment-month'
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: 'controls-segment-month'
+- tapOn:
+    id: 'controls-tab-activity'
+- assertVisible:
+    id: 'controls-tab-panel-activity'
+- scrollUntilVisible:
+    element:
+      id: 'controls-slider-volume'
+    direction: DOWN
+    centerElement: true
+- swipe:
+    from:
+      id: 'controls-slider-volume'
+    direction: RIGHT
+    duration: 800
+- takeScreenshot: ${PLATFORM}-03-controls
+
+# Display
+- scrollUntilVisible:
+    element:
+      id: 'display-progress-advance'
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: ${PLATFORM}-04-display
+- scrollUntilVisible:
+    element:
+      id: 'display-dock-inbox'
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: ${PLATFORM}-05-display
+
+# Modal overlays
+- scrollUntilVisible:
+    element:
+      id: 'open-dialog'
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: 'open-dialog'
+- extendedWaitUntil:
+    visible:
+      id: 'dialog-cancel'
+    timeout: 10000
+- takeScreenshot: ${PLATFORM}-06-dialog
+- tapOn:
+    id: 'dialog-cancel'
+- tapOn:
+    id: 'open-sheet'
+- extendedWaitUntil:
+    visible:
+      id: 'sheet-copy'
+    timeout: 10000
+- takeScreenshot: ${PLATFORM}-07-sheet
+- tapOn:
+    id: 'sheet-copy'
+- tapOn:
+    id: 'open-side-sheet'
+- extendedWaitUntil:
+    visible:
+      id: 'side-sheet-archived'
+    timeout: 10000
+- tapOn:
+    id: 'side-sheet-archived'
+- takeScreenshot: ${PLATFORM}-08-side-sheet
+- tapOn: 'Close sheet'
+- tapOn:
+    id: 'show-toast'
+- extendedWaitUntil:
+    visible:
+      id: 'toast-undo'
+    timeout: 10000
+- takeScreenshot: ${PLATFORM}-09-toast
+- tapOn:
+    id: 'toast-dismiss'
+
+# Anchored overlays, dismissed by a tap where they are not
+- scrollUntilVisible:
+    element:
+      id: 'open-menu'
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: 'open-menu'
+- waitForAnimationToEnd
+- takeScreenshot: ${PLATFORM}-10-menu
+- tapOn:
+    point: '96%,96%'
+- tapOn:
+    id: 'open-select'
+- waitForAnimationToEnd
+- takeScreenshot: ${PLATFORM}-11-select
+- tapOn: 'Astro'
+- assertVisible: 'Framework: Astro'
+- tapOn:
+    id: 'open-popover'
+- waitForAnimationToEnd
+- takeScreenshot: ${PLATFORM}-12-popover
+- tapOn:
+    point: '96%,96%'
+
+# The light theme, then Reduce Transparency's opaque surfaces
+- scrollUntilVisible:
+    element:
+      id: 'toggle-theme'
+    direction: UP
+    speed: 100
+    timeout: 90000
+- tapOn:
+    id: 'toggle-theme'
+- takeScreenshot: ${PLATFORM}-13-light
+- tapOn:
+    id: 'toggle-transparency'
+- takeScreenshot: ${PLATFORM}-14-opaque

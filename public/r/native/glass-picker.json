@@ -1,0 +1,40 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glass-picker",
+  "title": "Glass Picker",
+  "description": "A labelled system picker on glass, with a wheel on iOS and native dropdowns on Android and the web.",
+  "dependencies": [
+    "@expo/ui"
+  ],
+  "registryDependencies": [
+    "@glassyui-native/glass-surface",
+    "@glassyui-native/glass-provider"
+  ],
+  "files": [
+    {
+      "path": "registry/glassyui-native/glass-picker.tsx",
+      "content": "import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';\nimport { GlassSurface } from './glass-surface';\nimport { NativePicker } from './lib/picker';\n\nexport type GlassPickerProps<T extends string = string> = {\n  label: string;\n  options: readonly { label: string; value: T }[];\n  value: T;\n  onValueChange: (value: T) => void;\n  /** iOS supports an inline wheel; Android and web use their native dropdown. */\n  appearance?: 'menu' | 'wheel';\n  disabled?: boolean;\n  style?: StyleProp<ViewStyle>;\n  testID?: string;\n};\n\n/** A labelled system picker on glass: SwiftUI on iOS, Compose on Android, a select on web. */\nexport function GlassPicker<T extends string>({ style, ...props }: GlassPickerProps<T>) {\n  if (!props.options.some((option) => option.value === props.value)) {\n    throw new Error('GlassPicker value must match an option.');\n  }\n\n  return (\n    <GlassSurface elevation=\"none\" preset=\"control\" style={[styles.surface, style]}>\n      <NativePicker {...props} />\n    </GlassSurface>\n  );\n}\n\nconst styles = StyleSheet.create({ surface: { padding: 12 } });\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glass-picker.tsx"
+    },
+    {
+      "path": "registry/glassyui-native/lib/picker.tsx",
+      "content": "import { useEffect, useState } from 'react';\nimport { Host } from '@expo/ui';\nimport {\n  DropdownMenuItem,\n  ExposedDropdownMenu,\n  ExposedDropdownMenuBox,\n  Text,\n  TextField,\n  useNativeState,\n} from '@expo/ui/jetpack-compose';\nimport { menuAnchor, semantics, testID as nativeTestID } from '@expo/ui/jetpack-compose/modifiers';\nimport type { GlassPickerProps } from '../glass-picker';\nimport { useGlassTheme } from '../glass-provider';\n\n// Metro selects picker.ios and picker.web on those platforms. This is the Android implementation.\nexport function NativePicker<T extends string>({\n  label,\n  options,\n  value,\n  onValueChange,\n  disabled = false,\n  testID,\n}: GlassPickerProps<T>) {\n  const { preferences } = useGlassTheme();\n  const [expanded, setExpanded] = useState(false);\n  const selected = options.find((option) => option.value === value);\n  const text = useNativeState(selected?.label ?? value);\n\n  useEffect(() => {\n    text.set(selected?.label ?? value);\n  }, [selected?.label, text, value]);\n\n  return (\n    <Host\n      colorScheme={preferences.theme}\n      matchContents={{ vertical: true }}\n      style={{ width: '100%' }}\n    >\n      <ExposedDropdownMenuBox\n        expanded={expanded && !disabled}\n        onExpandedChange={disabled ? undefined : setExpanded}\n      >\n        <TextField\n          value={text}\n          enabled={!disabled}\n          readOnly\n          modifiers={[\n            menuAnchor('primaryNotEditable', !disabled),\n            semantics({ contentDescription: label }),\n            ...(testID ? [nativeTestID(testID)] : []),\n          ]}\n        >\n          <TextField.Label>\n            <Text>{label}</Text>\n          </TextField.Label>\n        </TextField>\n        <ExposedDropdownMenu\n          expanded={expanded && !disabled}\n          onDismissRequest={() => setExpanded(false)}\n        >\n          {options.map((option) => (\n            <DropdownMenuItem\n              key={option.value}\n              onClick={() => {\n                setExpanded(false);\n                onValueChange(option.value);\n              }}\n            >\n              <DropdownMenuItem.Text>\n                <Text>{option.label}</Text>\n              </DropdownMenuItem.Text>\n            </DropdownMenuItem>\n          ))}\n        </ExposedDropdownMenu>\n      </ExposedDropdownMenuBox>\n    </Host>\n  );\n}\n",
+      "type": "registry:lib",
+      "target": "components/glassyui/lib/picker.tsx"
+    },
+    {
+      "path": "registry/glassyui-native/lib/picker.ios.tsx",
+      "content": "import { Host } from '@expo/ui';\nimport { Picker, Text } from '@expo/ui/swift-ui';\nimport { disabled as nativeDisabled, pickerStyle, tag, tint } from '@expo/ui/swift-ui/modifiers';\nimport { Text as NativeText, View } from 'react-native';\nimport type { GlassPickerProps } from '../glass-picker';\nimport { useGlassTheme } from '../glass-provider';\n\nexport function NativePicker<T extends string>({\n  label,\n  options,\n  value,\n  onValueChange,\n  appearance = 'menu',\n  disabled = false,\n  testID,\n}: GlassPickerProps<T>) {\n  const { colors, preferences } = useGlassTheme();\n  const wheel = appearance === 'wheel';\n\n  return (\n    <View\n      style={{\n        alignItems: wheel ? 'stretch' : 'center',\n        flexDirection: wheel ? 'column' : 'row',\n        gap: 12,\n        justifyContent: 'space-between',\n        minHeight: 44,\n      }}\n    >\n      <NativeText style={{ color: colors.foreground, fontSize: 16 }}>{label}</NativeText>\n      <Host\n        colorScheme={preferences.theme}\n        matchContents={wheel ? { vertical: true } : { horizontal: true }}\n        style={wheel ? { width: '100%' } : { height: 44 }}\n      >\n        <Picker\n          label={label}\n          selection={value}\n          onSelectionChange={onValueChange}\n          modifiers={[pickerStyle(appearance), nativeDisabled(disabled), tint(colors.accent)]}\n          testID={testID}\n        >\n          {options.map((option) => (\n            <Text key={option.value} modifiers={[tag(option.value)]}>\n              {option.label}\n            </Text>\n          ))}\n        </Picker>\n      </Host>\n    </View>\n  );\n}\n",
+      "type": "registry:lib",
+      "target": "components/glassyui/lib/picker.ios.tsx"
+    },
+    {
+      "path": "registry/glassyui-native/lib/picker.web.tsx",
+      "content": "import { useId } from 'react';\nimport type { GlassPickerProps } from '../glass-picker';\nimport { useGlassTheme } from '../glass-provider';\n\n/** The browser's real select preserves labels, keyboard input, and native option menus. */\nexport function NativePicker<T extends string>({\n  label,\n  options,\n  value,\n  onValueChange,\n  disabled = false,\n  testID,\n}: GlassPickerProps<T>) {\n  const id = useId();\n  const { colors, preferences } = useGlassTheme();\n\n  return (\n    <div\n      style={{\n        display: 'flex',\n        position: 'relative',\n        alignItems: 'center',\n        gap: 12,\n        justifyContent: 'space-between',\n        fontFamily: '-apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif',\n      }}\n    >\n      <label htmlFor={id} style={{ color: colors.foreground, fontSize: 16 }}>\n        {label}\n      </label>\n      <select\n        id={id}\n        data-testid={testID}\n        value={value}\n        disabled={disabled}\n        onChange={(event) => {\n          const option = options.find((item) => item.value === event.target.value);\n\n          if (option) onValueChange(option.value);\n        }}\n        style={{\n          background: colors.opaqueSurface,\n          color: colors.foreground,\n          colorScheme: preferences.theme,\n          border: `1px solid ${colors.border}`,\n          borderRadius: 10,\n          font: 'inherit',\n          fontSize: 16,\n          minHeight: 44,\n          maxWidth: '65%',\n          padding: '8px 12px',\n        }}\n      >\n        {options.map((option) => (\n          <option key={option.value} value={option.value}>\n            {option.label}\n          </option>\n        ))}\n      </select>\n    </div>\n  );\n}\n",
+      "type": "registry:lib",
+      "target": "components/glassyui/lib/picker.web.tsx"
+    }
+  ],
+  "type": "registry:ui"
+}

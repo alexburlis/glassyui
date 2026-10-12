@@ -1,0 +1,415 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glassy-theme",
+  "title": "Glassy UI theme for shadcn/ui",
+  "description": "Gives stock shadcn/ui components the Glassy UI look, tinted from your own palette, with one command.",
+  "cssVars": {
+    "theme": {
+      "ease-glassy-spring": "linear(0, 0.033, 0.115, 0.225, 0.348, 0.47, 0.586, 0.689, 0.778, 0.852, 0.91, 0.955, 0.989, 1.012, 1.026, 1.035, 1.038, 1.038, 1.036, 1.032, 1.027, 1.023, 1.018, 1.014, 1.01, 1.007, 1.004, 1.002, 1)",
+      "ease-glassy-out": "cubic-bezier(0.32, 0.72, 0, 1)"
+    },
+    "light": {
+      "glassy-tint": "97%",
+      "glassy-tint-depth": "0.24",
+      "glassy-rim-split": "0.28",
+      "glassy-pill-lift": "0%",
+      "glassy-surface": "64%",
+      "glassy-field": "58%",
+      "glassy-frost": "14px",
+      "glassy-lens-frost": "6px",
+      "glassy-float-frost": "22px",
+      "glassy-saturate": "1.6",
+      "glassy-rim": "0.82",
+      "glassy-shade": "0.24",
+      "glassy-sheen": "0.22",
+      "glassy-pane-sheen": "0.22",
+      "glassy-shadow": "24 24 27"
+    },
+    "dark": {
+      "glassy-tint": "97%",
+      "glassy-tint-depth": "0.2",
+      "glassy-rim-split": "0.28",
+      "glassy-pill-lift": "18%",
+      "glassy-surface": "58%",
+      "glassy-field": "46%",
+      "glassy-frost": "16px",
+      "glassy-lens-frost": "6px",
+      "glassy-float-frost": "26px",
+      "glassy-saturate": "1.7",
+      "glassy-rim": "0.3",
+      "glassy-shade": "0.55",
+      "glassy-sheen": "0.08",
+      "glassy-pane-sheen": "0",
+      "glassy-shadow": "0 0 0"
+    }
+  },
+  "css": {
+    "@layer components": {
+      "@layer glassy": {
+        ":root, .dark:not([data-slot])": {
+          "--glassy-src-primary": "var(--primary)",
+          "--glassy-src-destructive": "var(--destructive)",
+          "--glassy-src-secondary": "var(--secondary)",
+          "--glassy-src-card": "var(--card)",
+          "--glassy-src-popover": "var(--popover)",
+          "--glassy-src-background": "var(--background)",
+          "--glassy-src-foreground": "var(--foreground)",
+          "--glassy-src-muted": "var(--muted)",
+          "--glassy-src-accent": "var(--accent)",
+          "--glassy-src-border": "var(--border)",
+          "--glassy-hue": "oklch(from var(--glassy-src-primary) l c h / calc(c * 0.7))",
+          "--glassy-hue-soft": "oklch(from var(--glassy-src-primary) l c h / calc(c * 0.35))",
+          "--glassy-hue-rim": "oklch(from var(--glassy-src-primary) 0.97 calc(c * 0.35) h)"
+        },
+        ":is([data-slot='card'], [data-slot='alert']):not(.dark)": {
+          "--card": "color-mix(in oklab, var(--glassy-src-card) var(--glassy-surface), transparent)",
+          "--border": "transparent",
+          "--tw-shadow-color": "transparent",
+          "position": "relative",
+          "isolation": "isolate",
+          "backdrop-filter": "blur(var(--glassy-frost)) saturate(var(--glassy-saturate))"
+        },
+        ":is([data-slot='card'], [data-slot='alert']):not(.dark)::before, :is([data-slot='card'], [data-slot='alert']):not(.dark)::after": {
+          "content": "''",
+          "position": "absolute",
+          "inset": "0",
+          "border-radius": "inherit",
+          "pointer-events": "none"
+        },
+        ":is([data-slot='card'], [data-slot='alert']):not(.dark)::before": {
+          "z-index": "-1",
+          "background": "linear-gradient(158deg, rgb(255 255 255 / calc(var(--glassy-pane-sheen) * 1.6)), transparent 36%), radial-gradient(110% 85% at 0% 0%, var(--glassy-hue), transparent 58%), radial-gradient(80% 70% at 100% 100%, var(--glassy-hue-soft), transparent 62%)"
+        },
+        ":is([data-slot='card'], [data-slot='alert']):not(.dark)::after": {
+          "z-index": "-1",
+          "box-shadow": "inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.45)), inset 1.5px 1.5px 0 color-mix(in oklab, var(--glassy-hue-rim) calc(var(--glassy-rim) * 95%), transparent), inset -1px -1px 0 color-mix(in oklab, var(--glassy-hue-rim) calc(var(--glassy-rim) * 45%), transparent), inset 0 0 0 2px color-mix(in oklab, var(--glassy-hue-rim) calc(var(--glassy-rim) * 30%), transparent), 0 1px 2px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.4)), 0 14px 34px -16px color-mix(in oklab, var(--glassy-src-primary) 22%, rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 1.1)))"
+        },
+        "[data-slot='alert']:is([data-variant='destructive'], [class~='text-destructive']):not(.dark)": {
+          "--glassy-hue": "transparent",
+          "--glassy-hue-soft": "transparent",
+          "--glassy-pane-sheen": "0"
+        },
+        ":is([data-slot='popover-content'], [data-slot='dropdown-menu-content'], [data-slot='dropdown-menu-sub-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='sheet-content']):not(.dark)": {
+          "--popover": "color-mix(in oklab, var(--glassy-src-popover) var(--glassy-surface), transparent)",
+          "--background": "color-mix(in oklab, var(--glassy-src-background) var(--glassy-surface), transparent)",
+          "--border": "transparent",
+          "--tw-shadow-color": "transparent",
+          "position": "relative",
+          "isolation": "isolate",
+          "background-image": "radial-gradient(110% 85% at 0% 0%, var(--glassy-hue), transparent 58%), radial-gradient(80% 70% at 100% 100%, var(--glassy-hue-soft), transparent 62%)",
+          "backdrop-filter": "blur(var(--glassy-float-frost)) saturate(var(--glassy-saturate))",
+          "box-shadow": "inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.4)), inset 0 0 0 2px rgb(255 255 255 / calc(var(--glassy-rim) * 0.5)), inset 0 1px 0 1px rgb(255 255 255 / calc(var(--glassy-rim) * 0.45)), 0 2px 6px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.35)), 0 24px 56px -16px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 1.4))"
+        },
+        "[data-slot='tooltip-content']:not(.dark)": {
+          "--foreground": "color-mix(in oklab, var(--glassy-src-foreground) 86%, transparent)",
+          "backdrop-filter": "blur(8px) saturate(var(--glassy-saturate))"
+        },
+        ":is([data-slot='dialog-overlay'], [data-slot='sheet-overlay'])": {
+          "backdrop-filter": "blur(3px) saturate(1.2)"
+        },
+        ":is([data-slot='dropdown-menu-item'], [data-slot='dropdown-menu-checkbox-item'], [data-slot='dropdown-menu-radio-item'], [data-slot='dropdown-menu-sub-trigger'], [data-slot='select-item'], [data-slot='command-item']):not(.dark)": {
+          "--accent": "rgb(255 255 255 / calc(var(--glassy-rim) * 0.6))",
+          "--radius": "12px"
+        },
+        ":is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):not([data-variant='link'], [class~='underline-offset-4']):not(.dark)": {
+          "--radius": "999px",
+          "--radius-md": "999px",
+          "min-width": "calc-size(fit-content, size + 0.75rem)",
+          "--glassy-lift": "1",
+          "--glassy-face": "brightness(1.02) saturate(1.1)",
+          "--glassy-lighting": "oklch(from currentColor 1 0 0 / clamp(0, (0.62 - l) * 100, 1))",
+          "--glassy-shading": "oklch(from currentColor 0 0 0 / clamp(0, (l - 0.62) * 100, 1))",
+          "--glassy-face-light": "radial-gradient(circle at 50% 0%, color-mix(in oklab, var(--glassy-lighting) calc(var(--glassy-sheen) * 90%), transparent), transparent 62%)",
+          "--glassy-face-sweep": "linear-gradient(transparent, transparent)",
+          "--glassy-deepen": "transparent",
+          "--tw-shadow-color": "transparent",
+          "position": "relative",
+          "isolation": "isolate"
+        },
+        "@media (hover: hover)": {
+          ":is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):not([data-variant='link'], [class~='underline-offset-4']):not(.dark):hover": {
+            "--glassy-lift": "0.55"
+          }
+        },
+        ":is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):not([data-variant='link'], [class~='underline-offset-4']):not(.dark):active": {
+          "--glassy-lift": "0.12"
+        },
+        ":is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):not([data-variant='link'], [class~='underline-offset-4']):not(.dark)::before, :is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):not([data-variant='link'], [class~='underline-offset-4']):not(.dark)::after": {
+          "content": "''",
+          "position": "absolute",
+          "inset": "0",
+          "border-radius": "inherit",
+          "pointer-events": "none"
+        },
+        ":is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):not([data-variant='link'], [class~='underline-offset-4']):not(.dark)::before": {
+          "z-index": "-1",
+          "box-shadow": "inset 0 0 0 1px rgb(255 255 255 / calc(var(--glassy-rim) * 0.12)), inset 0 0 0 0.5px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.35)), inset 1.8px 3px 0 -2px rgb(255 255 255 / calc(var(--glassy-rim) * 1.1)), inset -2px -2px 0 -2px rgb(255 255 255 / calc(var(--glassy-rim) * 0.95)), inset -3px -8px 1px -6px rgb(255 255 255 / calc(var(--glassy-rim) * 0.7)), inset -0.3px -1px 4px 0 rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.5)), inset -1.5px 2.5px 0 -2px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.8)), inset 0 3px 4px -2px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.8)), inset 2px -6.5px 1px -4px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.4))",
+          "filter": "drop-shadow(0.35px 0 rgb(255 90 150 / var(--glassy-rim-split))) drop-shadow(-0.35px 0 rgb(80 160 255 / var(--glassy-rim-split)))"
+        },
+        ":is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):not([data-variant='link'], [class~='underline-offset-4']):not(.dark)::after": {
+          "z-index": "-2",
+          "background": "var(--glassy-face-light), var(--glassy-face-sweep), linear-gradient(var(--glassy-deepen), var(--glassy-deepen))",
+          "backdrop-filter": "blur(0.6px) var(--glassy-face)",
+          "box-shadow": "0 calc(var(--glassy-lift) * 1px) calc(var(--glassy-lift) * 5px) rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.4)), 0 calc(var(--glassy-lift) * 6px) calc(var(--glassy-lift) * 16px) rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.33))",
+          "transition": "box-shadow 0.3s var(--ease-glassy-out)"
+        },
+        ":is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):is([data-variant='default'], :not([data-variant])[class~='bg-primary']):not(.dark)": {
+          "--primary": "color-mix(in oklab, var(--glassy-src-primary) var(--glassy-tint), transparent)",
+          "--glassy-drop": "color-mix(in oklab, var(--glassy-src-primary), black 20%)"
+        },
+        ":is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):is([data-variant='destructive'], :not([data-variant])[class~='bg-destructive']):not(.dark)": {
+          "--destructive": "color-mix(in oklab, var(--glassy-src-destructive) var(--glassy-tint), transparent)",
+          "--glassy-drop": "color-mix(in oklab, var(--glassy-src-destructive), black 20%)"
+        },
+        ":is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):is([data-variant='default'], [data-variant='destructive'], :not([data-variant])[class~='bg-primary'], :not([data-variant])[class~='bg-destructive']):not(.dark)": {
+          "--glassy-face": "contrast(1.08) saturate(1.15)",
+          "--glassy-deepen": "oklch(from currentColor clamp(0, (0.62 - l) * 100, 1) 0 0 / var(--glassy-tint-depth))",
+          "--glassy-face-light": "radial-gradient(circle at 50% 0%, color-mix(in oklab, var(--glassy-lighting) 3%, transparent), transparent 62%)",
+          "--glassy-face-sweep": "linear-gradient(145deg, color-mix(in oklab, var(--glassy-lighting) 3%, transparent), transparent 34%, color-mix(in oklab, var(--glassy-shading) 12%, transparent) 72%, color-mix(in oklab, var(--glassy-lighting) 1.5%, transparent))"
+        },
+        ":is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):is([data-variant='default'], [data-variant='destructive'], :not([data-variant])[class~='bg-primary'], :not([data-variant])[class~='bg-destructive']):not(.dark)::before": {
+          "box-shadow": "inset 0 0 0 1px rgb(255 255 255 / 0.18), inset 2px 3px 0 -2px rgb(255 255 255 / 0.82), inset -2px -3px 0 -2px rgb(0 0 0 / calc(0.34 * var(--glassy-tint))), inset 0 0 0 2px rgb(255 255 255 / 0.04), inset 0 -18px 24px -24px color-mix(in oklab, var(--glassy-shading) calc(0.8 * var(--glassy-tint)), transparent)"
+        },
+        ":is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):is([data-variant='default'], [data-variant='destructive'], :not([data-variant])[class~='bg-primary'], :not([data-variant])[class~='bg-destructive']):not(.dark)::after": {
+          "box-shadow": "0 calc(var(--glassy-lift) * 18px) calc(var(--glassy-lift) * 46px) calc(var(--glassy-lift) * -22px) color-mix(in oklab, var(--glassy-drop) calc(var(--glassy-tint) * 0.98), transparent), 0 calc(var(--glassy-lift) * 7px) calc(var(--glassy-lift) * 20px) calc(var(--glassy-lift) * -12px) color-mix(in oklab, var(--glassy-drop) calc(var(--glassy-tint) * 0.8), transparent)"
+        },
+        ":is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):is([data-variant='secondary'], [data-variant='outline'], :not([data-variant]):is([class~='bg-secondary'], [class~='border-border'], [class~='bg-background'])):not(.dark)": {
+          "--secondary": "color-mix(in oklab, var(--glassy-src-secondary) 60%, transparent)",
+          "--background": "color-mix(in oklab, var(--glassy-src-background) 55%, transparent)",
+          "--input": "transparent",
+          "--border": "transparent",
+          "--accent": "color-mix(in oklab, var(--glassy-src-background) 75%, transparent)",
+          "--muted": "color-mix(in oklab, var(--glassy-src-background) 75%, transparent)"
+        },
+        ":is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):is([data-variant='ghost'], :not([data-variant]):is([class~='hover:bg-muted'], [class~='hover:bg-accent']):not([class~='bg-background'], [class~='bg-secondary'], [class~='border-border'], [class~='bg-primary'], [class~='bg-destructive'])):not(.dark)": {
+          "--accent": "color-mix(in oklab, var(--glassy-src-background) 55%, transparent)",
+          "--muted": "color-mix(in oklab, var(--glassy-src-background) 55%, transparent)",
+          "min-width": "auto"
+        },
+        ":is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):is([data-variant='ghost'], :not([data-variant]):is([class~='hover:bg-muted'], [class~='hover:bg-accent']):not([class~='bg-background'], [class~='bg-secondary'], [class~='border-border'], [class~='bg-primary'], [class~='bg-destructive'])):not(.dark):not(:hover, :active)::before, :is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):is([data-variant='ghost'], :not([data-variant]):is([class~='hover:bg-muted'], [class~='hover:bg-accent']):not([class~='bg-background'], [class~='bg-secondary'], [class~='border-border'], [class~='bg-primary'], [class~='bg-destructive'])):not(.dark):not(:hover, :active)::after": {
+          "opacity": "0"
+        },
+        "@supports (-webkit-app-region: drag)": {
+          ":is([data-slot='card'], [data-slot='alert']):not(.dark)": {
+            "backdrop-filter": "none"
+          },
+          ":is([data-slot='card'], [data-slot='alert']):not(.dark)::after": {
+            "z-index": "-2",
+            "backdrop-filter": "blur(var(--glassy-lens-frost)) url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='pane' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeFlood flood-color='%23fff' result='box'/%3E%3CfeGaussianBlur in='box' stdDeviation='8' edgeMode='none' result='depth'/%3E%3CfeComponentTransfer in='depth' result='height'%3E%3CfeFuncA type='table' tableValues='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.0437 0.0864 0.1281 0.1689 0.2087 0.2476 0.2857 0.3228 0.3591 0.3945 0.4291 0.4628 0.4957 0.5277 0.5589 0.5892 0.6186 0.6471 0.6748 0.7015 0.7273 0.7521 0.7759 0.7986 0.8202 0.8407 0.86 0.8779 0.8945 0.9096 0.9234 0.936 0.9472 0.9573 0.966 0.9737 0.9802 0.9858 0.9902 0.9937 0.9964 0.9981 0.9992 0.9998 1 1 1 1 1 1'/%3E%3C/feComponentTransfer%3E%3CfeOffset in='height' dx='-1' result='east'/%3E%3CfeOffset in='height' dy='-1' result='south'/%3E%3CfeComposite in='east' in2='height' operator='arithmetic' k2='1' k3='-1' k4='0.5' result='across'/%3E%3CfeComposite in='south' in2='height' operator='arithmetic' k2='1' k3='-1' k4='0.5' result='down'/%3E%3CfeColorMatrix in='across' type='matrix' values='0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1' result='x'/%3E%3CfeColorMatrix in='down' type='matrix' values='0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 1' result='y'/%3E%3CfeComposite in='x' in2='y' operator='arithmetic' k2='1' k3='1' result='map'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='map' scale='27.25' xChannelSelector='R' yChannelSelector='G' result='r'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='map' scale='30.8' xChannelSelector='R' yChannelSelector='G' result='gb'/%3E%3CfeColorMatrix in='r' type='matrix' values='1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1' result='red'/%3E%3CfeColorMatrix in='gb' type='matrix' values='0 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0 1' result='cyan'/%3E%3CfeComposite in='red' in2='cyan' operator='arithmetic' k2='1' k3='1' result='split'/%3E%3CfeComposite in='split' in2='gb' operator='in'/%3E%3C/filter%3E%3C/svg%3E#pane\") saturate(var(--glassy-saturate))",
+            "box-shadow": "none"
+          },
+          ":is([data-slot='card'], [data-slot='alert']):not(.dark)::before": {
+            "box-shadow": "inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.45)), inset 1.5px 1.5px 0 color-mix(in oklab, var(--glassy-hue-rim) calc(var(--glassy-rim) * 95%), transparent), inset -1px -1px 0 color-mix(in oklab, var(--glassy-hue-rim) calc(var(--glassy-rim) * 45%), transparent), inset 0 0 0 2px color-mix(in oklab, var(--glassy-hue-rim) calc(var(--glassy-rim) * 30%), transparent), 0 1px 2px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.4)), 0 14px 34px -16px color-mix(in oklab, var(--glassy-src-primary) 22%, rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 1.1)))"
+          },
+          ":is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):not([data-variant='link'], [class~='underline-offset-4']):not(.dark)::after": {
+            "filter": "none",
+            "backdrop-filter": "blur(var(--glassy-lens-frost)) url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='slab' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeFlood flood-color='%23fff' result='box'/%3E%3CfeGaussianBlur in='box' stdDeviation='9' edgeMode='none' result='depth'/%3E%3CfeComponentTransfer in='depth' result='height'%3E%3CfeFuncA type='table' tableValues='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.039 0.0773 0.1147 0.1515 0.1875 0.2227 0.2573 0.2912 0.3244 0.3569 0.3888 0.42 0.4506 0.4806 0.5099 0.5385 0.5665 0.5939 0.6206 0.6465 0.6719 0.6965 0.7204 0.7437 0.7659 0.7875 0.8082 0.8279 0.8467 0.8645 0.8811 0.8965 0.9108 0.9239 0.9361 0.9471 0.957 0.9659 0.9737 0.9805 0.9862 0.9908 0.9946 0.9975 0.9989 0.9997 1 1 1 1'/%3E%3C/feComponentTransfer%3E%3CfeOffset in='height' dx='-1' result='east'/%3E%3CfeOffset in='height' dy='-1' result='south'/%3E%3CfeComposite in='east' in2='height' operator='arithmetic' k2='1' k3='-1' k4='0.5' result='across'/%3E%3CfeComposite in='south' in2='height' operator='arithmetic' k2='1' k3='-1' k4='0.5' result='down'/%3E%3CfeColorMatrix in='across' type='matrix' values='0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1' result='x'/%3E%3CfeColorMatrix in='down' type='matrix' values='0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 1' result='y'/%3E%3CfeComposite in='x' in2='y' operator='arithmetic' k2='1' k3='1' result='map'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='map' scale='46.81' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3C/svg%3E#slab\") var(--glassy-face)"
+          },
+          ":is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):not([data-variant='link'], [class~='underline-offset-4']):not(.dark):is([class~='h-6'], [class~='size-6'])::after": {
+            "backdrop-filter": "blur(var(--glassy-lens-frost)) url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='slab-12' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeFlood flood-color='%23fff' result='box'/%3E%3CfeGaussianBlur in='box' stdDeviation='6' edgeMode='none' result='depth'/%3E%3CfeComponentTransfer in='depth' result='height'%3E%3CfeFuncA type='table' tableValues='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.0378 0.0748 0.1111 0.1468 0.1817 0.216 0.2497 0.2827 0.3151 0.3469 0.3781 0.4087 0.4387 0.4681 0.497 0.5252 0.5529 0.58 0.6065 0.6324 0.6578 0.6824 0.7065 0.7299 0.7525 0.7745 0.7957 0.8161 0.8357 0.8543 0.872 0.8886 0.9039 0.918 0.9312 0.943 0.9537 0.9633 0.9717 0.9789 0.9851 0.9901 0.9941 0.9972 0.9988 0.9997 1 1 1 1'/%3E%3C/feComponentTransfer%3E%3CfeOffset in='height' dx='-1' result='east'/%3E%3CfeOffset in='height' dy='-1' result='south'/%3E%3CfeComposite in='east' in2='height' operator='arithmetic' k2='1' k3='-1' k4='0.5' result='across'/%3E%3CfeComposite in='south' in2='height' operator='arithmetic' k2='1' k3='-1' k4='0.5' result='down'/%3E%3CfeColorMatrix in='across' type='matrix' values='0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1' result='x'/%3E%3CfeColorMatrix in='down' type='matrix' values='0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 1' result='y'/%3E%3CfeComposite in='x' in2='y' operator='arithmetic' k2='1' k3='1' result='map'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='map' scale='22.43' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3C/svg%3E#slab-12\") var(--glassy-face)"
+          },
+          ":is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):not([data-variant='link'], [class~='underline-offset-4']):not(.dark):is([class~='h-7'], [class~='size-7'])::after": {
+            "backdrop-filter": "blur(var(--glassy-lens-frost)) url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='slab-14' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeFlood flood-color='%23fff' result='box'/%3E%3CfeGaussianBlur in='box' stdDeviation='7' edgeMode='none' result='depth'/%3E%3CfeComponentTransfer in='depth' result='height'%3E%3CfeFuncA type='table' tableValues='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.0383 0.0758 0.1126 0.1486 0.184 0.2187 0.2527 0.2861 0.3188 0.3509 0.3824 0.4132 0.4435 0.4731 0.5022 0.5306 0.5584 0.5856 0.6122 0.6381 0.6635 0.6882 0.7122 0.7355 0.758 0.7798 0.8009 0.821 0.8403 0.8586 0.8759 0.892 0.9069 0.9205 0.9333 0.9448 0.9551 0.9644 0.9725 0.9796 0.9856 0.9904 0.9943 0.9973 0.9988 0.9997 1 1 1 1'/%3E%3C/feComponentTransfer%3E%3CfeOffset in='height' dx='-1' result='east'/%3E%3CfeOffset in='height' dy='-1' result='south'/%3E%3CfeComposite in='east' in2='height' operator='arithmetic' k2='1' k3='-1' k4='0.5' result='across'/%3E%3CfeComposite in='south' in2='height' operator='arithmetic' k2='1' k3='-1' k4='0.5' result='down'/%3E%3CfeColorMatrix in='across' type='matrix' values='0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1' result='x'/%3E%3CfeColorMatrix in='down' type='matrix' values='0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 1' result='y'/%3E%3CfeComposite in='x' in2='y' operator='arithmetic' k2='1' k3='1' result='map'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='map' scale='29.62' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3C/svg%3E#slab-14\") var(--glassy-face)"
+          },
+          ":is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):not([data-variant='link'], [class~='underline-offset-4']):not(.dark):is([class~='h-8'], [class~='size-8'])::after": {
+            "backdrop-filter": "blur(var(--glassy-lens-frost)) url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='slab-16' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeFlood flood-color='%23fff' result='box'/%3E%3CfeGaussianBlur in='box' stdDeviation='8' edgeMode='none' result='depth'/%3E%3CfeComponentTransfer in='depth' result='height'%3E%3CfeFuncA type='table' tableValues='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.0387 0.0766 0.1138 0.1502 0.1859 0.2209 0.2552 0.2889 0.3219 0.3542 0.3859 0.417 0.4474 0.4772 0.5064 0.5349 0.5629 0.5901 0.6168 0.6428 0.6681 0.6928 0.7167 0.74 0.7624 0.7841 0.8049 0.8248 0.8439 0.8619 0.8788 0.8945 0.9091 0.9224 0.9349 0.9461 0.9562 0.9652 0.9732 0.9801 0.9859 0.9907 0.9945 0.9974 0.9988 0.9997 1 1 1 1'/%3E%3C/feComponentTransfer%3E%3CfeOffset in='height' dx='-1' result='east'/%3E%3CfeOffset in='height' dy='-1' result='south'/%3E%3CfeComposite in='east' in2='height' operator='arithmetic' k2='1' k3='-1' k4='0.5' result='across'/%3E%3CfeComposite in='south' in2='height' operator='arithmetic' k2='1' k3='-1' k4='0.5' result='down'/%3E%3CfeColorMatrix in='across' type='matrix' values='0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1' result='x'/%3E%3CfeColorMatrix in='down' type='matrix' values='0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 1' result='y'/%3E%3CfeComposite in='x' in2='y' operator='arithmetic' k2='1' k3='1' result='map'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='map' scale='37.75' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3C/svg%3E#slab-16\") var(--glassy-face)"
+          },
+          ":is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):not([data-variant='link'], [class~='underline-offset-4']):not(.dark):is([class~='h-10'], [class~='size-10'])::after": {
+            "backdrop-filter": "blur(var(--glassy-lens-frost)) url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='slab-20' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeFlood flood-color='%23fff' result='box'/%3E%3CfeGaussianBlur in='box' stdDeviation='10' edgeMode='none' result='depth'/%3E%3CfeComponentTransfer in='depth' result='height'%3E%3CfeFuncA type='table' tableValues='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.0393 0.0778 0.1156 0.1526 0.1888 0.2243 0.2591 0.2931 0.3265 0.3592 0.3913 0.4227 0.4534 0.4834 0.5128 0.5415 0.5696 0.597 0.6237 0.6497 0.6751 0.6997 0.7235 0.7467 0.7689 0.7903 0.8109 0.8304 0.849 0.8665 0.8829 0.8981 0.9122 0.925 0.9371 0.9479 0.9577 0.9664 0.9741 0.9808 0.9864 0.991 0.9947 0.9975 0.9989 0.9997 1 1 1 1'/%3E%3C/feComponentTransfer%3E%3CfeOffset in='height' dx='-1' result='east'/%3E%3CfeOffset in='height' dy='-1' result='south'/%3E%3CfeComposite in='east' in2='height' operator='arithmetic' k2='1' k3='-1' k4='0.5' result='across'/%3E%3CfeComposite in='south' in2='height' operator='arithmetic' k2='1' k3='-1' k4='0.5' result='down'/%3E%3CfeColorMatrix in='across' type='matrix' values='0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1' result='x'/%3E%3CfeColorMatrix in='down' type='matrix' values='0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 1' result='y'/%3E%3CfeComposite in='x' in2='y' operator='arithmetic' k2='1' k3='1' result='map'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='map' scale='56.8' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3C/svg%3E#slab-20\") var(--glassy-face)"
+          },
+          ":is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):not([data-variant='link'], [class~='underline-offset-4']):not(.dark):is([data-variant='default'], [data-variant='destructive'], :not([data-variant])[class~='bg-primary'], :not([data-variant])[class~='bg-destructive'])::after": {
+            "backdrop-filter": "blur(var(--glassy-lens-frost)) var(--glassy-face)"
+          },
+          ":is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))):not([data-variant='link'], [class~='underline-offset-4']):not(.dark):is([data-variant='ghost'], :not([data-variant]):is([class~='hover:bg-muted'], [class~='hover:bg-accent']):not([class~='bg-background'], [class~='bg-secondary'], [class~='border-border'], [class~='bg-primary'], [class~='bg-destructive'])):not(:hover, :active)::after": {
+            "backdrop-filter": "none"
+          }
+        },
+        ":is([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger']):not(.dark)": {
+          "--input": "transparent",
+          "--tw-inset-shadow": "inset 0 1px 2px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.5)), inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.55)), inset 0 0 0 1px rgb(255 255 255 / calc(var(--glassy-rim) * 0.35)), inset 0 -1px 0 rgb(255 255 255 / calc(var(--glassy-rim) * 0.6))",
+          "background-image": "linear-gradient(color-mix(in oklab, var(--glassy-src-background) var(--glassy-field), transparent), color-mix(in oklab, var(--glassy-src-background) var(--glassy-field), transparent))",
+          "backdrop-filter": "blur(var(--glassy-frost)) saturate(var(--glassy-saturate))",
+          "box-shadow": "var(--tw-inset-shadow)"
+        },
+        "[data-slot='switch']:not(.dark)": {
+          "--primary": "color-mix(in oklab, var(--glassy-src-primary) var(--glassy-tint), transparent)",
+          "--input": "color-mix(in oklab, var(--glassy-src-foreground) 16%, transparent)",
+          "--tw-inset-shadow": "inset 0 1px 2px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.6)), inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.35))",
+          "backdrop-filter": "blur(8px) saturate(var(--glassy-saturate))",
+          "box-shadow": "var(--tw-inset-shadow)"
+        },
+        "[data-slot='switch-thumb']:not(.dark)": {
+          "--tw-ease": "var(--ease-glassy-spring)",
+          "--tw-duration": "0.6s",
+          "--tw-shadow": "0 1px 3px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.8)), 0 0 0 0.5px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.5))",
+          "box-shadow": "var(--tw-shadow)"
+        },
+        "[data-slot='switch']:not(.dark):active [data-slot='switch-thumb']": {
+          "scale": "1.22 1"
+        },
+        "[data-slot='slider-track']:not(.dark)": {
+          "--muted": "color-mix(in oklab, var(--glassy-src-foreground) 14%, transparent)",
+          "box-shadow": "inset 0 1px 2px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.6)), inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.3))"
+        },
+        "[data-slot='slider-range']:not(.dark)": {
+          "--primary": "color-mix(in oklab, var(--glassy-src-primary) var(--glassy-tint), transparent)"
+        },
+        "[data-slot='slider-thumb']:not(.dark)": {
+          "--primary": "transparent",
+          "position": "relative",
+          "isolation": "isolate",
+          "background-clip": "text"
+        },
+        "[data-slot='slider-thumb']:not(.dark)::before": {
+          "content": "''",
+          "position": "absolute",
+          "inset": "-4px -9px",
+          "z-index": "-1",
+          "border-radius": "999px",
+          "pointer-events": "none",
+          "background": "linear-gradient(180deg, rgb(255 255 255 / 0.55), rgb(255 255 255 / 0.12) 60%), rgb(255 255 255 / 0.95)",
+          "box-shadow": "inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.5)), inset 0 1px 0 1px rgb(255 255 255 / 0.9), 0 2px 6px rgb(var(--glassy-shadow) / 0.22)",
+          "transition": "scale 0.6s var(--ease-glassy-spring), background-color 0.25s var(--ease-glassy-out)"
+        },
+        "[data-slot='slider-thumb']:not(.dark):active::before": {
+          "scale": "1.35",
+          "background-color": "rgb(255 255 255 / 0.18)",
+          "backdrop-filter": "blur(1px) saturate(1.8) brightness(1.08)"
+        },
+        ":is([data-slot='checkbox'], [data-slot='radio-group-item']):not(.dark)": {
+          "--primary": "color-mix(in oklab, var(--glassy-src-primary) var(--glassy-tint), transparent)",
+          "--input": "transparent",
+          "--tw-inset-shadow": "inset 0 1px 2px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.55)), inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.6)), inset 0 0 0 1.5px rgb(255 255 255 / calc(var(--glassy-rim) * 0.4))",
+          "backdrop-filter": "blur(6px) saturate(var(--glassy-saturate))",
+          "box-shadow": "var(--tw-inset-shadow)"
+        },
+        ":is([data-slot='checkbox'], [data-slot='radio-group-item']):not(.dark):not([data-state='checked'], [data-checked]:not([data-checked='false']))": {
+          "background-image": "linear-gradient(color-mix(in oklab, var(--glassy-src-background) var(--glassy-field), transparent), color-mix(in oklab, var(--glassy-src-background) var(--glassy-field), transparent))"
+        },
+        "[data-slot='tabs-list'][data-variant='default']:not(.dark)": {
+          "--muted": "color-mix(in oklab, var(--glassy-src-foreground) 7%, transparent)",
+          "--radius": "999px",
+          "position": "relative",
+          "isolation": "isolate",
+          "backdrop-filter": "blur(var(--glassy-frost)) saturate(var(--glassy-saturate))",
+          "box-shadow": "inset 0 1px 2px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.5)), inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.3))"
+        },
+        "@supports (anchor-name: --a) and (anchor-scope: --a)": {
+          "[data-slot='tabs-list'][data-variant='default']:not(.dark)": {
+            "anchor-scope": "--glassy-tab"
+          },
+          "[data-slot='tabs-list'][data-variant='default']:not(.dark) [data-slot='tabs-trigger']": {
+            "--background": "transparent",
+            "--input": "transparent",
+            "--tw-shadow-color": "transparent",
+            "position": "relative",
+            "z-index": "1"
+          },
+          "[data-slot='tabs-list'][data-variant='default']:not(.dark) :is([data-slot='tabs-trigger'][data-state='active'], [data-slot='tabs-trigger'][data-active]:not([data-active='false']))": {
+            "anchor-name": "--glassy-tab"
+          },
+          "[data-slot='tabs-list'][data-variant='default']:not(.dark)::before": {
+            "content": "''",
+            "position": "absolute",
+            "position-anchor": "--glassy-tab",
+            "top": "anchor(top)",
+            "left": "anchor(left)",
+            "width": "anchor-size(width)",
+            "height": "anchor-size(height)",
+            "z-index": "0",
+            "border-radius": "999px",
+            "pointer-events": "none",
+            "background": "linear-gradient(180deg, rgb(255 255 255 / var(--glassy-sheen)), transparent 55%), color-mix(in oklab, color-mix(in oklab, var(--glassy-src-foreground) var(--glassy-pill-lift), var(--glassy-src-background)) 86%, transparent)",
+            "box-shadow": "inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.45)), inset 0 0 0 2px rgb(255 255 255 / calc(var(--glassy-rim) * 0.7)), 0 2px 6px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.5))",
+            "transition": "left 0.6s var(--ease-glassy-spring), top 0.6s var(--ease-glassy-spring), width 0.6s var(--ease-glassy-spring), height 0.6s var(--ease-glassy-spring)"
+          }
+        },
+        "[data-slot='badge']:not(.dark)": {
+          "--radius": "999px",
+          "--primary": "color-mix(in oklab, var(--glassy-src-primary) var(--glassy-tint), transparent)",
+          "--secondary": "color-mix(in oklab, var(--glassy-src-secondary) 60%, transparent)",
+          "--border": "transparent",
+          "position": "relative",
+          "isolation": "isolate"
+        },
+        "[data-slot='badge']:not([class~='text-destructive']):not(.dark)": {
+          "--destructive": "color-mix(in oklab, var(--glassy-src-destructive) var(--glassy-tint), transparent)"
+        },
+        "[data-slot='badge']:is([data-variant='default'], [data-variant='destructive'], :not([data-variant]):is([class~='bg-primary'], [class~='bg-destructive/10'])):not(.dark)": {
+          "--glassy-deepen": "oklch(from currentColor clamp(0, (0.62 - l) * 100, 1) 0 0 / var(--glassy-tint-depth))",
+          "background-image": "linear-gradient(var(--glassy-deepen), var(--glassy-deepen))"
+        },
+        "[data-slot='badge']:not(.dark)::after": {
+          "content": "''",
+          "position": "absolute",
+          "inset": "0",
+          "z-index": "-1",
+          "border-radius": "inherit",
+          "pointer-events": "none",
+          "box-shadow": "inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.6)), inset 0 0 0 1.5px rgb(255 255 255 / calc(var(--glassy-rim) * 0.5))"
+        },
+        ":is([data-slot='kbd'], [data-slot='avatar-fallback']):not(.dark)": {
+          "--muted": "color-mix(in oklab, var(--glassy-src-muted) 40%, transparent)",
+          "box-shadow": "inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.5)), inset 0 1px 0 rgb(255 255 255 / calc(var(--glassy-rim) * 0.6))",
+          "backdrop-filter": "blur(6px) saturate(var(--glassy-saturate))"
+        },
+        "[data-slot='skeleton']:not(.dark)": {
+          "--accent": "color-mix(in oklab, var(--glassy-src-foreground) 8%, transparent)",
+          "backdrop-filter": "blur(6px) saturate(var(--glassy-saturate))"
+        },
+        "@media (prefers-reduced-motion: reduce)": {
+          ":is(:is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))), [data-slot='switch-thumb'], [data-slot='slider-thumb'], [data-slot='tabs-list'], [data-slot='tabs-trigger'], [data-slot='popover-content'], [data-slot='dropdown-menu-content'], [data-slot='dropdown-menu-sub-content'], [data-slot='select-content'], [data-slot='tooltip-content'], [data-slot='dialog-content'], [data-slot='dialog-overlay'], [data-slot='sheet-content'], [data-slot='sheet-overlay'], [data-slot='accordion-trigger'], [data-slot='accordion-trigger'] svg, [data-slot='accordion-content'], [data-slot='skeleton']), :is(:is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))), [data-slot='slider-thumb'], [data-slot='tabs-list'])::before, :is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs'])))::after": {
+            "transition": "none !important",
+            "animation": "none !important"
+          }
+        },
+        "@media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active)": {
+          ":is([data-slot='card'], [data-slot='alert'], [data-slot='popover-content'], [data-slot='dropdown-menu-content'], [data-slot='dropdown-menu-sub-content'], [data-slot='select-content'], [data-slot='tooltip-content'], [data-slot='dialog-content'], [data-slot='sheet-content'], [data-slot='dialog-overlay'], [data-slot='sheet-overlay'], [data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger'], [data-slot='switch'], [data-slot='checkbox'], [data-slot='radio-group-item'], [data-slot='tabs-list'], [data-slot='kbd'], [data-slot='avatar-fallback'], [data-slot='skeleton'], :is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))), [data-slot='badge'], [data-slot='slider-track'], [data-slot='slider-range']):not(.dark)": {
+            "--primary": "var(--glassy-src-primary) !important",
+            "--destructive": "var(--glassy-src-destructive) !important",
+            "--secondary": "var(--glassy-src-secondary) !important",
+            "--card": "var(--glassy-src-card) !important",
+            "--popover": "var(--glassy-src-popover) !important",
+            "--background": "var(--glassy-src-background) !important",
+            "--foreground": "var(--glassy-src-foreground) !important",
+            "--muted": "var(--glassy-src-muted) !important",
+            "--accent": "var(--glassy-src-accent) !important",
+            "--border": "var(--glassy-src-border) !important",
+            "--input": "var(--glassy-src-border) !important",
+            "--glassy-deepen": "transparent !important",
+            "backdrop-filter": "none !important"
+          },
+          ":is([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger']):not(.dark), :is([data-slot='checkbox'], [data-slot='radio-group-item']):not(.dark):not([data-state='checked'], [data-checked]:not([data-checked='false']))": {
+            "background-image": "linear-gradient(var(--glassy-src-background), var(--glassy-src-background)) !important"
+          },
+          ":is([data-slot='popover-content'], [data-slot='dropdown-menu-content'], [data-slot='dropdown-menu-sub-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='sheet-content']):not(.dark)": {
+            "background-image": "none !important"
+          },
+          ":is([data-slot='card'], [data-slot='alert'], :is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))), [data-slot='badge'], [data-slot='slider-thumb']):not(.dark)::before, :is([data-slot='card'], [data-slot='alert'], :is([data-slot='button'], :where([data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not([class~='w-fit'][class~='text-xs']))), [data-slot='badge']):not(.dark)::after": {
+            "backdrop-filter": "none !important",
+            "background": "none !important",
+            "box-shadow": "none !important",
+            "filter": "none !important"
+          },
+          "[data-slot='slider-thumb']:not(.dark)": {
+            "background-clip": "border-box !important"
+          },
+          "[data-slot='tabs-list'][data-variant='default']:not(.dark)::before": {
+            "background": "var(--glassy-src-background) !important",
+            "box-shadow": "inset 0 0 0 1px var(--glassy-src-border) !important"
+          }
+        },
+        "@media (forced-colors: active)": {
+          "[data-slot='tabs-list'][data-variant='default']:not(.dark)::before": {
+            "content": "none !important"
+          },
+          "[data-slot='tabs-list'][data-variant='default']:not(.dark) [data-slot='tabs-trigger']": {
+            "--background": "var(--glassy-src-background) !important"
+          }
+        }
+      }
+    }
+  },
+  "docs": "Glassy UI theme installed. To remove or upgrade it, delete the @layer glassy block and every --glassy-* and --ease-glassy-* line from your CSS. Guide: https://glassyui.com/guides/shadcn-theme",
+  "type": "registry:theme"
+}

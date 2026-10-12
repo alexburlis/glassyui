@@ -1,0 +1,41 @@
+# Version control and local state
+.git
+.agent
+.claude
+.codex
+.superpowers
+.tldr
+.playwright-mcp
+.DS_Store
+
+# Dependencies and build output (rebuilt in the image)
+node_modules
+.pnpm-store
+# The Expo fixture's local install and native builds
+fixtures/expo-consumer/node_modules
+fixtures/expo-consumer/ios
+fixtures/expo-consumer/android
+.next
+.build
+out
+*.tsbuildinfo
+
+# Environment files never ship in an image
+.env
+.env.*
+
+# Local evidence, research and screenshots
+.artifacts
+coverage
+research
+reports
+design-explorations
+docs/execplan-*.md
+docs/execplans
+docs/plans
+docs/archive
+docs/marketing
+docs/superpowers
+docs/seo/28day-*
+*.log
+*.jpeg

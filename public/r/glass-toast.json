@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glass-toast",
+  "title": "Glass Toast",
+  "description": "A glass notification for brief updates, announced to screen readers.",
+  "dependencies": [
+    "@radix-ui/react-toast",
+    "clsx"
+  ],
+  "registryDependencies": [
+    "@glassyui/glass-panel"
+  ],
+  "files": [
+    {
+      "path": "registry/glassyui/glass-toast.tsx",
+      "content": "'use client';\n\nimport * as ToastPrimitive from '@radix-ui/react-toast';\nimport clsx from 'clsx';\nimport { forwardRef, useSyncExternalStore } from 'react';\nimport { createPortal } from 'react-dom';\nimport { GlassPanel } from './glass-panel';\n\nconst subscribeToClient = () => () => {};\n\nconst getClientSnapshot = () => true;\n\nconst getServerSnapshot = () => false;\n\nexport const GlassToastProvider = ToastPrimitive.Provider;\n\nexport const GlassToastViewport = (\n  props: React.ComponentPropsWithoutRef<typeof ToastPrimitive.Viewport>,\n) => {\n  const canPortal = useSyncExternalStore(subscribeToClient, getClientSnapshot, getServerSnapshot);\n\n  if (!canPortal) return null;\n\n  return createPortal(\n    <ToastPrimitive.Viewport {...props} className={clsx('lg-toast-viewport', props.className)} />,\n    document.body,\n  );\n};\n\nexport function GlassToast(props: React.ComponentPropsWithoutRef<typeof ToastPrimitive.Root>) {\n  const { className, children, ...rest } = props;\n\n  return (\n    <ToastPrimitive.Root {...rest} className={clsx('lg-toast', className)}>\n      <GlassPanel refraction=\"soft\" variant=\"card\" elevation=\"raised\" className=\"lg-toast-root\">\n        {children}\n      </GlassPanel>\n    </ToastPrimitive.Root>\n  );\n}\n\nexport const GlassToastTitle = (\n  props: React.ComponentPropsWithoutRef<typeof ToastPrimitive.Title>,\n) => <ToastPrimitive.Title {...props} className={clsx('lg-toast-title', props.className)} />;\n\nexport const GlassToastDescription = (\n  props: React.ComponentPropsWithoutRef<typeof ToastPrimitive.Description>,\n) => (\n  <ToastPrimitive.Description\n    {...props}\n    className={clsx('lg-toast-description', props.className)}\n  />\n);\n\n/**\n * A round button that dismisses the toast. It draws its own × and is named \"Dismiss\"; give it\n * children and their text names it, or pass `aria-label`.\n */\nexport const GlassToastClose = forwardRef<\n  HTMLButtonElement,\n  React.ComponentPropsWithoutRef<typeof ToastPrimitive.Close>\n>(({ children, className, ...props }, forwardedRef) => (\n  <ToastPrimitive.Close\n    aria-label={children === undefined ? 'Dismiss' : undefined}\n    {...props}\n    ref={forwardedRef}\n    className={clsx('lg-toast-close', className)}\n  >\n    {children ?? (\n      <svg aria-hidden viewBox=\"0 0 20 20\">\n        <path\n          d=\"M5.5 5.5l9 9m0-9l-9 9\"\n          fill=\"none\"\n          stroke=\"currentColor\"\n          strokeLinecap=\"round\"\n          strokeWidth=\"1.6\"\n        />\n      </svg>\n    )}\n  </ToastPrimitive.Close>\n));\n\nGlassToastClose.displayName = 'GlassToastClose';\n\n/** A pill under the message, such as Undo. `altText` says how to do it without the button. */\nexport const GlassToastAction = forwardRef<\n  HTMLButtonElement,\n  React.ComponentPropsWithoutRef<typeof ToastPrimitive.Action>\n>(({ className, ...props }, forwardedRef) => (\n  <ToastPrimitive.Action\n    {...props}\n    ref={forwardedRef}\n    className={clsx('lg-toast-action', className)}\n  />\n));\n\nGlassToastAction.displayName = 'GlassToastAction';\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glass-toast.tsx"
+    }
+  ],
+  "meta": {
+    "sourceModules": [
+      "toast"
+    ]
+  },
+  "type": "registry:ui"
+}

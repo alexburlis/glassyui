@@ -1,0 +1,168 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  release-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+
+      - name: Locate pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore dependency cache
+        id: pnpm-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-${{ runner.arch }}-pnpm-${{ hashFiles('.node-version', 'package.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Save a successful install before later browser checks can fail.
+      - name: Save dependency cache
+        if: steps.pnpm-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ steps.pnpm-cache.outputs.cache-primary-key }}
+
+      - name: Install release browsers
+        run: pnpm exec playwright install --with-deps chrome chromium firefox webkit
+
+      - name: Run static release checks
+        run: |
+          pnpm format:check
+          pnpm registry:check-generated
+          pnpm check:registry
+          pnpm check:dead-code
+          pnpm test:braces-security
+          pnpm test:analytics-consent
+          pnpm test:error-reports
+          pnpm test:error-startup
+          pnpm test:build-upload
+          pnpm lint
+          pnpm build
+
+      - name: Run production release smokes
+        timeout-minutes: 50
+        # Headless Firefox needs a Linux display to create its WebGL context.
+        shell: xvfb-run --auto-servernum bash --noprofile --norc -e -o pipefail {0}
+        run: |
+          # Smoke the standalone server that the production image (Dockerfile) runs.
+          cp -R public/. .next/standalone/public/
+          cp -R .next/static .next/standalone/.next/static
+          HOSTNAME=127.0.0.1 PORT=3100 node .next/standalone/server.js > /tmp/glassyui-next.log 2>&1 &
+          echo "$!" > /tmp/glassyui-next.pid
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:3100/ > /dev/null; then
+              break
+            fi
+            if [ "$attempt" -eq 60 ]; then
+              cat /tmp/glassyui-next.log
+              exit 1
+            fi
+            sleep 1
+          done
+          pnpm smoke:registry-routes http://127.0.0.1:3100
+          pnpm smoke:registry-install http://127.0.0.1:3100
+          GLASSYUI_BASE_URL=http://127.0.0.1:3100 pnpm smoke:docs-routes
+          pnpm check:agent-discovery http://127.0.0.1:3100 .artifacts/agent-discovery
+          pnpm smoke:launch http://127.0.0.1:3100 .artifacts/launch
+          pnpm check:platform-switch http://127.0.0.1:3100 .artifacts/platform-switch
+          pnpm check:refraction-visuals http://127.0.0.1:3100 .artifacts/refraction-visuals
+          pnpm check:glass-material http://127.0.0.1:3100 .artifacts/glass-material
+          node scripts/smoke-pro-links.mjs http://127.0.0.1:3100 .artifacts/pro-links
+          pnpm check:analytics-consent http://127.0.0.1:3100 .artifacts/analytics-consent
+          pnpm smoke:release-ui http://127.0.0.1:3100 .artifacts/release-ui
+
+      - name: Stop production server
+        if: always()
+        run: |
+          if [ -f /tmp/glassyui-next.pid ]; then
+            server_pid="$(cat /tmp/glassyui-next.pid)"
+            if kill -0 "$server_pid" 2>/dev/null; then
+              kill "$server_pid"
+              for _ in $(seq 1 30); do
+                if ! kill -0 "$server_pid" 2>/dev/null; then break; fi
+                sleep 0.1
+              done
+              if kill -0 "$server_pid" 2>/dev/null; then kill -KILL "$server_pid"; fi
+            fi
+          fi
+
+      - name: Run development diagnostics interactions
+        run: |
+          setsid pnpm exec next dev -H 127.0.0.1 -p 3101 > /tmp/glassyui-dev.log 2>&1 &
+          echo "$!" > /tmp/glassyui-dev.pid
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:3101/diagnostics > /dev/null; then
+              break
+            fi
+            if [ "$attempt" -eq 60 ]; then
+              cat /tmp/glassyui-dev.log
+              exit 1
+            fi
+            sleep 1
+          done
+          pnpm exec node scripts/smoke-liquid-interactions.mjs http://127.0.0.1:3101/diagnostics .artifacts/liquid-interactions
+
+      - name: Stop development server
+        if: always()
+        run: |
+          if [ -f /tmp/glassyui-dev.pid ]; then
+            server_pid="$(cat /tmp/glassyui-dev.pid)"
+            if kill -0 "$server_pid" 2>/dev/null; then
+              kill -- "-$server_pid"
+              for _ in $(seq 1 30); do
+                if ! kill -0 "$server_pid" 2>/dev/null; then break; fi
+                sleep 0.1
+              done
+              if kill -0 "$server_pid" 2>/dev/null; then kill -KILL -- "-$server_pid"; fi
+            fi
+          fi
+
+      # Keep browser evidence for failures or cancellations so passing runs never
+      # hit the account's artifact storage quota.
+      - name: Upload release UI evidence
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-ui-evidence
+          path: |
+            .artifacts/release-ui
+            .artifacts/refraction-visuals
+            .artifacts/glass-material
+            .artifacts/platform-switch
+            .artifacts/liquid-interactions
+            .artifacts/prelaunch/registry-install
+            .artifacts/pro-links
+            .artifacts/analytics-consent
+            .artifacts/agent-discovery
+            .artifacts/launch
+          if-no-files-found: ignore
+          retention-days: 7

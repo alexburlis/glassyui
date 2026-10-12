@@ -1,0 +1,117 @@
+<!-- Written by `node scripts/build-shadcn-theme.mjs` from
+     scripts/shadcn-theme-lens.mjs; edit that file, not this one.
+
+     The rim lens of the Glassy UI theme for shadcn/ui: Glassy UI's own Chromium
+     lens, without the script that measures each element. Wherever
+     glassy-theme.css says url('./glassy-lens.svg#<id>'), the build writes that one
+     filter into the registry item as a data: URL, so the item stays CSS only.
+
+     The theme frosts the page first (blur() before url()), so each filter bends
+     frosted glass, as the components do: the element's own box, flooded and
+     blurred, is turned into the components' rim profile, read across and down.
+     On cards red bends by 0.92 of it and green with blue by 1.04; buttons bend
+     as one. Only Chromium renders SVG filters in backdrop-filter, so the theme
+     applies these in Chromium alone. -->
+<svg xmlns="http://www.w3.org/2000/svg">
+  <!-- Cards and alerts: a 14 px rim, the corner of shadcn's default card, reading the page from up to 6.5 px further in. -->
+  <filter id="pane" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#fff" result="box"/>
+    <feGaussianBlur in="box" stdDeviation="8" edgeMode="none" result="depth"/>
+    <feComponentTransfer in="depth" result="height">
+      <feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.0437 0.0864 0.1281 0.1689 0.2087 0.2476 0.2857 0.3228 0.3591 0.3945 0.4291 0.4628 0.4957 0.5277 0.5589 0.5892 0.6186 0.6471 0.6748 0.7015 0.7273 0.7521 0.7759 0.7986 0.8202 0.8407 0.86 0.8779 0.8945 0.9096 0.9234 0.936 0.9472 0.9573 0.966 0.9737 0.9802 0.9858 0.9902 0.9937 0.9964 0.9981 0.9992 0.9998 1 1 1 1 1 1"/>
+    </feComponentTransfer>
+    <feOffset in="height" dx="-1" result="east"/>
+    <feOffset in="height" dy="-1" result="south"/>
+    <feComposite in="east" in2="height" operator="arithmetic" k2="1" k3="-1" k4="0.5" result="across"/>
+    <feComposite in="south" in2="height" operator="arithmetic" k2="1" k3="-1" k4="0.5" result="down"/>
+    <feColorMatrix in="across" type="matrix" values="0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1" result="x"/>
+    <feColorMatrix in="down" type="matrix" values="0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 1" result="y"/>
+    <feComposite in="x" in2="y" operator="arithmetic" k2="1" k3="1" result="map"/>
+    <feDisplacementMap in="SourceGraphic" in2="map" scale="27.25" xChannelSelector="R" yChannelSelector="G" result="r"/>
+    <feDisplacementMap in="SourceGraphic" in2="map" scale="30.8" xChannelSelector="R" yChannelSelector="G" result="gb"/>
+    <feColorMatrix in="r" type="matrix" values="1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1" result="red"/>
+    <feColorMatrix in="gb" type="matrix" values="0 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0 1" result="cyan"/>
+    <feComposite in="red" in2="cyan" operator="arithmetic" k2="1" k3="1" result="split"/>
+    <feComposite in="split" in2="gb" operator="in"/>
+  </filter>
+  <!-- Buttons 36 px tall (h-9, size-9) and any other height, reading the page from up to 8.2 px further in. -->
+  <filter id="slab" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#fff" result="box"/>
+    <feGaussianBlur in="box" stdDeviation="9" edgeMode="none" result="depth"/>
+    <feComponentTransfer in="depth" result="height">
+      <feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.039 0.0773 0.1147 0.1515 0.1875 0.2227 0.2573 0.2912 0.3244 0.3569 0.3888 0.42 0.4506 0.4806 0.5099 0.5385 0.5665 0.5939 0.6206 0.6465 0.6719 0.6965 0.7204 0.7437 0.7659 0.7875 0.8082 0.8279 0.8467 0.8645 0.8811 0.8965 0.9108 0.9239 0.9361 0.9471 0.957 0.9659 0.9737 0.9805 0.9862 0.9908 0.9946 0.9975 0.9989 0.9997 1 1 1 1"/>
+    </feComponentTransfer>
+    <feOffset in="height" dx="-1" result="east"/>
+    <feOffset in="height" dy="-1" result="south"/>
+    <feComposite in="east" in2="height" operator="arithmetic" k2="1" k3="-1" k4="0.5" result="across"/>
+    <feComposite in="south" in2="height" operator="arithmetic" k2="1" k3="-1" k4="0.5" result="down"/>
+    <feColorMatrix in="across" type="matrix" values="0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1" result="x"/>
+    <feColorMatrix in="down" type="matrix" values="0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 1" result="y"/>
+    <feComposite in="x" in2="y" operator="arithmetic" k2="1" k3="1" result="map"/>
+    <feDisplacementMap in="SourceGraphic" in2="map" scale="46.81" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <!-- Buttons 24 px tall (h-6, size-6), reading the page from up to 5.7 px further in. -->
+  <filter id="slab-12" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#fff" result="box"/>
+    <feGaussianBlur in="box" stdDeviation="6" edgeMode="none" result="depth"/>
+    <feComponentTransfer in="depth" result="height">
+      <feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.0378 0.0748 0.1111 0.1468 0.1817 0.216 0.2497 0.2827 0.3151 0.3469 0.3781 0.4087 0.4387 0.4681 0.497 0.5252 0.5529 0.58 0.6065 0.6324 0.6578 0.6824 0.7065 0.7299 0.7525 0.7745 0.7957 0.8161 0.8357 0.8543 0.872 0.8886 0.9039 0.918 0.9312 0.943 0.9537 0.9633 0.9717 0.9789 0.9851 0.9901 0.9941 0.9972 0.9988 0.9997 1 1 1 1"/>
+    </feComponentTransfer>
+    <feOffset in="height" dx="-1" result="east"/>
+    <feOffset in="height" dy="-1" result="south"/>
+    <feComposite in="east" in2="height" operator="arithmetic" k2="1" k3="-1" k4="0.5" result="across"/>
+    <feComposite in="south" in2="height" operator="arithmetic" k2="1" k3="-1" k4="0.5" result="down"/>
+    <feColorMatrix in="across" type="matrix" values="0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1" result="x"/>
+    <feColorMatrix in="down" type="matrix" values="0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 1" result="y"/>
+    <feComposite in="x" in2="y" operator="arithmetic" k2="1" k3="1" result="map"/>
+    <feDisplacementMap in="SourceGraphic" in2="map" scale="22.43" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <!-- Buttons 28 px tall (h-7, size-7), reading the page from up to 6.5 px further in. -->
+  <filter id="slab-14" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#fff" result="box"/>
+    <feGaussianBlur in="box" stdDeviation="7" edgeMode="none" result="depth"/>
+    <feComponentTransfer in="depth" result="height">
+      <feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.0383 0.0758 0.1126 0.1486 0.184 0.2187 0.2527 0.2861 0.3188 0.3509 0.3824 0.4132 0.4435 0.4731 0.5022 0.5306 0.5584 0.5856 0.6122 0.6381 0.6635 0.6882 0.7122 0.7355 0.758 0.7798 0.8009 0.821 0.8403 0.8586 0.8759 0.892 0.9069 0.9205 0.9333 0.9448 0.9551 0.9644 0.9725 0.9796 0.9856 0.9904 0.9943 0.9973 0.9988 0.9997 1 1 1 1"/>
+    </feComponentTransfer>
+    <feOffset in="height" dx="-1" result="east"/>
+    <feOffset in="height" dy="-1" result="south"/>
+    <feComposite in="east" in2="height" operator="arithmetic" k2="1" k3="-1" k4="0.5" result="across"/>
+    <feComposite in="south" in2="height" operator="arithmetic" k2="1" k3="-1" k4="0.5" result="down"/>
+    <feColorMatrix in="across" type="matrix" values="0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1" result="x"/>
+    <feColorMatrix in="down" type="matrix" values="0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 1" result="y"/>
+    <feComposite in="x" in2="y" operator="arithmetic" k2="1" k3="1" result="map"/>
+    <feDisplacementMap in="SourceGraphic" in2="map" scale="29.62" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <!-- Buttons 32 px tall (h-8, size-8), reading the page from up to 7.4 px further in. -->
+  <filter id="slab-16" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#fff" result="box"/>
+    <feGaussianBlur in="box" stdDeviation="8" edgeMode="none" result="depth"/>
+    <feComponentTransfer in="depth" result="height">
+      <feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.0387 0.0766 0.1138 0.1502 0.1859 0.2209 0.2552 0.2889 0.3219 0.3542 0.3859 0.417 0.4474 0.4772 0.5064 0.5349 0.5629 0.5901 0.6168 0.6428 0.6681 0.6928 0.7167 0.74 0.7624 0.7841 0.8049 0.8248 0.8439 0.8619 0.8788 0.8945 0.9091 0.9224 0.9349 0.9461 0.9562 0.9652 0.9732 0.9801 0.9859 0.9907 0.9945 0.9974 0.9988 0.9997 1 1 1 1"/>
+    </feComponentTransfer>
+    <feOffset in="height" dx="-1" result="east"/>
+    <feOffset in="height" dy="-1" result="south"/>
+    <feComposite in="east" in2="height" operator="arithmetic" k2="1" k3="-1" k4="0.5" result="across"/>
+    <feComposite in="south" in2="height" operator="arithmetic" k2="1" k3="-1" k4="0.5" result="down"/>
+    <feColorMatrix in="across" type="matrix" values="0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1" result="x"/>
+    <feColorMatrix in="down" type="matrix" values="0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 1" result="y"/>
+    <feComposite in="x" in2="y" operator="arithmetic" k2="1" k3="1" result="map"/>
+    <feDisplacementMap in="SourceGraphic" in2="map" scale="37.75" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <!-- Buttons 40 px tall (h-10, size-10), reading the page from up to 9 px further in. -->
+  <filter id="slab-20" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#fff" result="box"/>
+    <feGaussianBlur in="box" stdDeviation="10" edgeMode="none" result="depth"/>
+    <feComponentTransfer in="depth" result="height">
+      <feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.0393 0.0778 0.1156 0.1526 0.1888 0.2243 0.2591 0.2931 0.3265 0.3592 0.3913 0.4227 0.4534 0.4834 0.5128 0.5415 0.5696 0.597 0.6237 0.6497 0.6751 0.6997 0.7235 0.7467 0.7689 0.7903 0.8109 0.8304 0.849 0.8665 0.8829 0.8981 0.9122 0.925 0.9371 0.9479 0.9577 0.9664 0.9741 0.9808 0.9864 0.991 0.9947 0.9975 0.9989 0.9997 1 1 1 1"/>
+    </feComponentTransfer>
+    <feOffset in="height" dx="-1" result="east"/>
+    <feOffset in="height" dy="-1" result="south"/>
+    <feComposite in="east" in2="height" operator="arithmetic" k2="1" k3="-1" k4="0.5" result="across"/>
+    <feComposite in="south" in2="height" operator="arithmetic" k2="1" k3="-1" k4="0.5" result="down"/>
+    <feColorMatrix in="across" type="matrix" values="0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1" result="x"/>
+    <feColorMatrix in="down" type="matrix" values="0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 1" result="y"/>
+    <feComposite in="x" in2="y" operator="arithmetic" k2="1" k3="1" result="map"/>
+    <feDisplacementMap in="SourceGraphic" in2="map" scale="56.8" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>

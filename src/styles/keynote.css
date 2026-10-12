@@ -1,0 +1,329 @@
+/*
+  The home page's keynote (src/components/keynote). The opener plays over the page as it loads,
+  only while html[data-keynote-intro] is set; the turn pins and moves only while html[data-keynote]
+  is set. Both need JavaScript and motion allowed; without them the page is the ordinary one, and
+  the turn's phone and features stand still.
+*/
+
+.keynote {
+  /* Scroll the turn takes, in screens. */
+  --keynote-turn: 4;
+
+  position: relative;
+  container: keynote / inline-size;
+}
+
+.keynote-stage,
+.keynote-skip,
+.turn-player {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- opener */
+
+html[data-keynote-intro] .keynote-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: block;
+  overflow: hidden;
+  container-type: size;
+}
+
+/* The first click or tap shows the confirmation; the second animates the exit. The control
+   stays visible while the intro plays, including before hydration. */
+html[data-keynote-intro] .keynote-skip {
+  position: fixed;
+  right: max(24px, env(safe-area-inset-right));
+  bottom: max(24px, env(safe-area-inset-bottom));
+  z-index: 31;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 1px solid var(--site-hairline);
+  border-radius: 999px;
+  background: var(--site-bg);
+  color: var(--site-text);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+html[data-keynote-exiting] .keynote-skip {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.keynote-skip-mouse,
+.keynote-skip-touch,
+html[data-keynote-skip] .keynote-skip-key {
+  display: none;
+}
+
+html[data-keynote-skip='mouse'] .keynote-skip-mouse,
+html[data-keynote-skip='touch'] .keynote-skip-touch {
+  display: inline;
+}
+
+.keynote-skip:hover {
+  background: var(--site-tile);
+}
+
+.keynote-skip:focus-visible {
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: 4px;
+}
+
+.keynote-poster,
+.keynote-player {
+  position: absolute;
+  inset: 0;
+}
+
+/* The document chooses the poster's appearance before React hydrates. */
+.keynote-poster {
+  background: var(--keynote-stage-dark);
+}
+
+:root[data-lg-theme='light'] .keynote-poster {
+  background: var(--keynote-stage-light);
+}
+
+.keynote-player {
+  visibility: hidden;
+}
+
+.keynote-player[data-playing] {
+  visibility: visible;
+}
+
+.keynote-stage:has(.keynote-player[data-playing]) .keynote-poster {
+  visibility: hidden;
+}
+
+/* The poster is the composition's first frames, drawn before the player loads: a worker brings
+   the mark into focus on this canvas with the composition's own timing, frames 6 to 65 at 60 a
+   second. */
+.keynote-poster-ribbon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: clamp(120px, 22cqmin, 200px);
+  height: clamp(120px, 22cqmin, 200px);
+  translate: -50% -50%;
+}
+
+/* A replay plays the composition from its first frame; the poster's mark is not drawn again. */
+.keynote-stage[data-replay] .keynote-poster-ribbon {
+  visibility: hidden;
+}
+
+/* The analytics prompt sits above every page; it waits until the opener has made way, and no
+   analytics run before the visitor answers it. */
+html[data-keynote-intro] .analytics-consent {
+  visibility: hidden;
+}
+
+/* The header waits above the stage, and the opener slides it in as the fold finishes opening.
+   A keyboard visitor who reaches it sees it at once. */
+html[data-keynote-intro] .site-nav {
+  translate: 0 -150%;
+}
+
+html[data-keynote-intro] .site-nav:focus-within {
+  translate: none !important;
+}
+
+/* Replay intro sits in the space under the hero's last line, where it moves nothing, and shows
+   only where the opener can run. The turn's track reaches up into that space, so the control
+   stands above it. */
+.keynote .home-hero {
+  position: relative;
+}
+
+.keynote-replay {
+  display: none;
+}
+
+/* Centred in .home-hero's bottom padding, clamp(40px, 5vh, 56px), under its last line. */
+html[data-keynote]:not([data-keynote-intro]) .keynote-replay {
+  position: absolute;
+  top: calc(100% - clamp(40px, 5vh, 56px) / 2 - 12px);
+  left: 50%;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  padding: 2px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--site-text-3);
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  translate: -50% 0;
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease;
+}
+
+.keynote-replay:hover {
+  background: var(--site-fill);
+  color: var(--site-text);
+}
+
+.keynote-replay:focus-visible {
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ turn */
+
+/* The desk centres in the screen it is pinned to. The turn measures the desk once it runs; until
+   then its height follows the desk's own sizing rules. */
+.turn {
+  --desk-height: max(
+    600px,
+    calc(min(1200px, calc(100cqi - 48px), calc((100svh - 120px) * 1.6)) * 0.625)
+  );
+  --turn-inset: max(16px, calc((100svh - var(--desk-height)) / 2));
+
+  position: relative;
+}
+
+.turn-desk {
+  padding: 0 24px;
+}
+
+html[data-keynote] .turn {
+  height: calc((1 + var(--keynote-turn)) * 100svh);
+  margin-top: calc(-1 * var(--turn-inset));
+}
+
+html[data-keynote] .turn-stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  pointer-events: none;
+}
+
+html[data-keynote] .turn-desk {
+  position: absolute;
+  top: var(--turn-inset);
+  right: 0;
+  left: 0;
+  pointer-events: auto;
+}
+
+html[data-keynote] .turn-stage > .home-desk-caption {
+  position: absolute;
+  top: calc(var(--turn-inset) + var(--desk-height));
+  right: 24px;
+  left: 24px;
+}
+
+html[data-keynote] .turn-player {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: block;
+  pointer-events: none;
+}
+
+/* While the keynote plays, the composition draws the phone and its features; this copy is for
+   screen readers. Otherwise it is the section, standing still. */
+html[data-keynote] .turn-still {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.turn-still {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 120px 24px 0;
+  text-align: center;
+}
+
+.turn-still-echo {
+  display: block;
+  color: var(--site-text-3);
+}
+
+.turn-still-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 24px 56px;
+  margin-top: 48px;
+}
+
+.turn-still-phone {
+  grid-row: 1 / span 3;
+  grid-column: 2;
+}
+
+.turn-still-phone .home-phone {
+  --phone-width: 260px;
+
+  margin: 0;
+}
+
+.turn-still-features {
+  display: contents;
+}
+
+.turn-still-features li {
+  display: grid;
+  gap: 4px;
+}
+
+.turn-still-features li:nth-child(odd) {
+  grid-column: 1;
+  text-align: end;
+}
+
+.turn-still-features li:nth-child(even) {
+  grid-column: 3;
+  text-align: start;
+}
+
+.turn-still-features strong {
+  font-family: var(--site-font-display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+}
+
+.turn-still-features span {
+  color: var(--site-text-2);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+@container keynote (width < 900px) {
+  .turn-still-body {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+
+  .turn-still-phone {
+    grid-row: auto;
+    grid-column: 1;
+  }
+
+  .turn-still-features li:nth-child(n) {
+    grid-column: 1;
+    text-align: center;
+  }
+}

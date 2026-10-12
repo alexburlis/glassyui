@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 900 520" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="vermilion-base" x2="0" y2="1"><stop stop-color="#fbfbfc"/><stop offset="1" stop-color="#e2e4e8"/></linearGradient>
+    <linearGradient id="vermilion-fold" x1="0" y1="0" x2=".5" y2="1"><stop stop-color="#ffbd91"/><stop offset=".36" stop-color="#ff754c"/><stop offset=".7" stop-color="#f04a28"/><stop offset="1" stop-color="#c9361a"/></linearGradient>
+    <linearGradient id="vermilion-lip" x2="1" y2=".7"><stop stop-color="#fff5eb"/><stop offset=".4" stop-color="#ffc9a9"/><stop offset="1" stop-color="#ff936b"/></linearGradient>
+    <linearGradient id="vermilion-silver" x2="1" y2=".7"><stop stop-color="#d2d5da"/><stop offset=".55" stop-color="#ffffff"/><stop offset="1" stop-color="#d2d5da"/></linearGradient>
+  </defs>
+  <rect width="900" height="520" fill="url(#vermilion-base)"/>
+  <path d="M-120 515C210 520 255 450 440 362S670 445 1010 302" fill="none" stroke="url(#vermilion-silver)" stroke-width="48"/>
+  <g>
+    <path d="M-150 365C90 225 190 535 420 340C650 145 610 35 1030 125L1030 183C610 93 650 203 420 398C190 593 90 283-150 423Z" fill="#000000" opacity=".10" transform="translate(0 8)"/>
+    <path d="M-150 365C90 225 190 535 420 340C650 145 610 35 1030 125L1030 183C610 93 650 203 420 398C190 593 90 283-150 423Z" fill="url(#vermilion-fold)"/>
+    <path d="M-150 365C90 225 190 535 420 340C650 145 610 35 1030 125" fill="none" stroke="url(#vermilion-lip)" stroke-width="3"/>
+  </g>
+</svg>

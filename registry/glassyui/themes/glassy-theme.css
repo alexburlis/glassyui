@@ -1,0 +1,1161 @@
+/* Glassy theme for shadcn/ui: the source of the `glassy-theme` registry item.
+
+   scripts/build-shadcn-theme.mjs turns this file into the item in
+   registry.json: the `:root` and `.dark` tokens become cssVars.light and
+   cssVars.dark, `@theme inline` becomes cssVars.theme, and the one
+   `@layer components { @layer glassy { … } }` block becomes the item's css. Each
+   url('./glassy-lens.svg#…') becomes a data: URL holding that filter. The
+   shadcn CLI writes all of it into the app's globals.css.
+
+   Rules:
+   - Every rule lives in the glassy sublayer, below the app's utilities, so a
+     class the app writes keeps winning. The only `!important` declarations are
+     the reduced-motion, reduced-transparency, increased-contrast and
+     forced-colours guards.
+   - The theme recolours stock classes through scoped palette tokens, paints
+     its own layers on ::before and ::after where the stock slot leaves them
+     unused, and sets only properties the stock classes leave unset.
+   - Tints come from the app's own palette, captured where the palette is
+     declared. A covered element that carries `.dark` itself keeps its stock
+     palette, so the capture can never refer to itself.
+   - Token values are numbers, lengths, percents or `r g b` triplets: a value
+     that starts with rgb, # or oklch would make the CLI add a colour alias.
+   - The CLI never deletes rules. To upgrade, delete the `@layer glassy` block
+     and the --glassy-* tokens, then run the install command again. */
+
+:root {
+  --glassy-tint: 97%;
+  --glassy-tint-depth: 0.24;
+  --glassy-rim-split: 0.28;
+  --glassy-pill-lift: 0%;
+  --glassy-surface: 64%;
+  --glassy-field: 58%;
+  --glassy-frost: 14px;
+  --glassy-lens-frost: 6px;
+  --glassy-float-frost: 22px;
+  --glassy-saturate: 1.6;
+  --glassy-rim: 0.82;
+  --glassy-shade: 0.24;
+  --glassy-sheen: 0.22;
+  --glassy-pane-sheen: 0.22;
+  --glassy-shadow: 24 24 27;
+}
+
+.dark {
+  --glassy-tint: 97%;
+  --glassy-tint-depth: 0.2;
+  --glassy-rim-split: 0.28;
+  --glassy-pill-lift: 18%;
+  --glassy-surface: 58%;
+  --glassy-field: 46%;
+  --glassy-frost: 16px;
+  --glassy-lens-frost: 6px;
+  --glassy-float-frost: 26px;
+  --glassy-saturate: 1.7;
+  --glassy-rim: 0.3;
+  --glassy-shade: 0.55;
+  --glassy-sheen: 0.08;
+  --glassy-pane-sheen: 0;
+  --glassy-shadow: 0 0 0;
+}
+
+@theme inline {
+  --ease-glassy-spring: linear(
+    0,
+    0.033,
+    0.115,
+    0.225,
+    0.348,
+    0.47,
+    0.586,
+    0.689,
+    0.778,
+    0.852,
+    0.91,
+    0.955,
+    0.989,
+    1.012,
+    1.026,
+    1.035,
+    1.038,
+    1.038,
+    1.036,
+    1.032,
+    1.027,
+    1.023,
+    1.018,
+    1.014,
+    1.01,
+    1.007,
+    1.004,
+    1.002,
+    1
+  );
+  --ease-glassy-out: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@layer components {
+  @layer glassy {
+    /* ---------- Palette capture ----------
+       Read where the palette is declared, so every tint below follows the app's
+       own colours. Covered slots never redeclare these names. */
+    :root,
+    .dark:not([data-slot]) {
+      --glassy-src-primary: var(--primary);
+      --glassy-src-destructive: var(--destructive);
+      --glassy-src-secondary: var(--secondary);
+      --glassy-src-card: var(--card);
+      --glassy-src-popover: var(--popover);
+      --glassy-src-background: var(--background);
+      --glassy-src-foreground: var(--foreground);
+      --glassy-src-muted: var(--muted);
+      --glassy-src-accent: var(--accent);
+      --glassy-src-border: var(--border);
+      /* Light through glass of the palette's own colour, as strong as that
+         colour is vivid: a grey palette gives clear glass. */
+      --glassy-hue: oklch(from var(--glassy-src-primary) l c h / calc(c * 0.7));
+      --glassy-hue-soft: oklch(from var(--glassy-src-primary) l c h / calc(c * 0.35));
+      --glassy-hue-rim: oklch(from var(--glassy-src-primary) 0.97 calc(c * 0.35) h);
+    }
+
+    /* ---------- Panes: cards and alerts ----------
+       Frost on the element itself, a palette tint, and under the content a sheen
+       and the palette's light, brightest where light enters at the top left. The
+       rim catches that light on its top and left edges, and the shadow carries a
+       little of the palette. The stock shadow and border give way to the rim. */
+    :is([data-slot='card'], [data-slot='alert']):not(.dark) {
+      --card: color-mix(in oklab, var(--glassy-src-card) var(--glassy-surface), transparent);
+      --border: transparent;
+      --tw-shadow-color: transparent;
+      position: relative;
+      isolation: isolate;
+      backdrop-filter: blur(var(--glassy-frost)) saturate(var(--glassy-saturate));
+    }
+
+    :is([data-slot='card'], [data-slot='alert']):not(.dark)::before,
+    :is([data-slot='card'], [data-slot='alert']):not(.dark)::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+    }
+
+    :is([data-slot='card'], [data-slot='alert']):not(.dark)::before {
+      z-index: -1;
+      background:
+        linear-gradient(
+          158deg,
+          rgb(255 255 255 / calc(var(--glassy-pane-sheen) * 1.6)),
+          transparent 36%
+        ),
+        radial-gradient(110% 85% at 0% 0%, var(--glassy-hue), transparent 58%),
+        radial-gradient(80% 70% at 100% 100%, var(--glassy-hue-soft), transparent 62%);
+    }
+
+    :is([data-slot='card'], [data-slot='alert']):not(.dark)::after {
+      z-index: -1;
+      box-shadow:
+        inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.45)),
+        inset 1.5px 1.5px 0
+          color-mix(in oklab, var(--glassy-hue-rim) calc(var(--glassy-rim) * 95%), transparent),
+        inset -1px -1px 0
+          color-mix(in oklab, var(--glassy-hue-rim) calc(var(--glassy-rim) * 45%), transparent),
+        inset 0 0 0 2px
+          color-mix(in oklab, var(--glassy-hue-rim) calc(var(--glassy-rim) * 30%), transparent),
+        0 1px 2px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.4)),
+        0 14px 34px -16px
+          color-mix(
+            in oklab,
+            var(--glassy-src-primary) 22%,
+            rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 1.1))
+          );
+    }
+
+    /* A destructive alert keeps its title clear of the palette's light and of
+       the sheen: shadcn's own red already falls short of 4.5:1 in its colour
+       themes, and the sheen's gradient is drawn with a dither that would cost
+       the title a little more. */
+    [data-slot='alert']:is([data-variant='destructive'], [class~='text-destructive']):not(.dark) {
+      --glassy-hue: transparent;
+      --glassy-hue-soft: transparent;
+      --glassy-pane-sheen: 0;
+    }
+
+    /* ---------- Floats: menus, popovers, selects, tooltips, dialogs, sheets ----------
+       They fade in, and a fading element hides the blur of anything inside
+       it, so the frost sits on the element itself, with the palette's light as a
+       background image over the fill. */
+    :is(
+      [data-slot='popover-content'],
+      [data-slot='dropdown-menu-content'],
+      [data-slot='dropdown-menu-sub-content'],
+      [data-slot='select-content'],
+      [data-slot='dialog-content'],
+      [data-slot='sheet-content']
+    ):not(.dark) {
+      --popover: color-mix(in oklab, var(--glassy-src-popover) var(--glassy-surface), transparent);
+      --background: color-mix(
+        in oklab,
+        var(--glassy-src-background) var(--glassy-surface),
+        transparent
+      );
+      --border: transparent;
+      --tw-shadow-color: transparent;
+      position: relative;
+      isolation: isolate;
+      background-image:
+        radial-gradient(110% 85% at 0% 0%, var(--glassy-hue), transparent 58%),
+        radial-gradient(80% 70% at 100% 100%, var(--glassy-hue-soft), transparent 62%);
+      backdrop-filter: blur(var(--glassy-float-frost)) saturate(var(--glassy-saturate));
+      box-shadow:
+        inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.4)),
+        inset 0 0 0 2px rgb(255 255 255 / calc(var(--glassy-rim) * 0.5)),
+        inset 0 1px 0 1px rgb(255 255 255 / calc(var(--glassy-rim) * 0.45)),
+        0 2px 6px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.35)),
+        0 24px 56px -16px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 1.4));
+    }
+
+    [data-slot='tooltip-content']:not(.dark) {
+      --foreground: color-mix(in oklab, var(--glassy-src-foreground) 86%, transparent);
+      backdrop-filter: blur(8px) saturate(var(--glassy-saturate));
+    }
+
+    :is([data-slot='dialog-overlay'], [data-slot='sheet-overlay']) {
+      backdrop-filter: blur(3px) saturate(1.2);
+    }
+
+    /* Items inside floats light up as clear glass. */
+    :is(
+      [data-slot='dropdown-menu-item'],
+      [data-slot='dropdown-menu-checkbox-item'],
+      [data-slot='dropdown-menu-radio-item'],
+      [data-slot='dropdown-menu-sub-trigger'],
+      [data-slot='select-item'],
+      [data-slot='command-item']
+    ):not(.dark) {
+      --accent: rgb(255 255 255 / calc(var(--glassy-rim) * 0.6));
+      --radius: 12px;
+    }
+
+    /* ---------- Slabs: buttons ----------
+       A thick slab of glass resting just above the page, its glass in its
+       edges. The rims (::before) catch the light: a crisp line along the
+       top-left inner edge, a softer one bottom-right, and a faint split into
+       red and blue around them. Under them (::after) lies the face's light and,
+       on tinted slabs, a layer that pushes the colour away from the label:
+       deeper under a light label, paler under a dark one, so the page showing
+       through never costs contrast, whatever the palette. The face casts the
+       slab's long, soft shadow.
+       A pointer lowers the slab and a press sets it down, so its shadow draws
+       in. The slab never scales.
+       A Button that opens a menu, dialog, popover or sheet carries that
+       trigger's data-slot instead of 'button', so slabs also take any *-trigger
+       that wears the Button's own classes (inline-flex and shrink-0; badges,
+       which share them, add w-fit and text-xs). */
+    :is(
+        [data-slot='button'],
+        :where(
+          [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+              [class~='w-fit'][class~='text-xs']
+            )
+        )
+      ):not([data-variant='link'], [class~='underline-offset-4']):not(.dark) {
+      --radius: 999px;
+      /* base-nova's small and icon buttons cap their radius at
+         min(var(--radius-md), 12px), so they round as far as that cap allows. */
+      --radius-md: 999px;
+      /* A pill's round ends take room from its label, so a slab widens past its
+         content by 0.75rem, split between the ends. Widths you set, and buttons
+         that stretch, keep theirs; min-w-0 gives back shadcn's width. Chromium
+         only until Safari and Firefox support calc-size(). */
+      min-width: calc-size(fit-content, size + 0.75rem);
+      --glassy-lift: 1;
+      --glassy-face: brightness(1.02) saturate(1.1);
+      /* Light that pales the face only under a dark label, and shading that
+         deepens it only under a light one: the other way round they would
+         cost contrast. */
+      --glassy-lighting: oklch(from currentColor 1 0 0 / clamp(0, (0.62 - l) * 100, 1));
+      --glassy-shading: oklch(from currentColor 0 0 0 / clamp(0, (l - 0.62) * 100, 1));
+      --glassy-face-light: radial-gradient(
+        circle at 50% 0%,
+        color-mix(in oklab, var(--glassy-lighting) calc(var(--glassy-sheen) * 90%), transparent),
+        transparent 62%
+      );
+      --glassy-face-sweep: linear-gradient(transparent, transparent);
+      --glassy-deepen: transparent;
+      --tw-shadow-color: transparent;
+      position: relative;
+      isolation: isolate;
+    }
+
+    @media (hover: hover) {
+      :is(
+          [data-slot='button'],
+          :where(
+            [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+                [class~='w-fit'][class~='text-xs']
+              )
+          )
+        ):not([data-variant='link'], [class~='underline-offset-4']):not(.dark):hover {
+        --glassy-lift: 0.55;
+      }
+    }
+
+    :is(
+        [data-slot='button'],
+        :where(
+          [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+              [class~='w-fit'][class~='text-xs']
+            )
+        )
+      ):not([data-variant='link'], [class~='underline-offset-4']):not(.dark):active {
+      --glassy-lift: 0.12;
+    }
+
+    :is(
+        [data-slot='button'],
+        :where(
+          [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+              [class~='w-fit'][class~='text-xs']
+            )
+        )
+      ):not([data-variant='link'], [class~='underline-offset-4']):not(.dark)::before,
+    :is(
+        [data-slot='button'],
+        :where(
+          [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+              [class~='w-fit'][class~='text-xs']
+            )
+        )
+      ):not([data-variant='link'], [class~='underline-offset-4']):not(.dark)::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+    }
+
+    /* The rims of clear glass: bright edges top-left and bottom-right with a
+       shade inside them. */
+    :is(
+        [data-slot='button'],
+        :where(
+          [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+              [class~='w-fit'][class~='text-xs']
+            )
+        )
+      ):not([data-variant='link'], [class~='underline-offset-4']):not(.dark)::before {
+      z-index: -1;
+      box-shadow:
+        inset 0 0 0 1px rgb(255 255 255 / calc(var(--glassy-rim) * 0.12)),
+        inset 0 0 0 0.5px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.35)),
+        inset 1.8px 3px 0 -2px rgb(255 255 255 / calc(var(--glassy-rim) * 1.1)),
+        inset -2px -2px 0 -2px rgb(255 255 255 / calc(var(--glassy-rim) * 0.95)),
+        inset -3px -8px 1px -6px rgb(255 255 255 / calc(var(--glassy-rim) * 0.7)),
+        inset -0.3px -1px 4px 0 rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.5)),
+        inset -1.5px 2.5px 0 -2px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.8)),
+        inset 0 3px 4px -2px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.8)),
+        inset 2px -6.5px 1px -4px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.4));
+      filter: drop-shadow(0.35px 0 rgb(255 90 150 / var(--glassy-rim-split)))
+        drop-shadow(-0.35px 0 rgb(80 160 255 / var(--glassy-rim-split)));
+    }
+
+    :is(
+        [data-slot='button'],
+        :where(
+          [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+              [class~='w-fit'][class~='text-xs']
+            )
+        )
+      ):not([data-variant='link'], [class~='underline-offset-4']):not(.dark)::after {
+      z-index: -2;
+      background:
+        var(--glassy-face-light), var(--glassy-face-sweep),
+        linear-gradient(var(--glassy-deepen), var(--glassy-deepen));
+      backdrop-filter: blur(0.6px) var(--glassy-face);
+      box-shadow:
+        0 calc(var(--glassy-lift) * 1px) calc(var(--glassy-lift) * 5px)
+          rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.4)),
+        0 calc(var(--glassy-lift) * 6px) calc(var(--glassy-lift) * 16px)
+          rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.33));
+      transition: box-shadow 0.3s var(--ease-glassy-out);
+    }
+
+    /* Tinted slabs are deep glass in the palette colour: an inner ring, a crisp
+       highlight on the top-left inner edge, a darker one bottom-right, a shade
+       along the bottom and a long shadow in their own colour. The dark edge and
+       the shadow follow --glassy-tint, so lighter glass never gets a hard
+       outline. */
+    :is(
+        [data-slot='button'],
+        :where(
+          [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+              [class~='w-fit'][class~='text-xs']
+            )
+        )
+      ):is([data-variant='default'], :not([data-variant])[class~='bg-primary']):not(.dark) {
+      --primary: color-mix(in oklab, var(--glassy-src-primary) var(--glassy-tint), transparent);
+      --glassy-drop: color-mix(in oklab, var(--glassy-src-primary), black 20%);
+    }
+
+    :is(
+        [data-slot='button'],
+        :where(
+          [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+              [class~='w-fit'][class~='text-xs']
+            )
+        )
+      ):is([data-variant='destructive'], :not([data-variant])[class~='bg-destructive']):not(.dark) {
+      --destructive: color-mix(
+        in oklab,
+        var(--glassy-src-destructive) var(--glassy-tint),
+        transparent
+      );
+      --glassy-drop: color-mix(in oklab, var(--glassy-src-destructive), black 20%);
+    }
+
+    :is(
+        [data-slot='button'],
+        :where(
+          [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+              [class~='w-fit'][class~='text-xs']
+            )
+        )
+      ):is(
+        [data-variant='default'],
+        [data-variant='destructive'],
+        :not([data-variant])[class~='bg-primary'],
+        :not([data-variant])[class~='bg-destructive']
+      ):not(.dark) {
+      --glassy-face: contrast(1.08) saturate(1.15);
+      --glassy-deepen: oklch(
+        from currentColor clamp(0, (0.62 - l) * 100, 1) 0 0 / var(--glassy-tint-depth)
+      );
+      --glassy-face-light: radial-gradient(
+        circle at 50% 0%,
+        color-mix(in oklab, var(--glassy-lighting) 3%, transparent),
+        transparent 62%
+      );
+      --glassy-face-sweep: linear-gradient(
+        145deg,
+        color-mix(in oklab, var(--glassy-lighting) 3%, transparent),
+        transparent 34%,
+        color-mix(in oklab, var(--glassy-shading) 12%, transparent) 72%,
+        color-mix(in oklab, var(--glassy-lighting) 1.5%, transparent)
+      );
+    }
+
+    :is(
+        [data-slot='button'],
+        :where(
+          [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+              [class~='w-fit'][class~='text-xs']
+            )
+        )
+      ):is(
+        [data-variant='default'],
+        [data-variant='destructive'],
+        :not([data-variant])[class~='bg-primary'],
+        :not([data-variant])[class~='bg-destructive']
+      ):not(.dark)::before {
+      box-shadow:
+        inset 0 0 0 1px rgb(255 255 255 / 0.18),
+        inset 2px 3px 0 -2px rgb(255 255 255 / 0.82),
+        inset -2px -3px 0 -2px rgb(0 0 0 / calc(0.34 * var(--glassy-tint))),
+        inset 0 0 0 2px rgb(255 255 255 / 0.04),
+        inset 0 -18px 24px -24px
+          color-mix(in oklab, var(--glassy-shading) calc(0.8 * var(--glassy-tint)), transparent);
+    }
+
+    :is(
+        [data-slot='button'],
+        :where(
+          [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+              [class~='w-fit'][class~='text-xs']
+            )
+        )
+      ):is(
+        [data-variant='default'],
+        [data-variant='destructive'],
+        :not([data-variant])[class~='bg-primary'],
+        :not([data-variant])[class~='bg-destructive']
+      ):not(.dark)::after {
+      box-shadow:
+        0 calc(var(--glassy-lift) * 18px) calc(var(--glassy-lift) * 46px)
+          calc(var(--glassy-lift) * -22px)
+          color-mix(in oklab, var(--glassy-drop) calc(var(--glassy-tint) * 0.98), transparent),
+        0 calc(var(--glassy-lift) * 7px) calc(var(--glassy-lift) * 20px)
+          calc(var(--glassy-lift) * -12px)
+          color-mix(in oklab, var(--glassy-drop) calc(var(--glassy-tint) * 0.8), transparent);
+    }
+
+    /* Clear slabs: a breath of the page colour, lit rims. Buttons copied before
+       shadcn added data-variant are told apart by their stock classes. */
+    :is(
+        [data-slot='button'],
+        :where(
+          [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+              [class~='w-fit'][class~='text-xs']
+            )
+        )
+      ):is(
+        [data-variant='secondary'],
+        [data-variant='outline'],
+        :not([data-variant]):is(
+          [class~='bg-secondary'],
+          [class~='border-border'],
+          [class~='bg-background']
+        )
+      ):not(.dark) {
+      --secondary: color-mix(in oklab, var(--glassy-src-secondary) 60%, transparent);
+      --background: color-mix(in oklab, var(--glassy-src-background) 55%, transparent);
+      --input: transparent;
+      --border: transparent;
+      --accent: color-mix(in oklab, var(--glassy-src-background) 75%, transparent);
+      --muted: color-mix(in oklab, var(--glassy-src-background) 75%, transparent);
+    }
+
+    /* Ghost slabs are clear until a pointer or a press finds them, and keep
+       shadcn's width: they often sit flush with text, as in table headers. */
+    :is(
+        [data-slot='button'],
+        :where(
+          [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+              [class~='w-fit'][class~='text-xs']
+            )
+        )
+      ):is(
+        [data-variant='ghost'],
+        :not([data-variant]):is([class~='hover:bg-muted'], [class~='hover:bg-accent']):not(
+            [class~='bg-background'],
+            [class~='bg-secondary'],
+            [class~='border-border'],
+            [class~='bg-primary'],
+            [class~='bg-destructive']
+          )
+      ):not(.dark) {
+      --accent: color-mix(in oklab, var(--glassy-src-background) 55%, transparent);
+      --muted: color-mix(in oklab, var(--glassy-src-background) 55%, transparent);
+      min-width: auto;
+    }
+
+    :is(
+        [data-slot='button'],
+        :where(
+          [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+              [class~='w-fit'][class~='text-xs']
+            )
+        )
+      ):is(
+        [data-variant='ghost'],
+        :not([data-variant]):is([class~='hover:bg-muted'], [class~='hover:bg-accent']):not(
+            [class~='bg-background'],
+            [class~='bg-secondary'],
+            [class~='border-border'],
+            [class~='bg-primary'],
+            [class~='bg-destructive']
+          )
+      ):not(.dark):not(:hover, :active)::before,
+    :is(
+        [data-slot='button'],
+        :where(
+          [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+              [class~='w-fit'][class~='text-xs']
+            )
+        )
+      ):is(
+        [data-variant='ghost'],
+        :not([data-variant]):is([class~='hover:bg-muted'], [class~='hover:bg-accent']):not(
+            [class~='bg-background'],
+            [class~='bg-secondary'],
+            [class~='border-border'],
+            [class~='bg-primary'],
+            [class~='bg-destructive']
+          )
+      ):not(.dark):not(:hover, :active)::after {
+      opacity: 0;
+    }
+
+    /* ---------- Lens: panes and slabs bend the page at their rim ----------
+       Glass frosts the page evenly, then bends it along its rim and splits it
+       into colour, as Glassy UI's own components do in Chromium: the filters in
+       glassy-lens.svg carry their rim profile and three-way colour split, and
+       scripts/build-shadcn-theme.mjs inlines each as a data: URL. Behind a lens
+       the frost is lighter (--glassy-lens-frost), as on the components, so the
+       bend shows. Only Chromium draws SVG filters in backdrop-filter, and only
+       Chromium knows app-region, so Safari and Firefox keep the frost above.
+       A pane draws its glass under everything else (::after) and moves its rims
+       and shadow onto ::before, above it; a slab draws its glass, with its
+       face's light, under its face (::after). A rim is as wide as the corner it
+       rounds: 14 px on cards, the corner of shadcn's default card, and half the
+       height on buttons. */
+    @supports (-webkit-app-region: drag) {
+      :is([data-slot='card'], [data-slot='alert']):not(.dark) {
+        backdrop-filter: none;
+      }
+
+      :is([data-slot='card'], [data-slot='alert']):not(.dark)::after {
+        z-index: -2;
+        backdrop-filter: blur(var(--glassy-lens-frost)) url('./glassy-lens.svg#pane')
+          saturate(var(--glassy-saturate));
+        box-shadow: none;
+      }
+
+      :is([data-slot='card'], [data-slot='alert']):not(.dark)::before {
+        box-shadow:
+          inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.45)),
+          inset 1.5px 1.5px 0
+            color-mix(in oklab, var(--glassy-hue-rim) calc(var(--glassy-rim) * 95%), transparent),
+          inset -1px -1px 0
+            color-mix(in oklab, var(--glassy-hue-rim) calc(var(--glassy-rim) * 45%), transparent),
+          inset 0 0 0 2px
+            color-mix(in oklab, var(--glassy-hue-rim) calc(var(--glassy-rim) * 30%), transparent),
+          0 1px 2px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.4)),
+          0 14px 34px -16px
+            color-mix(
+              in oklab,
+              var(--glassy-src-primary) 22%,
+              rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 1.1))
+            );
+      }
+
+      :is(
+          [data-slot='button'],
+          :where(
+            [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+                [class~='w-fit'][class~='text-xs']
+              )
+          )
+        ):not([data-variant='link'], [class~='underline-offset-4']):not(.dark)::after {
+        filter: none;
+        backdrop-filter: blur(var(--glassy-lens-frost)) url('./glassy-lens.svg#slab')
+          var(--glassy-face);
+      }
+
+      /* A pill's rim is half its height, as on the components, so shadcn's other
+         button heights take their own lens; any other height keeps the 36 px one. */
+
+      :is(
+          [data-slot='button'],
+          :where(
+            [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+                [class~='w-fit'][class~='text-xs']
+              )
+          )
+        ):not([data-variant='link'], [class~='underline-offset-4']):not(.dark):is(
+          [class~='h-6'],
+          [class~='size-6']
+        )::after {
+        backdrop-filter: blur(var(--glassy-lens-frost)) url('./glassy-lens.svg#slab-12')
+          var(--glassy-face);
+      }
+
+      :is(
+          [data-slot='button'],
+          :where(
+            [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+                [class~='w-fit'][class~='text-xs']
+              )
+          )
+        ):not([data-variant='link'], [class~='underline-offset-4']):not(.dark):is(
+          [class~='h-7'],
+          [class~='size-7']
+        )::after {
+        backdrop-filter: blur(var(--glassy-lens-frost)) url('./glassy-lens.svg#slab-14')
+          var(--glassy-face);
+      }
+
+      :is(
+          [data-slot='button'],
+          :where(
+            [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+                [class~='w-fit'][class~='text-xs']
+              )
+          )
+        ):not([data-variant='link'], [class~='underline-offset-4']):not(.dark):is(
+          [class~='h-8'],
+          [class~='size-8']
+        )::after {
+        backdrop-filter: blur(var(--glassy-lens-frost)) url('./glassy-lens.svg#slab-16')
+          var(--glassy-face);
+      }
+
+      :is(
+          [data-slot='button'],
+          :where(
+            [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+                [class~='w-fit'][class~='text-xs']
+              )
+          )
+        ):not([data-variant='link'], [class~='underline-offset-4']):not(.dark):is(
+          [class~='h-10'],
+          [class~='size-10']
+        )::after {
+        backdrop-filter: blur(var(--glassy-lens-frost)) url('./glassy-lens.svg#slab-20')
+          var(--glassy-face);
+      }
+
+      /* A tinted slab's colour hides the page, so it frosts it without the bend,
+         which would cost frames for nothing; a ghost slab draws no glass until a
+         pointer or a press finds it. */
+      :is(
+          [data-slot='button'],
+          :where(
+            [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+                [class~='w-fit'][class~='text-xs']
+              )
+          )
+        ):not([data-variant='link'], [class~='underline-offset-4']):not(.dark):is(
+          [data-variant='default'],
+          [data-variant='destructive'],
+          :not([data-variant])[class~='bg-primary'],
+          :not([data-variant])[class~='bg-destructive']
+        )::after {
+        backdrop-filter: blur(var(--glassy-lens-frost)) var(--glassy-face);
+      }
+
+      :is(
+          [data-slot='button'],
+          :where(
+            [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+                [class~='w-fit'][class~='text-xs']
+              )
+          )
+        ):not([data-variant='link'], [class~='underline-offset-4']):not(.dark):is(
+          [data-variant='ghost'],
+          :not([data-variant]):is([class~='hover:bg-muted'], [class~='hover:bg-accent']):not(
+              [class~='bg-background'],
+              [class~='bg-secondary'],
+              [class~='border-border'],
+              [class~='bg-primary'],
+              [class~='bg-destructive']
+            )
+        ):not(:hover, :active)::after {
+        backdrop-filter: none;
+      }
+    }
+
+    /* ---------- Fields: inputs, textareas, select triggers ----------
+       A recessed well. Inputs cannot hold ::before or ::after, so the fill is a
+       background image (clear it with `bg-none`) and the rim is the inset
+       shadow channel (clear it with `inset-shadow-none`). */
+    :is([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger']):not(.dark) {
+      --input: transparent;
+      --tw-inset-shadow:
+        inset 0 1px 2px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.5)),
+        inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.55)),
+        inset 0 0 0 1px rgb(255 255 255 / calc(var(--glassy-rim) * 0.35)),
+        inset 0 -1px 0 rgb(255 255 255 / calc(var(--glassy-rim) * 0.6));
+      background-image: linear-gradient(
+        color-mix(in oklab, var(--glassy-src-background) var(--glassy-field), transparent),
+        color-mix(in oklab, var(--glassy-src-background) var(--glassy-field), transparent)
+      );
+      backdrop-filter: blur(var(--glassy-frost)) saturate(var(--glassy-saturate));
+      box-shadow: var(--tw-inset-shadow);
+    }
+
+    /* ---------- Channels and knobs: switch, slider, checkbox, radio ---------- */
+    [data-slot='switch']:not(.dark) {
+      --primary: color-mix(in oklab, var(--glassy-src-primary) var(--glassy-tint), transparent);
+      --input: color-mix(in oklab, var(--glassy-src-foreground) 16%, transparent);
+      --tw-inset-shadow:
+        inset 0 1px 2px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.6)),
+        inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.35));
+      backdrop-filter: blur(8px) saturate(var(--glassy-saturate));
+      box-shadow: var(--tw-inset-shadow);
+    }
+
+    [data-slot='switch-thumb']:not(.dark) {
+      --tw-ease: var(--ease-glassy-spring);
+      --tw-duration: 0.6s;
+      --tw-shadow:
+        0 1px 3px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.8)),
+        0 0 0 0.5px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.5));
+      box-shadow: var(--tw-shadow);
+    }
+
+    [data-slot='switch']:not(.dark):active [data-slot='switch-thumb'] {
+      scale: 1.22 1;
+    }
+
+    [data-slot='slider-track']:not(.dark) {
+      --muted: color-mix(in oklab, var(--glassy-src-foreground) 14%, transparent);
+      box-shadow:
+        inset 0 1px 2px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.6)),
+        inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.3));
+    }
+
+    [data-slot='slider-range']:not(.dark) {
+      --primary: color-mix(in oklab, var(--glassy-src-primary) var(--glassy-tint), transparent);
+    }
+
+    /* The knob is a capsule of glass on ::before; the stock white fill is
+       clipped away so the glass shows. */
+    [data-slot='slider-thumb']:not(.dark) {
+      --primary: transparent;
+      position: relative;
+      isolation: isolate;
+      background-clip: text;
+    }
+
+    [data-slot='slider-thumb']:not(.dark)::before {
+      content: '';
+      position: absolute;
+      inset: -4px -9px;
+      z-index: -1;
+      border-radius: 999px;
+      pointer-events: none;
+      background:
+        linear-gradient(180deg, rgb(255 255 255 / 0.55), rgb(255 255 255 / 0.12) 60%),
+        rgb(255 255 255 / 0.95);
+      box-shadow:
+        inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.5)),
+        inset 0 1px 0 1px rgb(255 255 255 / 0.9),
+        0 2px 6px rgb(var(--glassy-shadow) / 0.22);
+      transition:
+        scale 0.6s var(--ease-glassy-spring),
+        background-color 0.25s var(--ease-glassy-out);
+    }
+
+    [data-slot='slider-thumb']:not(.dark):active::before {
+      scale: 1.35;
+      background-color: rgb(255 255 255 / 0.18);
+      backdrop-filter: blur(1px) saturate(1.8) brightness(1.08);
+    }
+
+    :is([data-slot='checkbox'], [data-slot='radio-group-item']):not(.dark) {
+      --primary: color-mix(in oklab, var(--glassy-src-primary) var(--glassy-tint), transparent);
+      --input: transparent;
+      --tw-inset-shadow:
+        inset 0 1px 2px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.55)),
+        inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.6)),
+        inset 0 0 0 1.5px rgb(255 255 255 / calc(var(--glassy-rim) * 0.4));
+      backdrop-filter: blur(6px) saturate(var(--glassy-saturate));
+      box-shadow: var(--tw-inset-shadow);
+    }
+
+    :is([data-slot='checkbox'], [data-slot='radio-group-item']):not(.dark):not(
+        [data-state='checked'],
+        [data-checked]:not([data-checked='false'])
+      ) {
+      background-image: linear-gradient(
+        color-mix(in oklab, var(--glassy-src-background) var(--glassy-field), transparent),
+        color-mix(in oklab, var(--glassy-src-background) var(--glassy-field), transparent)
+      );
+    }
+
+    /* ---------- Pill: tabs ----------
+       A recessed channel; the selected tab sits on a pill of glass that slides
+       to it on the spring, anchored to whichever tab is active. */
+    [data-slot='tabs-list'][data-variant='default']:not(.dark) {
+      --muted: color-mix(in oklab, var(--glassy-src-foreground) 7%, transparent);
+      --radius: 999px;
+      position: relative;
+      isolation: isolate;
+      backdrop-filter: blur(var(--glassy-frost)) saturate(var(--glassy-saturate));
+      box-shadow:
+        inset 0 1px 2px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.5)),
+        inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.3));
+    }
+
+    @supports (anchor-name: --a) and (anchor-scope: --a) {
+      [data-slot='tabs-list'][data-variant='default']:not(.dark) {
+        anchor-scope: --glassy-tab;
+      }
+
+      [data-slot='tabs-list'][data-variant='default']:not(.dark) [data-slot='tabs-trigger'] {
+        --background: transparent;
+        --input: transparent;
+        --tw-shadow-color: transparent;
+        position: relative;
+        z-index: 1;
+      }
+
+      [data-slot='tabs-list'][data-variant='default']:not(.dark)
+        :is(
+          [data-slot='tabs-trigger'][data-state='active'],
+          [data-slot='tabs-trigger'][data-active]:not([data-active='false'])
+        ) {
+        anchor-name: --glassy-tab;
+      }
+
+      [data-slot='tabs-list'][data-variant='default']:not(.dark)::before {
+        content: '';
+        position: absolute;
+        position-anchor: --glassy-tab;
+        top: anchor(top);
+        left: anchor(left);
+        width: anchor-size(width);
+        height: anchor-size(height);
+        z-index: 0;
+        border-radius: 999px;
+        pointer-events: none;
+        background:
+          linear-gradient(180deg, rgb(255 255 255 / var(--glassy-sheen)), transparent 55%),
+          color-mix(
+            in oklab,
+            color-mix(
+                in oklab,
+                var(--glassy-src-foreground) var(--glassy-pill-lift),
+                var(--glassy-src-background)
+              )
+              86%,
+            transparent
+          );
+        box-shadow:
+          inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.45)),
+          inset 0 0 0 2px rgb(255 255 255 / calc(var(--glassy-rim) * 0.7)),
+          0 2px 6px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.5));
+        transition:
+          left 0.6s var(--ease-glassy-spring),
+          top 0.6s var(--ease-glassy-spring),
+          width 0.6s var(--ease-glassy-spring),
+          height 0.6s var(--ease-glassy-spring);
+      }
+    }
+
+    /* ---------- Chips: badges, keys, skeletons, avatar fallbacks ---------- */
+    [data-slot='badge']:not(.dark) {
+      --radius: 999px;
+      --primary: color-mix(in oklab, var(--glassy-src-primary) var(--glassy-tint), transparent);
+      --secondary: color-mix(in oklab, var(--glassy-src-secondary) 60%, transparent);
+      --border: transparent;
+      position: relative;
+      isolation: isolate;
+    }
+
+    /* The destructive tint is for fills. A soft badge that prints its label in
+       the destructive colour keeps that colour opaque. */
+    [data-slot='badge']:not([class~='text-destructive']):not(.dark) {
+      --destructive: color-mix(
+        in oklab,
+        var(--glassy-src-destructive) var(--glassy-tint),
+        transparent
+      );
+    }
+
+    /* Tinted badges keep their label legible the way tinted slabs do. */
+    [data-slot='badge']:is(
+        [data-variant='default'],
+        [data-variant='destructive'],
+        :not([data-variant]):is([class~='bg-primary'], [class~='bg-destructive/10'])
+      ):not(.dark) {
+      --glassy-deepen: oklch(
+        from currentColor clamp(0, (0.62 - l) * 100, 1) 0 0 / var(--glassy-tint-depth)
+      );
+      background-image: linear-gradient(var(--glassy-deepen), var(--glassy-deepen));
+    }
+
+    [data-slot='badge']:not(.dark)::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      border-radius: inherit;
+      pointer-events: none;
+      box-shadow:
+        inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.6)),
+        inset 0 0 0 1.5px rgb(255 255 255 / calc(var(--glassy-rim) * 0.5));
+    }
+
+    /* A light fill keeps stock muted labels above 4.5:1; the rim draws the key. */
+    :is([data-slot='kbd'], [data-slot='avatar-fallback']):not(.dark) {
+      --muted: color-mix(in oklab, var(--glassy-src-muted) 40%, transparent);
+      box-shadow:
+        inset 0 0 0 1px rgb(var(--glassy-shadow) / calc(var(--glassy-shade) * 0.5)),
+        inset 0 1px 0 rgb(255 255 255 / calc(var(--glassy-rim) * 0.6));
+      backdrop-filter: blur(6px) saturate(var(--glassy-saturate));
+    }
+
+    [data-slot='skeleton']:not(.dark) {
+      --accent: color-mix(in oklab, var(--glassy-src-foreground) 8%, transparent);
+      backdrop-filter: blur(6px) saturate(var(--glassy-saturate));
+    }
+
+    /* ---------- Reduced motion ----------
+       Keep every end state and drop the movement, including the stock arrivals,
+       exits and accordion folds. */
+    @media (prefers-reduced-motion: reduce) {
+      :is(
+        :is(
+          [data-slot='button'],
+          :where(
+            [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+                [class~='w-fit'][class~='text-xs']
+              )
+          )
+        ),
+        [data-slot='switch-thumb'],
+        [data-slot='slider-thumb'],
+        [data-slot='tabs-list'],
+        [data-slot='tabs-trigger'],
+        [data-slot='popover-content'],
+        [data-slot='dropdown-menu-content'],
+        [data-slot='dropdown-menu-sub-content'],
+        [data-slot='select-content'],
+        [data-slot='tooltip-content'],
+        [data-slot='dialog-content'],
+        [data-slot='dialog-overlay'],
+        [data-slot='sheet-content'],
+        [data-slot='sheet-overlay'],
+        [data-slot='accordion-trigger'],
+        [data-slot='accordion-trigger'] svg,
+        [data-slot='accordion-content'],
+        [data-slot='skeleton']
+      ),
+      :is(
+        :is(
+          [data-slot='button'],
+          :where(
+            [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+                [class~='w-fit'][class~='text-xs']
+              )
+          )
+        ),
+        [data-slot='slider-thumb'],
+        [data-slot='tabs-list']
+      )::before,
+      :is(
+        [data-slot='button'],
+        :where(
+          [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+              [class~='w-fit'][class~='text-xs']
+            )
+        )
+      )::after {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+
+    /* ---------- Reduced transparency, increased contrast, forced colours ----------
+       Solid palette fills, no frost, plain borders. */
+    @media (prefers-reduced-transparency: reduce),
+      (prefers-contrast: more),
+      (forced-colors: active) {
+      :is(
+        [data-slot='card'],
+        [data-slot='alert'],
+        [data-slot='popover-content'],
+        [data-slot='dropdown-menu-content'],
+        [data-slot='dropdown-menu-sub-content'],
+        [data-slot='select-content'],
+        [data-slot='tooltip-content'],
+        [data-slot='dialog-content'],
+        [data-slot='sheet-content'],
+        [data-slot='dialog-overlay'],
+        [data-slot='sheet-overlay'],
+        [data-slot='input'],
+        [data-slot='textarea'],
+        [data-slot='select-trigger'],
+        [data-slot='switch'],
+        [data-slot='checkbox'],
+        [data-slot='radio-group-item'],
+        [data-slot='tabs-list'],
+        [data-slot='kbd'],
+        [data-slot='avatar-fallback'],
+        [data-slot='skeleton'],
+        :is(
+          [data-slot='button'],
+          :where(
+            [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+                [class~='w-fit'][class~='text-xs']
+              )
+          )
+        ),
+        [data-slot='badge'],
+        [data-slot='slider-track'],
+        [data-slot='slider-range']
+      ):not(.dark) {
+        --primary: var(--glassy-src-primary) !important;
+        --destructive: var(--glassy-src-destructive) !important;
+        --secondary: var(--glassy-src-secondary) !important;
+        --card: var(--glassy-src-card) !important;
+        --popover: var(--glassy-src-popover) !important;
+        --background: var(--glassy-src-background) !important;
+        --foreground: var(--glassy-src-foreground) !important;
+        --muted: var(--glassy-src-muted) !important;
+        --accent: var(--glassy-src-accent) !important;
+        --border: var(--glassy-src-border) !important;
+        --input: var(--glassy-src-border) !important;
+        --glassy-deepen: transparent !important;
+        backdrop-filter: none !important;
+      }
+
+      :is([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger']):not(.dark),
+      :is([data-slot='checkbox'], [data-slot='radio-group-item']):not(.dark):not(
+          [data-state='checked'],
+          [data-checked]:not([data-checked='false'])
+        ) {
+        background-image: linear-gradient(
+          var(--glassy-src-background),
+          var(--glassy-src-background)
+        ) !important;
+      }
+
+      :is(
+        [data-slot='popover-content'],
+        [data-slot='dropdown-menu-content'],
+        [data-slot='dropdown-menu-sub-content'],
+        [data-slot='select-content'],
+        [data-slot='dialog-content'],
+        [data-slot='sheet-content']
+      ):not(.dark) {
+        background-image: none !important;
+      }
+
+      :is(
+          [data-slot='card'],
+          [data-slot='alert'],
+          :is(
+            [data-slot='button'],
+            :where(
+              [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+                  [class~='w-fit'][class~='text-xs']
+                )
+            )
+          ),
+          [data-slot='badge'],
+          [data-slot='slider-thumb']
+        ):not(.dark)::before,
+      :is(
+          [data-slot='card'],
+          [data-slot='alert'],
+          :is(
+            [data-slot='button'],
+            :where(
+              [data-slot$='-trigger'][class~='inline-flex'][class~='shrink-0']:not(
+                  [class~='w-fit'][class~='text-xs']
+                )
+            )
+          ),
+          [data-slot='badge']
+        ):not(.dark)::after {
+        backdrop-filter: none !important;
+        background: none !important;
+        box-shadow: none !important;
+        filter: none !important;
+      }
+
+      [data-slot='slider-thumb']:not(.dark) {
+        background-clip: border-box !important;
+      }
+
+      [data-slot='tabs-list'][data-variant='default']:not(.dark)::before {
+        background: var(--glassy-src-background) !important;
+        box-shadow: inset 0 0 0 1px var(--glassy-src-border) !important;
+      }
+    }
+
+    @media (forced-colors: active) {
+      [data-slot='tabs-list'][data-variant='default']:not(.dark)::before {
+        content: none !important;
+      }
+
+      [data-slot='tabs-list'][data-variant='default']:not(.dark) [data-slot='tabs-trigger'] {
+        --background: var(--glassy-src-background) !important;
+      }
+    }
+  }
+}

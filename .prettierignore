@@ -1,0 +1,16 @@
+# Vendored anti-slop rules and local agent assets.
+tools/oxlint/anti-slop/
+**/.agent/
+**/.agents/
+**/.claude/
+**/.codex/
+**/.continue/
+**/.cursor/
+**/.gemini/
+**/.opencode/
+**/.pi/
+**/.roo/
+**/.windsurf/
+**/.tldr/
+**/.superpowers/
+**/.playwright-mcp/

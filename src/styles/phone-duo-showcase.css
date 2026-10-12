@@ -1,0 +1,48 @@
+.phone-duo-showcase {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  width: min(100%, 640px);
+  margin-inline: auto;
+  box-sizing: border-box;
+  padding: 16px 20px 24px;
+}
+
+/* Give this device a deeper silver canvas in light mode and a brighter
+   graphite canvas in dark mode. The controls keep the site's appearance. */
+.docs-preview:has(.phone-duo-showcase) {
+  background-image: url('/wallpapers/vermilion-desk-duo-dark.svg');
+}
+
+:root[data-lg-theme='light'] .docs-preview:has(.phone-duo-showcase) {
+  background-image: url('/wallpapers/vermilion-desk-duo-light.svg');
+}
+
+.phone-duo-showcase-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  padding: 4px;
+}
+
+.phone-duo-showcase-poses {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.phone-duo-showcase-fold {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 320px);
+  color: var(--lg-muted-foreground);
+  font-size: 12px;
+}
+
+.phone-duo-showcase-fold .lg-slider {
+  flex: 1;
+}

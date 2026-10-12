@@ -1,0 +1,31 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glass-swipe-row",
+  "title": "Glass Swipe Row",
+  "description": "A row whose actions follow a swipe and spring into place, with a labelled action button and selection haptics.",
+  "dependencies": [
+    "react-native-gesture-handler",
+    "react-native-reanimated",
+    "react-native-worklets",
+    "expo-haptics"
+  ],
+  "registryDependencies": [
+    "@glassyui-native/glass-surface",
+    "@glassyui-native/glass-provider"
+  ],
+  "files": [
+    {
+      "path": "registry/glassyui-native/glass-swipe-row.tsx",
+      "content": "import { useRef, useState, type ReactNode } from 'react';\nimport { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';\nimport ReanimatedSwipeable, {\n  type SwipeableMethods,\n} from 'react-native-gesture-handler/ReanimatedSwipeable';\nimport { ReduceMotion } from 'react-native-reanimated';\nimport { useGlassTheme } from './glass-provider';\nimport { GlassSurface } from './glass-surface';\nimport { selectionHaptic } from './lib/selection-haptic';\nimport { GLASS_MOTION, GLASS_RADIUS } from './lib/tokens';\n\nexport type GlassSwipeAction = {\n  id: string;\n  label: string;\n  onPress: () => void;\n  destructive?: boolean;\n};\n\nexport type GlassSwipeRowProps = {\n  children: ReactNode;\n  label: string;\n  actions: readonly GlassSwipeAction[];\n  haptics?: boolean;\n  style?: StyleProp<ViewStyle>;\n  testID?: string;\n};\n\n/** Swipe left to reveal actions; the labelled action button also works with a keyboard. */\nexport function GlassSwipeRow({\n  children,\n  label,\n  actions,\n  haptics = true,\n  style,\n  testID,\n}: GlassSwipeRowProps) {\n  const { colors, preferences } = useGlassTheme();\n  const swipeable = useRef<SwipeableMethods>(null);\n  const [open, setOpen] = useState(false);\n\n  function activate(action: GlassSwipeAction) {\n    swipeable.current?.close();\n    action.onPress();\n  }\n\n  return (\n    <View style={style} testID={testID}>\n      <ReanimatedSwipeable\n        ref={swipeable}\n        enabled={actions.length > 0}\n        friction={1}\n        overshootLeft={false}\n        overshootRight={false}\n        enableTrackpadTwoFingerGesture\n        animationOptions={{\n          ...GLASS_MOTION.spring,\n          reduceMotion: preferences.reduceMotion ? ReduceMotion.Always : ReduceMotion.System,\n        }}\n        containerStyle={styles.container}\n        onSwipeableWillOpen={() => setOpen(true)}\n        onSwipeableWillClose={() => setOpen(false)}\n        onSwipeableOpen={() => selectionHaptic(haptics)}\n        renderRightActions={() => (\n          <View\n            style={styles.actions}\n            accessibilityElementsHidden={!open}\n            importantForAccessibility={open ? 'auto' : 'no-hide-descendants'}\n          >\n            {actions.map((action) => (\n              <Pressable\n                accessibilityRole=\"button\"\n                accessibilityLabel={action.label}\n                key={action.id}\n                onPress={() => activate(action)}\n                style={[\n                  styles.action,\n                  { backgroundColor: action.destructive ? colors.invalid : colors.accent },\n                ]}\n              >\n                <Text style={styles.actionLabel}>{action.label}</Text>\n              </Pressable>\n            ))}\n          </View>\n        )}\n      >\n        <GlassSurface preset=\"control\" elevation=\"none\" style={styles.row}>\n          <View style={styles.content}>{children}</View>\n          {actions.length > 0 ? (\n            <Pressable\n              accessibilityRole=\"button\"\n              accessibilityLabel={`${open ? 'Close actions' : 'Actions'} for ${label}`}\n              onPress={() => (open ? swipeable.current?.close() : swipeable.current?.openRight())}\n              style={styles.trigger}\n            >\n              <Text style={[styles.dots, { color: colors.mutedForeground }]}>···</Text>\n            </Pressable>\n          ) : null}\n        </GlassSurface>\n      </ReanimatedSwipeable>\n    </View>\n  );\n}\n\nconst styles = StyleSheet.create({\n  action: { alignItems: 'center', justifyContent: 'center', minWidth: 80, paddingHorizontal: 16 },\n  actionLabel: { color: '#ffffff', fontSize: 15, fontWeight: '600' },\n  actions: { flexDirection: 'row' },\n  container: { borderRadius: GLASS_RADIUS.md },\n  content: { flex: 1 },\n  dots: { fontSize: 28, fontWeight: '600' },\n  row: { alignItems: 'center', flexDirection: 'row', gap: 8, minHeight: 64, paddingLeft: 16 },\n  trigger: { alignItems: 'center', justifyContent: 'center', minHeight: 48, minWidth: 48 },\n});\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glass-swipe-row.tsx"
+    },
+    {
+      "path": "registry/glassyui-native/lib/selection-haptic.ts",
+      "content": "import { selectionAsync } from 'expo-haptics';\nimport { Platform } from 'react-native';\n\n/** Feedback follows a committed selection. Web input does not vibrate. */\nexport function selectionHaptic(enabled: boolean) {\n  if (!enabled || Platform.OS === 'web') return;\n\n  void selectionAsync().catch((error: Error) => {\n    console.warn('Glassy UI could not play selection feedback.', error.message);\n  });\n}\n",
+      "type": "registry:lib",
+      "target": "components/glassyui/lib/selection-haptic.ts"
+    }
+  ],
+  "type": "registry:ui"
+}

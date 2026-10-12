@@ -1,0 +1,19 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glass-panel",
+  "title": "Glass Panel",
+  "description": "Glass cards, panels and pills for anything that floats above your content.",
+  "registryDependencies": [
+    "@glassyui-native/glass-surface",
+    "@glassyui-native/glass-provider"
+  ],
+  "files": [
+    {
+      "path": "registry/glassyui-native/glass-panel.tsx",
+      "content": "import { forwardRef } from 'react';\nimport type { View } from 'react-native';\nimport { GlassSurface, type GlassSurfaceProps } from './glass-surface';\nimport { GLASS_RADIUS } from './lib/tokens';\n\ntype PanelVariant = 'panel' | 'card' | 'pill';\n\ntype PanelElevation = 'base' | 'raised';\n\nexport type GlassPanelProps = Omit<GlassSurfaceProps, 'elevation'> & {\n  variant?: PanelVariant;\n  elevation?: PanelElevation;\n};\n\n// Shape and spacing come first, so a consumer's style always wins.\nconst VARIANT_STYLE = {\n  panel: { borderRadius: GLASS_RADIUS.lg, padding: 24 },\n  card: { borderRadius: GLASS_RADIUS.md, padding: 20 },\n  pill: { borderRadius: GLASS_RADIUS.capsule, paddingHorizontal: 20, paddingVertical: 12 },\n} as const;\n\n/** Glass cards, panels and pills for anything that floats above your content. */\nexport const GlassPanel = forwardRef<View, GlassPanelProps>(\n  (\n    {\n      elevation = 'base',\n      variant = 'panel',\n      preset = variant === 'pill' ? 'control' : 'standard',\n      style,\n      ...rest\n    },\n    ref,\n  ) => (\n    <GlassSurface\n      ref={ref}\n      elevation={elevation}\n      preset={preset}\n      style={[VARIANT_STYLE[variant], style]}\n      {...rest}\n    />\n  ),\n);\n\nGlassPanel.displayName = 'GlassPanel';\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glass-panel.tsx"
+    }
+  ],
+  "type": "registry:ui"
+}

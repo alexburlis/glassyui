@@ -1,0 +1,62 @@
+/* The Glass Laptop running the homepage desk on its docs page. */
+
+.laptop-showcase {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 28px;
+  width: 100%;
+}
+
+.laptop-showcase-device {
+  width: 100%;
+}
+
+/* The desk fills the display instead of keeping its homepage frame. */
+.laptop-showcase-desk {
+  container: desk / inline-size;
+  height: 100%;
+}
+
+.laptop-showcase-desk .desk-screen {
+  height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* On a notched display the menu bar is as tall as the notch area. */
+.laptop-showcase-desk .desk-menubar {
+  height: 37px;
+}
+
+.laptop-showcase-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.laptop-showcase-finish {
+  width: 320px;
+  max-width: 100%;
+}
+
+/* Wide enough for either label, so the row holds still when it changes. */
+.laptop-showcase-lid {
+  min-width: 112px;
+}
+
+/* In the docs the machine stands in a lit studio rather than on the wallpaper, in a
+   column as wide as the stage, so the controls cannot stretch it past a narrow one. */
+.docs-preview:has(.laptop-showcase),
+.component-card-stage:has(.laptop-showcase) {
+  grid-template-columns: minmax(0, 1fr);
+  background: radial-gradient(120% 90% at 50% 30%, #fff, var(--site-bg) 72%);
+}
+
+:root:not([data-lg-theme='light']) .docs-preview:has(.laptop-showcase),
+:root:not([data-lg-theme='light']) .component-card-stage:has(.laptop-showcase) {
+  background: radial-gradient(120% 90% at 50% 30%, #2c2c30, var(--site-bg) 72%);
+}

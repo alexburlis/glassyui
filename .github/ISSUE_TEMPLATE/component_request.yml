@@ -1,0 +1,24 @@
+name: Component request
+description: Request a new Glassy UI registry component.
+title: '[Component]: '
+labels: ['component']
+body:
+  - type: input
+    id: component
+    attributes:
+      label: Component name
+      placeholder: 'glass-tabs'
+    validations:
+      required: true
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use case
+      description: Describe the product workflow this component should support.
+    validations:
+      required: true
+  - type: textarea
+    id: accessibility
+    attributes:
+      label: Accessibility expectations
+      description: Keyboard, focus, ARIA, reduced motion, or contrast requirements.

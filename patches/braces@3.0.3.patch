@@ -1,0 +1,186 @@
+diff --git a/lib/compile.js b/lib/compile.js
+index dce69beb90ece5c3b0ca234a949418f9f34eedbc..3b6b87c7166aa5c9f152815bec1dc66d3170f1d0 100644
+--- a/lib/compile.js
++++ b/lib/compile.js
+@@ -2,8 +2,10 @@
+ 
+ const fill = require('fill-range');
+ const utils = require('./utils');
++const assertSafeAst = require('./guard');
+ 
+ const compile = (ast, options = {}) => {
++  assertSafeAst(ast);
+   const walk = (node, parent = {}) => {
+     const invalidBlock = utils.isInvalidBrace(parent);
+     const invalidNode = node.invalid === true && options.escapeInvalid === true;
+diff --git a/lib/expand.js b/lib/expand.js
+index 35b2c41d6afdb8f0197959e26079f266e48370d3..a1029b2b165176fefc353048bedcdd52a941bf3a 100644
+--- a/lib/expand.js
++++ b/lib/expand.js
+@@ -3,6 +3,19 @@
+ const fill = require('fill-range');
+ const stringify = require('./stringify');
+ const utils = require('./utils');
++const assertSafeAst = require('./guard');
++
++const findContainer = node => {
++  const ancestors = new Set();
++  while (node && node.type !== 'brace' && node.type !== 'root' && node.parent) {
++    if (ancestors.has(node)) {
++      throw new SyntaxError('AST parent chain contains a cycle');
++    }
++    ancestors.add(node);
++    node = node.parent;
++  }
++  return node;
++};
+ 
+ const append = (queue = '', stash = '', enclose = false) => {
+   const result = [];
+@@ -31,18 +44,14 @@ const append = (queue = '', stash = '', enclose = false) => {
+ };
+ 
+ const expand = (ast, options = {}) => {
++  assertSafeAst(ast);
+   const rangeLimit = options.rangeLimit === undefined ? 1000 : options.rangeLimit;
+ 
+   const walk = (node, parent = {}) => {
+     node.queue = [];
+ 
+-    let p = parent;
+-    let q = parent.queue;
+-
+-    while (p.type !== 'brace' && p.type !== 'root' && p.parent) {
+-      p = p.parent;
+-      q = p.queue;
+-    }
++    const p = findContainer(parent);
++    const q = p.queue;
+ 
+     if (node.invalid || node.dollar) {
+       q.push(append(q.pop(), stringify(node, options)));
+@@ -72,13 +81,8 @@ const expand = (ast, options = {}) => {
+     }
+ 
+     const enclose = utils.encloseBrace(node);
+-    let queue = node.queue;
+-    let block = node;
+-
+-    while (block.type !== 'brace' && block.type !== 'root' && block.parent) {
+-      block = block.parent;
+-      queue = block.queue;
+-    }
++    const block = findContainer(node);
++    const queue = block.queue;
+ 
+     for (let i = 0; i < node.nodes.length; i++) {
+       const child = node.nodes[i];
+diff --git a/lib/guard.js b/lib/guard.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..5c1310de3221df1c67e9a0b5f415dd8a43a500fc
+--- /dev/null
++++ b/lib/guard.js
+@@ -0,0 +1,47 @@
++'use strict';
++
++const MAX_NESTING = 100;
++const MAX_AST_DEPTH = MAX_NESTING + 1;
++
++const isObject = value =>
++  value !== null && (typeof value === 'object' || typeof value === 'function');
++
++const assertSafeAst = ast => {
++  const active = new WeakSet();
++  const stack = [{ node: ast, depth: 0, exit: false }];
++
++  while (stack.length > 0) {
++    const frame = stack.pop();
++    const { node, depth, exit } = frame;
++
++    if (!isObject(node)) {
++      continue;
++    }
++
++    if (exit) {
++      active.delete(node);
++      continue;
++    }
++
++    if (active.has(node)) {
++      throw new SyntaxError('AST contains a cycle');
++    }
++
++    if (depth > MAX_AST_DEPTH) {
++      throw new SyntaxError(`AST nesting exceeds the maximum of ${MAX_NESTING}`);
++    }
++
++    const children = node.nodes;
++    if (!Array.isArray(children) || children.length === 0) {
++      continue;
++    }
++
++    active.add(node);
++    stack.push({ node, depth, exit: true });
++    for (let index = children.length - 1; index >= 0; index -= 1) {
++      stack.push({ node: children[index], depth: depth + 1, exit: false });
++    }
++  }
++};
++
++module.exports = assertSafeAst;
+diff --git a/lib/parse.js b/lib/parse.js
+index 3a6988e629f52aee6609dc5ec290a5e9ff47cecb..39f545f162eeb072f8ae9564f5bef9a4fad4991c 100644
+--- a/lib/parse.js
++++ b/lib/parse.js
+@@ -28,6 +28,8 @@ const {
+  * parse
+  */
+ 
++const MAX_NESTING = 100;
++
+ const parse = (input, options = {}) => {
+   if (typeof input !== 'string') {
+     throw new TypeError('Expected a string');
+@@ -41,6 +43,11 @@ const parse = (input, options = {}) => {
+ 
+   const ast = { type: 'root', input, nodes: [] };
+   const stack = [ast];
++  const assertNestingDepth = () => {
++    if (stack.length > MAX_NESTING) {
++      throw new SyntaxError(`Nesting depth exceeds the maximum of ${MAX_NESTING}`);
++    }
++  };
+   let block = ast;
+   let prev = ast;
+   let brackets = 0;
+@@ -143,6 +150,7 @@ const parse = (input, options = {}) => {
+      */
+ 
+     if (value === CHAR_LEFT_PARENTHESES) {
++      assertNestingDepth();
+       block = push({ type: 'paren', nodes: [] });
+       stack.push(block);
+       push({ type: 'text', value });
+@@ -195,6 +203,7 @@ const parse = (input, options = {}) => {
+      */
+ 
+     if (value === CHAR_LEFT_CURLY_BRACE) {
++      assertNestingDepth();
+       depth++;
+ 
+       const dollar = prev.value && prev.value.slice(-1) === '$' || block.dollar === true;
+diff --git a/lib/stringify.js b/lib/stringify.js
+index 8bcf872c31894f81a8c64d9202fd607e4fd7ea2b..59332afcde91a0fe97822edf971b1c04864ecb41 100644
+--- a/lib/stringify.js
++++ b/lib/stringify.js
+@@ -1,8 +1,10 @@
+ 'use strict';
+ 
+ const utils = require('./utils');
++const assertSafeAst = require('./guard');
+ 
+ module.exports = (ast, options = {}) => {
++  assertSafeAst(ast);
+   const stringify = (node, parent = {}) => {
+     const invalidBlock = options.escapeInvalid && utils.isInvalidBrace(parent);
+     const invalidNode = node.invalid === true && options.escapeInvalid === true;

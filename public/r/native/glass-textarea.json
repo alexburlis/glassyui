@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glass-textarea",
+  "title": "Glass Textarea",
+  "description": "A recessed glass field for longer text that can grow as you type.",
+  "registryDependencies": [
+    "@glassyui-native/glass-input"
+  ],
+  "files": [
+    {
+      "path": "registry/glassyui-native/glass-textarea.tsx",
+      "content": "import { forwardRef, useCallback, useState } from 'react';\nimport { StyleSheet, type TextInput, type TextInputContentSizeChangeEvent } from 'react-native';\nimport { GlassInput, type GlassInputProps } from './glass-input';\n\nexport type GlassTextareaProps = GlassInputProps & {\n  /** Grows with its text instead of scrolling, up to `maxRows`. */\n  autoResize?: boolean;\n  /** The most rows an auto-resizing textarea grows to. Defaults to 8. */\n  maxRows?: number;\n  /** The rows it shows before it grows. Defaults to 3. */\n  rows?: number;\n};\n\nconst LINE_HEIGHT = 24;\n\nconst BORDER = 1;\n\n// The field's padding and hairline above and below its lines.\nconst FRAME = 14 * 2 + BORDER * 2;\n\n// The web's 5.5rem floor, which holds even when `rows` asks for less.\nconst MIN_HEIGHT = 88;\n\n/**\n * A recessed field for longer text, with an optional label and hint. With `autoResize` it grows\n * as you type and scrolls once it reaches `maxRows`.\n */\nexport const GlassTextarea = forwardRef<TextInput, GlassTextareaProps>(\n  ({ autoResize = false, maxRows = 8, onContentSizeChange, rows = 3, style, ...rest }, ref) => {\n    const [content, setContent] = useState(0);\n    const least = Math.max(rows * LINE_HEIGHT + FRAME, MIN_HEIGHT);\n    const most = Math.max(maxRows * LINE_HEIGHT + FRAME, least);\n\n    // The reported size includes the padding but not the hairline.\n    const height = autoResize ? Math.min(Math.max(content + BORDER * 2, least), most) : least;\n\n    const handleContentSizeChange = useCallback(\n      (event: TextInputContentSizeChangeEvent) => {\n        setContent(event.nativeEvent.contentSize.height);\n        onContentSizeChange?.(event);\n      },\n      [onContentSizeChange],\n    );\n\n    return (\n      <GlassInput\n        ref={ref}\n        multiline\n        onContentSizeChange={handleContentSizeChange}\n        style={[styles.textarea, { height }, style]}\n        {...rest}\n      />\n    );\n  },\n);\n\nGlassTextarea.displayName = 'GlassTextarea';\n\nconst styles = StyleSheet.create({\n  textarea: { lineHeight: LINE_HEIGHT, textAlignVertical: 'top' },\n});\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glass-textarea.tsx"
+    }
+  ],
+  "type": "registry:ui"
+}

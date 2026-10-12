@@ -1,0 +1,132 @@
+@property --lg-phone-duo-fold {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 1;
+}
+
+@property --lg-phone-duo-turn {
+  syntax: '<angle>';
+  inherits: true;
+  initial-value: 0deg;
+}
+
+@property --lg-phone-duo-pitch {
+  syntax: '<angle>';
+  inherits: true;
+  initial-value: 0deg;
+}
+
+@property --lg-phone-duo-roll {
+  syntax: '<angle>';
+  inherits: true;
+  initial-value: 0deg;
+}
+
+@property --lg-phone-duo-orbit {
+  syntax: '<angle>';
+  inherits: true;
+  initial-value: 0deg;
+}
+
+@property --lg-phone-duo-balance {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --lg-phone-duo-azimuth {
+  syntax: '<angle>';
+  inherits: true;
+  initial-value: 0deg;
+}
+
+@property --lg-phone-duo-zoom {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 1;
+}
+
+@layer properties;
+@layer theme, base, components, utilities;
+
+@layer components {
+  .lg-phone-duo {
+    --lg-phone-duo-duration: 1200ms;
+    --lg-phone-duo-fold-duration: var(--lg-phone-duo-duration);
+    --lg-phone-duo-fold-ease: cubic-bezier(0.45, 0, 0.2, 1);
+    --lg-phone-duo-turn: 0deg;
+
+    width: 100%;
+    margin: 0;
+    transition:
+      --lg-phone-duo-fold var(--lg-phone-duo-fold-duration) var(--lg-phone-duo-fold-ease),
+      --lg-phone-duo-turn var(--lg-phone-duo-duration) cubic-bezier(0.45, 0, 0.2, 1),
+      --lg-phone-duo-pitch var(--lg-phone-duo-duration) cubic-bezier(0.45, 0, 0.2, 1),
+      --lg-phone-duo-roll var(--lg-phone-duo-duration) cubic-bezier(0.45, 0, 0.2, 1),
+      --lg-phone-duo-orbit var(--lg-phone-duo-duration) cubic-bezier(0.45, 0, 0.2, 1),
+      --lg-phone-duo-azimuth var(--lg-phone-duo-duration) cubic-bezier(0.45, 0, 0.2, 1),
+      --lg-phone-duo-balance var(--lg-phone-duo-duration) cubic-bezier(0.45, 0, 0.2, 1),
+      --lg-phone-duo-zoom var(--lg-phone-duo-duration) cubic-bezier(0.45, 0, 0.2, 1);
+  }
+
+  .lg-phone-duo[data-view='back'] {
+    --lg-phone-duo-turn: 180deg;
+  }
+
+  .lg-phone-duo-body {
+    position: relative;
+    /* Includes room for the raised pane, rear cameras, and every rounded corner. */
+    aspect-ratio: 220 / 178;
+    isolation: isolate;
+  }
+
+  .lg-phone-duo-canvas {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    user-select: none;
+  }
+
+  .lg-phone-duo-shadow {
+    position: absolute;
+    inset: 77% 18% 7%;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgb(16 23 35 / 0.13), transparent 68%);
+    filter: blur(12px);
+    scale: calc(0.55 + var(--lg-phone-duo-fold) * 0.45) 1;
+  }
+
+  .lg-phone-duo[data-pose='laptop'] .lg-phone-duo-shadow {
+    inset: 87% 18% 2%;
+  }
+
+  .lg-phone-duo[data-pose='side'] .lg-phone-duo-shadow {
+    inset: 54% 18% 33%;
+  }
+
+  .lg-phone-duo-error {
+    padding: 12px;
+    color: var(--lg-foreground, #222);
+    text-align: center;
+  }
+
+  .lg-phone-duo[data-manual] {
+    --lg-phone-duo-duration: 0ms;
+    --lg-phone-duo-fold-duration: 120ms;
+    --lg-phone-duo-fold-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  html[data-lg-reduce-motion='1'] .lg-phone-duo {
+    --lg-phone-duo-duration: 0ms;
+    --lg-phone-duo-fold-duration: 0ms;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lg-phone-duo,
+    .lg-phone-duo[data-manual] {
+      --lg-phone-duo-duration: 0ms;
+      --lg-phone-duo-fold-duration: 0ms;
+    }
+  }
+}

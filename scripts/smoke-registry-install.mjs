@@ -1,0 +1,945 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import net from 'node:net';
+import os from 'node:os';
+import path from 'node:path';
+import { spawn, spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
+import { chromium, firefox, webkit } from 'playwright';
+import { checkConsumerCommand } from './check-consumer-command.mjs';
+import { checkConsumerTransparency } from './check-consumer-transparency.mjs';
+
+// Read the picture the installed consumer actually paints, without a renderer test hook.
+async function readPicture(page, buffer) {
+  return page.evaluate(
+    async (png) => {
+      const image = new Image();
+      image.src = png;
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const context = canvas.getContext('2d');
+      context.drawImage(image, 0, 0);
+      const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+      const stripe = [];
+      let clipped = 0;
+
+      for (let x = 0; x < canvas.width; x++) {
+        let weight = 0;
+        let centre = 0;
+
+        for (let y = 0; y < canvas.height; y++) {
+          const at = (y * canvas.width + x) * 4;
+          const [r, g, b] = data.slice(at, at + 3);
+
+          if (
+            // A screenshot rounds fractional figure bounds up; its final pixel
+            // can belong to the page background, outside the component.
+            x > 0 &&
+            x < canvas.width - 1 &&
+            y > 0 &&
+            y < canvas.height - 1 &&
+            (x < 4 || x >= canvas.width - 4 || y < 4 || y >= canvas.height - 4) &&
+            r + g + b < 300
+          )
+            clipped++;
+
+          if (g - r > 25 && g - b > 25) {
+            const amount = g - Math.max(r, b);
+            weight += amount;
+            centre += y * amount;
+          }
+        }
+
+        if (weight > 100) stripe.push({ x, y: centre / weight });
+      }
+
+      const n = stripe.length;
+      const sx = stripe.reduce((sum, p) => sum + p.x, 0);
+      const sy = stripe.reduce((sum, p) => sum + p.y, 0);
+      const sxx = stripe.reduce((sum, p) => sum + p.x * p.x, 0);
+      const sxy = stripe.reduce((sum, p) => sum + p.x * p.y, 0);
+      const slope = (n * sxy - sx * sy) / (n * sxx - sx * sx);
+      const intercept = (sy - slope * sx) / n;
+
+      const residual = Math.sqrt(
+        stripe.reduce((sum, p) => sum + (p.y - slope * p.x - intercept) ** 2, 0) / n,
+      );
+
+      return { columns: n, residual, clipped };
+    },
+    `data:image/png;base64,${buffer.toString('base64')}`,
+  );
+}
+
+async function pictureDifference(page, before, after) {
+  return page.evaluate(
+    async (pictures) => {
+      const images = await Promise.all(
+        pictures.map(async (src) => {
+          const image = new Image();
+          image.src = src;
+          await image.decode();
+          const canvas = document.createElement('canvas');
+          canvas.width = image.width;
+          canvas.height = image.height;
+          const context = canvas.getContext('2d');
+          context.drawImage(image, 0, 0);
+
+          return context.getImageData(0, 0, canvas.width, canvas.height).data;
+        }),
+      );
+
+      if (images[0].length !== images[1].length) throw new Error('Pose screenshots changed size.');
+      let difference = 0;
+
+      for (let index = 0; index < images[0].length; index++)
+        difference += Math.abs(images[0][index] - images[1][index]);
+
+      return difference / images[0].length;
+    },
+    [before, after].map((buffer) => `data:image/png;base64,${buffer.toString('base64')}`),
+  );
+}
+
+const nextPaint = (page) =>
+  page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
+
+const baseUrl = process.argv[2];
+
+const artifactDirectory = path.resolve(process.argv[3] ?? '.artifacts/prelaunch/registry-install');
+
+fs.mkdirSync(artifactDirectory, { recursive: true });
+
+if (!baseUrl) {
+  console.error('Usage: node scripts/smoke-registry-install.mjs http://127.0.0.1:3100');
+  process.exit(1);
+}
+
+const require = createRequire(import.meta.url);
+
+let shadcnPackage;
+
+try {
+  shadcnPackage = path.resolve(path.dirname(require.resolve('shadcn')), '..', 'package.json');
+} catch {
+  console.error(
+    'ERROR: registry-install smoke requires the pinned local shadcn CLI (shadcn@4.14.1). Run pnpm install before this release gate.',
+  );
+  process.exit(1);
+}
+
+const shadcnManifest = JSON.parse(fs.readFileSync(shadcnPackage, 'utf8'));
+
+assert.equal(shadcnManifest.name, 'shadcn', `resolved unexpected CLI package at ${shadcnPackage}`);
+
+assert.equal(
+  shadcnManifest.version,
+  '4.14.1',
+  `expected pinned shadcn 4.14.1, found ${shadcnManifest.version}`,
+);
+
+// The pinned 4.14.1 manifest declares its one entrypoint as a bin string.
+const binRelativePath = shadcnManifest.bin;
+
+assert.match(
+  binRelativePath,
+  /^\.\/.+\.js$/,
+  'pinned shadcn package must expose a shadcn bin entrypoint',
+);
+
+const shadcnBin = path.resolve(path.dirname(shadcnPackage), binRelativePath);
+
+assert.ok(
+  path.isAbsolute(shadcnBin),
+  'pinned shadcn bin entrypoint must resolve to an absolute path',
+);
+
+assert.ok(fs.statSync(shadcnBin).isFile(), `pinned shadcn bin is not a file: ${shadcnBin}`);
+
+const root = process.cwd();
+
+const fixture = path.join(root, 'fixtures/shadcn-consumer');
+
+const fixtureManifest = JSON.parse(fs.readFileSync(path.join(fixture, 'package.json'), 'utf8'));
+
+const fixtureDependencies = { ...fixtureManifest.dependencies };
+
+// This is a deliberately hand-derived v0.1 install contract for the public
+// dialog closure, installed into the clean fixture. It must not be inferred from
+// the live registry payload being installed, or a bad payload could teach this
+// smoke to accept its own drift.
+const expectedDialogDependencies = ['@radix-ui/react-dialog', 'clsx'];
+
+// A clean dialog install must include the slab helper used by glass-surface.
+// Omitting it from the registry closure breaks consumer imports. The existing
+// exact-set assertions own this install boundary; no runtime test hook is needed.
+const expectedDialogFiles = [
+  'components/glassyui/glass-dialog.tsx',
+  'components/glassyui/glass-panel.tsx',
+  'components/glassyui/glass-surface.tsx',
+  'components/glassyui/glass-provider.tsx',
+  'components/glassyui/liquid-filters.tsx',
+  'components/glassyui/lib/preferences.ts',
+  'components/glassyui/styles/liquid.css',
+  'components/glassyui/lib/merge-refs.ts',
+  'components/glassyui/lib/refraction-map.ts',
+  'components/glassyui/lib/slab-optics.ts',
+  'components/glassyui/lib/use-refraction-filter.tsx',
+  'components/glassyui/lib/scene-context.ts',
+];
+
+// The rest of the library, added on top of the dialog. Also hand-derived, from
+// each component's imports rather than from the payload being installed.
+const remainingItems = [
+  'glass-accordion',
+  'glass-alert',
+  'glass-avatar',
+  'glass-badge',
+  'glass-breadcrumb',
+  'glass-button',
+  'glass-checkbox',
+  'glass-command',
+  'glass-dock',
+  'glass-header',
+  'glass-input',
+  'glass-kbd',
+  'glass-laptop',
+  'glass-lens',
+  'glass-menu',
+  'glass-pagination',
+  'glass-phone-duo',
+  'glass-popover',
+  'glass-progress',
+  'glass-radio-group',
+  'glass-scene',
+  'glass-segmented-control',
+  'glass-select',
+  'glass-sheet',
+  'glass-skeleton',
+  'glass-slider',
+  'glass-spinner',
+  'glass-switch',
+  'glass-tabs',
+  'glass-textarea',
+  'glass-toast',
+  'glass-tooltip',
+];
+
+const expectedLibraryDependencies = [
+  '@radix-ui/react-accordion',
+  '@radix-ui/react-avatar',
+  '@radix-ui/react-checkbox',
+  '@radix-ui/react-dialog',
+  '@radix-ui/react-dropdown-menu',
+  '@radix-ui/react-popover',
+  '@radix-ui/react-radio-group',
+  '@radix-ui/react-select',
+  '@radix-ui/react-slider',
+  '@radix-ui/react-slot',
+  '@radix-ui/react-switch',
+  '@radix-ui/react-tabs',
+  '@radix-ui/react-toast',
+  '@radix-ui/react-tooltip',
+  'clsx',
+  'cmdk',
+];
+
+const expectedLibraryFiles = [
+  ...new Set([
+    ...expectedDialogFiles,
+    ...remainingItems.map((name) => `components/glassyui/${name}.tsx`),
+    // The motion springs behind the controls and the scene, and the scene's renderer.
+    'components/glassyui/lib/liquid-motion.ts',
+    'components/glassyui/lib/scene-renderer.ts',
+    'components/glassyui/lib/phone-duo-renderer.ts',
+    // The laptop's own stylesheet.
+    'components/glassyui/styles/laptop.css',
+    'components/glassyui/styles/header.css',
+    'components/glassyui/styles/phone-duo.css',
+  ]),
+];
+
+for (const dependency of expectedLibraryDependencies) {
+  assert.equal(
+    fixtureDependencies[dependency],
+    undefined,
+    `fixture must begin without ${dependency}`,
+  );
+}
+
+const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'glassyui-shadcn-consumer-'));
+
+const expectedPrefix = path.join(os.tmpdir(), 'glassyui-shadcn-consumer-');
+
+if (!temporaryRoot.startsWith(expectedPrefix))
+  throw new Error(`refusing to clean unexpected temporary directory ${temporaryRoot}`);
+
+function run(command, args) {
+  const result = spawnSync(command, args, { cwd: temporaryRoot, encoding: 'utf8', stdio: 'pipe' });
+
+  if (result.status !== 0)
+    throw new Error(
+      `${command} ${args.join(' ')} failed (${result.status})\n${result.stdout}\n${result.stderr}`,
+    );
+
+  return `${result.stdout}\n${result.stderr}`.trim();
+}
+
+function listFiles(directory, prefix = '') {
+  if (!fs.existsSync(directory)) return [];
+
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const relativePath = path.join(prefix, entry.name);
+
+    return entry.isDirectory()
+      ? listFiles(path.join(directory, entry.name), relativePath)
+      : [relativePath];
+  });
+}
+
+function assertExactSet(label, actual, expected) {
+  assert.deepEqual([...actual].sort(), [...expected].sort(), `${label} differs`);
+}
+
+async function getAvailablePort() {
+  return new Promise((resolve, reject) => {
+    const probe = net.createServer();
+    probe.once('error', reject);
+    probe.listen(0, '127.0.0.1', () => {
+      const address = probe.address();
+
+      // A TCP listener reports an address object; anything else has no port.
+      if (!address?.port) {
+        probe.close();
+        reject(new Error('Could not resolve an available loopback port'));
+
+        return;
+      }
+
+      probe.close((error) => {
+        if (error) reject(error);
+        else resolve(address.port);
+      });
+    });
+  });
+}
+
+async function waitForServer(url, child, getOutput) {
+  const deadline = Date.now() + 20_000;
+
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null) {
+      throw new Error(`installed consumer server exited early (${child.exitCode})\n${getOutput()}`);
+    }
+
+    try {
+      const response = await fetch(url);
+
+      if (response.ok) return;
+    } catch {
+      // The child has not bound its loopback port yet.
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+
+  throw new Error(`installed consumer server did not become ready\n${getOutput()}`);
+}
+
+// Reads a consumer-tinted material, then the same material with Reduce
+// Transparency on. The preference guard must beat the consumer utility.
+function readGuardedMaterial(node, { pseudo, tint }) {
+  const root = document.documentElement;
+  const sample = document.createElement('div');
+  sample.className = tint;
+  document.body.append(sample);
+  const expectedTint = getComputedStyle(sample).backgroundColor;
+  const tinted = getComputedStyle(node, pseudo).backgroundColor;
+  root.setAttribute('data-lg-reduce-transparency', '1');
+  sample.className = '';
+  sample.style.backgroundColor = getComputedStyle(root).getPropertyValue('--lg-opaque-surface');
+  const opaqueSurface = getComputedStyle(sample).backgroundColor;
+  const guarded = getComputedStyle(node, pseudo);
+
+  const result = {
+    backdrop: guarded.backdropFilter,
+    background: guarded.backgroundColor,
+    expectedTint,
+    opaqueSurface,
+    tinted,
+  };
+
+  sample.remove();
+  root.removeAttribute('data-lg-reduce-transparency');
+
+  return result;
+}
+
+async function stopChild(child) {
+  if (!child || child.exitCode !== null || child.signalCode !== null) return;
+
+  const exited =
+    child.exitCode !== null || child.signalCode !== null
+      ? Promise.resolve()
+      : new Promise((resolve) => child.once('exit', resolve));
+
+  const signalGroup = (signal) => {
+    try {
+      process.kill(-child.pid, signal);
+    } catch (error) {
+      if (error.code !== 'ESRCH') throw error;
+    }
+  };
+
+  signalGroup('SIGTERM');
+  await Promise.race([exited, new Promise((resolve) => setTimeout(resolve, 3_000))]);
+
+  if (child.exitCode === null && child.signalCode === null) signalGroup('SIGKILL');
+
+  await exited;
+}
+
+let fixtureServer;
+
+let browser;
+
+async function startConsumer() {
+  const port = await getAvailablePort();
+  const url = `http://127.0.0.1:${port}`;
+  let output = '';
+  fixtureServer = spawn('pnpm', ['exec', 'next', 'start', '-H', '127.0.0.1', '-p', String(port)], {
+    cwd: temporaryRoot,
+    detached: true,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  const capture = (chunk) => {
+    output = `${output}${chunk}`.slice(-20_000);
+  };
+
+  fixtureServer.stdout.on('data', capture);
+  fixtureServer.stderr.on('data', capture);
+  await waitForServer(url, fixtureServer, () => output);
+
+  return url;
+}
+
+async function captureDisplayedExamples() {
+  browser = await chromium.launch({
+    args: ['--disable-updater-scheduler'],
+    channel: 'chrome',
+    headless: true,
+  });
+  const page = await browser.newPage();
+  const directory = path.join(temporaryRoot, 'components', 'examples');
+  fs.mkdirSync(directory, { recursive: true });
+
+  for (const name of ['scene', 'lens', 'dock']) {
+    const response = await page.goto(`${baseUrl.replace(/\/$/, '')}/components/glass-${name}`, {
+      waitUntil: 'networkidle',
+    });
+
+    assert.equal(response.status(), 200, `${name} documentation must resolve`);
+    const source = await page.locator('#usage .docs-code-block pre code').first().innerText();
+    assert.match(source, /@\/components\/glassyui\//, `${name} example needs installed imports`);
+    fs.writeFileSync(path.join(directory, `${name}-example.tsx`), source);
+    fs.writeFileSync(path.join(artifactDirectory, `${name}-example.tsx`), source);
+  }
+
+  await browser.close();
+  browser = undefined;
+}
+
+try {
+  fs.cpSync(fixture, temporaryRoot, { recursive: true });
+  const configPath = path.join(temporaryRoot, 'components.json');
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  config.registries['@glassyui'] = `${baseUrl.replace(/\/$/, '')}/r/{name}.json`;
+  fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+
+  await captureDisplayedExamples();
+
+  const beforeManifest = JSON.parse(
+    fs.readFileSync(path.join(temporaryRoot, 'package.json'), 'utf8'),
+  );
+
+  const beforeDependencies = { ...beforeManifest.dependencies };
+
+  const beforeInstalledFiles = listFiles(
+    path.join(temporaryRoot, 'components', 'glassyui'),
+    'components/glassyui',
+  );
+
+  run('pnpm', ['install', '--ignore-scripts']);
+  const versionOutput = run(process.execPath, [shadcnBin, '--version']);
+  assert.match(
+    versionOutput,
+    /4\.14\.1/,
+    `absolute shadcn CLI did not report version 4.14.1: ${versionOutput}`,
+  );
+  run(process.execPath, [shadcnBin, 'add', '@glassyui/glass-dialog', '--yes']);
+
+  const installed = JSON.parse(fs.readFileSync(path.join(temporaryRoot, 'package.json'), 'utf8'));
+  const installedDependencies = installed.dependencies ?? {};
+
+  const addedDependencies = Object.keys(installedDependencies).filter(
+    (name) => !(name in beforeDependencies),
+  );
+
+  assertExactSet('added runtime dependencies', addedDependencies, expectedDialogDependencies);
+  assertExactSet('runtime dependency names after install', Object.keys(installedDependencies), [
+    ...Object.keys(beforeDependencies),
+    ...expectedDialogDependencies,
+  ]);
+
+  for (const [name, version] of Object.entries(beforeDependencies)) {
+    assert.equal(
+      installedDependencies[name],
+      version,
+      `installer changed existing dependency ${name}`,
+    );
+  }
+
+  assert.deepEqual(
+    installed.devDependencies ?? {},
+    beforeManifest.devDependencies ?? {},
+    'installer changed fixture devDependencies',
+  );
+
+  const installedFiles = listFiles(
+    path.join(temporaryRoot, 'components', 'glassyui'),
+    'components/glassyui',
+  );
+
+  assertExactSet(
+    'new installed Glassy UI files',
+    installedFiles.filter((file) => !beforeInstalledFiles.includes(file)),
+    expectedDialogFiles,
+  );
+  assertExactSet('installed Glassy UI file closure', installedFiles, expectedDialogFiles);
+
+  run(process.execPath, [
+    shadcnBin,
+    'add',
+    ...remainingItems.map((name) => `@glassyui/${name}`),
+    '--yes',
+  ]);
+  const library = JSON.parse(fs.readFileSync(path.join(temporaryRoot, 'package.json'), 'utf8'));
+  const libraryDependencies = library.dependencies ?? {};
+  assertExactSet(
+    'runtime dependency names after the full library install',
+    Object.keys(libraryDependencies),
+    [...Object.keys(fixtureDependencies), ...expectedLibraryDependencies],
+  );
+
+  for (const [name, version] of Object.entries(installedDependencies)) {
+    assert.equal(
+      libraryDependencies[name],
+      version,
+      `full library install changed dependency ${name}`,
+    );
+  }
+
+  assert.deepEqual(
+    library.devDependencies ?? {},
+    beforeManifest.devDependencies ?? {},
+    'full library install changed fixture devDependencies',
+  );
+  assertExactSet(
+    'full library file closure',
+    listFiles(path.join(temporaryRoot, 'components', 'glassyui'), 'components/glassyui'),
+    expectedLibraryFiles,
+  );
+  // next build type-checks every installed file, not only the ones the page imports.
+  run('pnpm', ['build']);
+  const nextStaticDirectory = path.join(temporaryRoot, '.next', 'static');
+
+  const cssAssets = listFiles(nextStaticDirectory)
+    .filter((relativePath) => relativePath.endsWith('.css'))
+    .map((relativePath) => fs.readFileSync(path.join(nextStaticDirectory, relativePath), 'utf8'));
+
+  const liquidCssSentinel = '--lg-refraction-blur-a';
+  assert.ok(
+    cssAssets.some((css) => css.includes(liquidCssSentinel)),
+    `built consumer CSS is missing the installed liquid.css sentinel ${liquidCssSentinel}`,
+  );
+
+  const fixtureUrl = await startConsumer();
+
+  for (const [browserName, browserType] of [
+    ['Chromium', chromium],
+    ['Firefox', firefox],
+    ['WebKit', webkit],
+  ]) {
+    browser = await browserType.launch(
+      browserName === 'Chromium'
+        ? { args: ['--disable-updater-scheduler'], channel: 'chrome', headless: true }
+        : { headless: true },
+    );
+    const contractFailures = [];
+
+    if (browserName === 'Chromium') {
+      try {
+        await checkConsumerTransparency(browser, fixtureUrl, artifactDirectory);
+      } catch (error) {
+        contractFailures.push(error);
+      }
+    }
+
+    try {
+      await checkConsumerCommand(browser, fixtureUrl, artifactDirectory, browserName.toLowerCase());
+    } catch (error) {
+      contractFailures.push(error);
+    }
+
+    if (contractFailures.length) {
+      const messages = contractFailures.map((error) => error.message);
+      fs.writeFileSync(
+        path.join(artifactDirectory, 'consumer-contract-failures.json'),
+        `${JSON.stringify({ browserName, messages }, null, 2)}\n`,
+      );
+      throw new AggregateError(contractFailures, messages.join('\n'));
+    }
+
+    const page = await browser.newPage({ viewport: { width: 800, height: 600 } });
+    const runtimeErrors = [];
+    const graphicsMessages = [];
+    page.on('pageerror', (error) => runtimeErrors.push(error.message));
+    page.on('console', (message) => {
+      if (message.type() === 'warning' || message.type() === 'error')
+        graphicsMessages.push(message.text());
+    });
+    await page.addInitScript(() => {
+      window.addEventListener(
+        'webglcontextcreationerror',
+        (event) => console.error(`WebGL context creation failed: ${event.statusMessage}`),
+        true,
+      );
+    });
+    await page.goto(fixtureUrl, { waitUntil: 'networkidle' });
+    fs.writeFileSync(
+      path.join(artifactDirectory, `${browserName.toLowerCase()}-graphics.json`),
+      `${JSON.stringify({ browserName, graphicsMessages, runtimeErrors }, null, 2)}\n`,
+    );
+
+    for (const name of ['scene', 'lens', 'dock', 'header'])
+      assert.ok(
+        await page.locator(`[data-installed-example="${name}"]`).isVisible(),
+        `${browserName}: copied ${name} source must render`,
+      );
+
+    // A straight line in the source stays straight while the glass lifts above it.
+    // This catches screen UVs rotating with the leaf, not just whether a canvas exists.
+    const duo = page.locator('[data-installed-example="phone-duo"]');
+    const figure = duo.getByRole('img');
+    await duo.getByRole('img', { name: 'Inner app screenshot', exact: true }).waitFor();
+    assert.equal(await figure.count(), 1, 'Both displays have one accessible description');
+    assert.ok(
+      await duo
+        .locator('img')
+        .evaluateAll((images) => images.every((image) => image.complete && image.naturalWidth > 0)),
+      `${browserName}: consumer screenshots must load`,
+    );
+
+    const openPicture = await figure.screenshot({
+      path: path.join(artifactDirectory, `installed-phone-duo-${browserName}-open.png`),
+    });
+
+    await duo.getByRole('button', { name: 'Pose hinge' }).click();
+    await nextPaint(page);
+
+    const partialPicture = await figure.screenshot({
+      path: path.join(artifactDirectory, `installed-phone-duo-${browserName}-folding.png`),
+    });
+
+    const partial = await readPicture(page, partialPicture);
+    assert.ok(partial.columns > 60, `${browserName}: the lifted glass must show the source stripe`);
+    assert.ok(
+      partial.residual < 1.6,
+      `${browserName}: flat screen content bends across the hinge (${partial.residual.toFixed(2)}px)`,
+    );
+    assert.equal(partial.clipped, 0, `${browserName}: the lifted frame clips at its canvas edge`);
+    await duo.getByRole('button', { name: 'Close phone' }).click();
+    await duo.getByRole('img', { name: 'Outer app screenshot', exact: true }).waitFor();
+    await page.waitForTimeout(1500);
+
+    const closedPicture = await figure.screenshot({
+      path: path.join(artifactDirectory, `installed-phone-duo-${browserName}-closed.png`),
+    });
+
+    assert.ok(
+      (await pictureDifference(page, partialPicture, closedPicture)) > 3,
+      `${browserName}: closing must change the visible pose`,
+    );
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await duo.getByRole('button', { name: 'Open phone' }).click();
+    await nextPaint(page);
+    assert.ok(
+      (await pictureDifference(page, openPicture, await figure.screenshot())) < 0.6,
+      `${browserName}: reduced motion must open directly to the resting picture`,
+    );
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.evaluate(() => document.documentElement.setAttribute('data-lg-reduce-motion', '1'));
+    await duo.getByRole('button', { name: 'Close phone' }).click();
+    await nextPaint(page);
+    assert.ok(
+      (await pictureDifference(page, closedPicture, await figure.screenshot())) < 0.6,
+      `${browserName}: the site preference must close directly to the resting picture`,
+    );
+    await duo.getByRole('button', { name: 'Open phone' }).click();
+    await nextPaint(page);
+
+    for (const width of [390, 800]) {
+      await page.setViewportSize({ width, height: 900 });
+      assert.ok(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+        `${browserName}: the installed duo must fit at ${width}px`,
+      );
+
+      const responsive = await figure.screenshot({
+        path: path.join(artifactDirectory, `installed-phone-duo-${browserName}-${width}.png`),
+      });
+
+      assert.equal(
+        (await readPicture(page, responsive)).clipped,
+        0,
+        `${browserName}: frame padding must survive at ${width}px`,
+      );
+    }
+
+    await page.evaluate(() => document.documentElement.removeAttribute('data-lg-reduce-motion'));
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.setViewportSize({ width: 800, height: 600 });
+    assert.deepEqual(runtimeErrors, [], `${browserName}: installed examples must not throw`);
+
+    const installedHeader = page.locator('[data-installed-example="header"]');
+    await installedHeader.locator('summary').click();
+    await installedHeader.getByRole('link', { name: 'Installed components', exact: true }).click();
+    assert.equal(
+      await installedHeader.locator('details').getAttribute('open'),
+      null,
+      `${browserName}: the installed header menu must close after choosing a link`,
+    );
+    assert.equal(new URL(page.url()).hash, '#installed-components');
+
+    // Library defaults sit in the components layer, so consumer utilities must
+    // win regardless of stylesheet order.
+    const override = await page.getByTestId('consumer-override').evaluate((node) => {
+      const style = getComputedStyle(node);
+
+      return { paddingLeft: style.paddingLeft, radius: style.borderTopLeftRadius };
+    });
+
+    assert.equal(
+      override.paddingLeft,
+      '16px',
+      `${browserName}: consumer p-4 must override the panel padding`,
+    );
+    assert.equal(
+      override.radius,
+      '0px',
+      `${browserName}: consumer rounded-none must override the panel radius`,
+    );
+
+    const frost = await page
+      .getByTestId('consumer-override')
+      .evaluate(readGuardedMaterial, { pseudo: '::before', tint: 'bg-sky-500/30' });
+
+    assert.equal(
+      frost.tinted,
+      frost.expectedTint,
+      `${browserName}: consumer before:bg-sky-500/30 must tint the panel frost`,
+    );
+    assert.equal(
+      frost.background,
+      frost.opaqueSurface,
+      `${browserName}: Reduce Transparency must beat the consumer frost tint`,
+    );
+    assert.equal(
+      frost.backdrop,
+      'none',
+      `${browserName}: Reduce Transparency must remove the panel blur`,
+    );
+
+    const trigger = page.getByRole('button', { name: 'Open installed dialog' });
+    await trigger.focus();
+    await trigger.click();
+    const dialog = page.getByRole('dialog', { name: 'Installed Glassy UI dialog' });
+    await dialog.waitFor({ state: 'visible' });
+    // Measure the dialog where it lands, not partway through its entrance.
+    await dialog.evaluate((node) =>
+      Promise.all(node.getAnimations().map((animation) => animation.finished)),
+    );
+
+    const layout = await dialog.evaluate((node) => {
+      const style = getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      const overlay = document.querySelector('.lg-dialog-overlay');
+      const overlayStyle = overlay ? getComputedStyle(overlay) : null;
+      const close = node.querySelector('button[aria-label="Close dialog"]');
+      const closeStyle = close ? getComputedStyle(close) : null;
+
+      return {
+        bottom: rect.bottom,
+        boxSizing: style.boxSizing,
+        centerX: rect.left + rect.width / 2,
+        centerY: rect.top + rect.height / 2,
+        left: rect.left,
+        maxWidth: style.maxWidth,
+        overlayBackdrop: overlayStyle?.backdropFilter,
+        overlayPosition: overlayStyle?.position,
+        paddingLeft: style.paddingLeft,
+        position: style.position,
+        right: rect.right,
+        top: rect.top,
+        translate: style.translate,
+        viewportHeight: window.innerHeight,
+        viewportWidth: window.innerWidth,
+        zIndex: style.zIndex,
+        closeHeight: closeStyle?.height,
+        closePosition: closeStyle?.position,
+        closeWidth: closeStyle?.width,
+      };
+    });
+
+    assert.equal(layout.position, 'fixed', `${browserName}: installed dialog must be fixed`);
+    assert.equal(
+      layout.boxSizing,
+      'border-box',
+      `${browserName}: Tailwind preflight must own installed dialog sizing`,
+    );
+    assert.equal(
+      layout.maxWidth,
+      '520px',
+      `${browserName}: installed dialog must keep its 520px max-width`,
+    );
+    assert.equal(
+      layout.paddingLeft,
+      '32px',
+      `${browserName}: installed dialog must use its wide-viewport padding`,
+    );
+    assert.equal(layout.zIndex, '50', `${browserName}: installed dialog must stack at z-index 50`);
+    assert.notEqual(
+      layout.translate,
+      'none',
+      `${browserName}: installed dialog must be translated to center`,
+    );
+    assert.ok(
+      Math.abs(layout.centerX - layout.viewportWidth / 2) <= 1,
+      `${browserName}: installed dialog must be horizontally centered`,
+    );
+    assert.ok(
+      Math.abs(layout.centerY - layout.viewportHeight / 2) <= 1,
+      `${browserName}: installed dialog must be vertically centered`,
+    );
+    assert.ok(
+      layout.left >= 0 &&
+        layout.top >= 0 &&
+        layout.right <= layout.viewportWidth &&
+        layout.bottom <= layout.viewportHeight,
+      `${browserName}: installed dialog must remain inside the viewport`,
+    );
+    assert.equal(
+      layout.overlayPosition,
+      'fixed',
+      `${browserName}: installed dialog overlay must be fixed`,
+    );
+    assert.notEqual(
+      layout.overlayBackdrop,
+      'none',
+      `${browserName}: installed dialog overlay must blur the page`,
+    );
+    assert.equal(
+      layout.closePosition,
+      'absolute',
+      `${browserName}: installed dialog close positioning utility must compile`,
+    );
+    assert.equal(
+      layout.closeWidth,
+      '36px',
+      `${browserName}: installed dialog close width utility must compile`,
+    );
+    assert.equal(
+      layout.closeHeight,
+      '36px',
+      `${browserName}: installed dialog close height utility must compile`,
+    );
+
+    const overlayMaterial = await dialog.evaluate(readGuardedMaterial, {
+      pseudo: null,
+      tint: 'bg-sky-500/30',
+    });
+
+    assert.equal(
+      overlayMaterial.tinted,
+      overlayMaterial.expectedTint,
+      `${browserName}: consumer bg-sky-500/30 must tint the installed dialog`,
+    );
+    assert.equal(
+      overlayMaterial.background,
+      overlayMaterial.opaqueSurface,
+      `${browserName}: Reduce Transparency must beat the consumer dialog tint`,
+    );
+    assert.equal(
+      overlayMaterial.backdrop,
+      'none',
+      `${browserName}: Reduce Transparency must remove the dialog blur`,
+    );
+
+    await page.keyboard.press('Escape');
+    await dialog.waitFor({ state: 'hidden' });
+    const triggerHandle = await trigger.elementHandle();
+    assert.ok(triggerHandle, `${browserName}: installed dialog trigger must remain mounted`);
+    await page.waitForFunction((node) => document.activeElement === node, triggerHandle, {
+      timeout: 2_000,
+    });
+
+    // A menu item that opens a sheet hands focus across two Radix layers. Whatever
+    // versions the installer resolved, the page must stay usable afterwards.
+    const menuTrigger = page.getByRole('button', { name: 'Open installed menu' });
+    const menu = page.locator('[role="menu"]');
+    await menuTrigger.click();
+    await page.getByRole('menuitem', { name: 'Open installed sheet' }).click();
+    const sheet = page.getByRole('dialog', { name: 'Installed Glassy UI sheet' });
+    await sheet.waitFor({ state: 'visible' });
+    await menu.waitFor({ state: 'detached' });
+    assert.ok(
+      await sheet.evaluate((node) => node.contains(document.activeElement)),
+      `${browserName}: a sheet opened from a menu must hold focus`,
+    );
+    await page.keyboard.press('Escape');
+    await sheet.waitFor({ state: 'detached' });
+    const menuTriggerHandle = await menuTrigger.elementHandle();
+    assert.ok(menuTriggerHandle, `${browserName}: installed menu trigger must remain mounted`);
+    await page.waitForFunction((node) => document.activeElement === node, menuTriggerHandle, {
+      timeout: 2_000,
+    });
+    assert.notEqual(
+      await page.evaluate(() => getComputedStyle(document.body).pointerEvents),
+      'none',
+      `${browserName}: closing a sheet opened from a menu must leave the page interactive`,
+    );
+    // A stuck layer would swallow this click, so the menu must open again.
+    await menuTrigger.click({ timeout: 5_000 });
+    await menu.waitFor({ state: 'visible' });
+    await page.keyboard.press('Escape');
+    await menu.waitFor({ state: 'detached' });
+    await browser.close();
+    browser = undefined;
+  }
+
+  console.log(
+    `Registry install smoke passed with verified shadcn CLI ${shadcnManifest.version}, Tailwind output, consumer overrides, preference guards, and rendered dialog and menu-to-sheet flow in Chromium, Firefox, and WebKit (${shadcnBin}).`,
+  );
+} finally {
+  try {
+    await browser?.close();
+  } finally {
+    await stopChild(fixtureServer);
+    fs.rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+}

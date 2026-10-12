@@ -1,0 +1,26 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glass-panel",
+  "title": "Glass Panel",
+  "description": "Glass cards, panels and pills for anything that floats above your content.",
+  "dependencies": [
+    "clsx"
+  ],
+  "registryDependencies": [
+    "@glassyui/glass-surface"
+  ],
+  "files": [
+    {
+      "path": "registry/glassyui/glass-panel.tsx",
+      "content": "'use client';\n\nimport clsx from 'clsx';\nimport { forwardRef } from 'react';\nimport type { HTMLAttributes, ReactNode } from 'react';\nimport { GlassSurface } from './glass-surface';\nimport type { RefractionBackgroundSpace } from './glass-surface';\n\ntype PanelVariant = 'panel' | 'card' | 'pill';\n\ntype PanelElevation = 'base' | 'raised';\n\ntype PanelRefraction = 'none' | 'soft' | 'strong';\n\ntype PanelPreset = 'subtle' | 'standard' | 'prominent' | 'control' | 'showcase';\n\nexport type GlassPanelProps = HTMLAttributes<HTMLDivElement> & {\n  variant?: PanelVariant;\n  elevation?: PanelElevation;\n  /** Brightens the surface a touch on hover. */\n  interactive?: boolean;\n  /** Chromium edge lens over the frost. On by default for control and showcase presets. */\n  lens?: boolean;\n  preset?: PanelPreset;\n  refraction?: PanelRefraction;\n  refractionBackground?: ReactNode;\n  refractionBackgroundSpace?: RefractionBackgroundSpace;\n  refractionDisplacement?: number;\n  /** How thick the glass is, as a multiple of regular. See GlassSurface. */\n  thickness?: number;\n};\n\n// Shape, spacing and elevation live in liquid.css, below Tailwind utilities.\nconst VARIANT_CLASS: Record<PanelVariant, string> = {\n  panel: 'lg-panel--panel',\n  card: 'lg-panel--card',\n  pill: 'lg-panel--pill',\n};\n\nexport const GlassPanel = forwardRef<HTMLDivElement, GlassPanelProps>(\n  (\n    {\n      className,\n      variant = 'panel',\n      elevation = 'base',\n      interactive = false,\n      lens,\n      preset = variant === 'pill' ? 'control' : 'standard',\n      refraction = preset === 'showcase' ? 'strong' : 'none',\n      refractionBackground,\n      refractionBackgroundSpace,\n      refractionDisplacement,\n      ...rest\n    },\n    forwardedRef,\n  ) => {\n    return (\n      <GlassSurface\n        ref={forwardedRef}\n        interactive={interactive}\n        lens={lens}\n        preset={preset}\n        refraction={refraction}\n        refractionBackground={refractionBackground}\n        refractionBackgroundSpace={refractionBackgroundSpace}\n        refractionDisplacement={refractionDisplacement}\n        className={clsx(\n          VARIANT_CLASS[variant],\n          elevation === 'raised' && 'lg-panel--raised',\n          className,\n        )}\n        {...rest}\n      />\n    );\n  },\n);\n\nGlassPanel.displayName = 'GlassPanel';\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glass-panel.tsx"
+    }
+  ],
+  "meta": {
+    "sourceModules": [
+      "panel"
+    ]
+  },
+  "type": "registry:ui"
+}

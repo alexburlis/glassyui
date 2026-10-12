@@ -1,0 +1,32 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glass-textarea",
+  "title": "Glass Textarea",
+  "description": "A recessed glass field for longer text that can grow as you type.",
+  "dependencies": [
+    "clsx"
+  ],
+  "registryDependencies": [
+    "@glassyui/glass-provider"
+  ],
+  "files": [
+    {
+      "path": "registry/glassyui/glass-textarea.tsx",
+      "content": "'use client';\n\nimport clsx from 'clsx';\nimport { forwardRef, useCallback, useId, useLayoutEffect, useMemo, useRef } from 'react';\nimport { mergeRefs } from './lib/merge-refs';\n\nexport interface GlassTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {\n  /** Grows with its text instead of scrolling, up to `maxRows`. */\n  autoResize?: boolean;\n  hint?: string;\n  label?: string;\n  /** The most rows an auto-resizing textarea grows to. Defaults to 8. */\n  maxRows?: number;\n}\n\nconst pixels = (value: string) => Number.parseFloat(value) || 0;\n\n/**\n * A recessed glass field for longer text, with an optional label and hint. With `autoResize`\n * it grows as you type and scrolls once it reaches `maxRows`.\n */\nexport const GlassTextarea = forwardRef<HTMLTextAreaElement, GlassTextareaProps>(\n  (\n    {\n      autoResize = false,\n      className,\n      hint,\n      id,\n      label,\n      maxRows = 8,\n      onInput,\n      rows = 3,\n      'aria-describedby': describedBy,\n      ...props\n    },\n    forwardedRef,\n  ) => {\n    const generatedId = useId();\n    const textareaId = id ?? `lg-textarea-${generatedId}`;\n    const hintId = `${textareaId}-hint`;\n    const descriptionIds = [describedBy, hint ? hintId : null].filter(Boolean).join(' ');\n    const innerRef = useRef<HTMLTextAreaElement | null>(null);\n    const ref = useMemo(() => mergeRefs(innerRef, forwardedRef), [forwardedRef]);\n\n    const fit = useCallback(() => {\n      const element = innerRef.current;\n\n      if (!element || !autoResize) return;\n\n      const style = getComputedStyle(element);\n      const border = pixels(style.borderTopWidth) + pixels(style.borderBottomWidth);\n      const padding = pixels(style.paddingTop) + pixels(style.paddingBottom);\n      const line = pixels(style.lineHeight) || pixels(style.fontSize) * 1.4;\n      const limit = line * maxRows + padding + border;\n\n      element.style.height = 'auto';\n\n      const wanted = element.scrollHeight + border;\n\n      element.style.height = `${Math.min(wanted, limit)}px`;\n      element.style.overflowY = wanted > limit ? 'auto' : 'hidden';\n    }, [autoResize, maxRows]);\n\n    // Resize once the text is in the DOM, and again when the width rewraps it.\n    useLayoutEffect(() => {\n      const element = innerRef.current;\n\n      fit();\n\n      if (!element || !autoResize) return;\n\n      let width = element.clientWidth;\n\n      const observer = new ResizeObserver(() => {\n        if (element.clientWidth === width) return;\n\n        width = element.clientWidth;\n        fit();\n      });\n\n      observer.observe(element);\n\n      return () => observer.disconnect();\n    }, [autoResize, fit, props.value]);\n\n    return (\n      <div className=\"flex w-full flex-col gap-2 text-sm text-[var(--lg-muted-foreground)]\">\n        {label ? (\n          <label\n            htmlFor={textareaId}\n            className=\"font-medium text-[var(--lg-muted-foreground)] select-none\"\n          >\n            {label}\n          </label>\n        ) : null}\n        <textarea\n          {...props}\n          id={textareaId}\n          ref={ref}\n          rows={rows}\n          aria-describedby={descriptionIds || undefined}\n          data-lg-refraction=\"none\"\n          data-resize={autoResize ? 'auto' : undefined}\n          className={clsx('lg-input lg-textarea', className)}\n          onInput={(event) => {\n            fit();\n            onInput?.(event);\n          }}\n        />\n        {hint ? (\n          <span id={hintId} className=\"text-xs text-[var(--lg-muted-foreground)]\">\n            {hint}\n          </span>\n        ) : null}\n      </div>\n    );\n  },\n);\n\nGlassTextarea.displayName = 'GlassTextarea';\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glass-textarea.tsx"
+    },
+    {
+      "path": "registry/glassyui/lib/merge-refs.ts",
+      "content": "import type { Ref } from 'react';\n\nexport function mergeRefs<T>(...refs: Array<Ref<T> | undefined>) {\n  return (node: T) => {\n    for (const ref of refs) {\n      if (!ref) continue;\n\n      if ('current' in ref) {\n        try {\n          ref.current = node;\n        } catch {\n          // Read-only refs cannot be assigned.\n        }\n      } else {\n        ref(node);\n      }\n    }\n  };\n}\n",
+      "type": "registry:lib",
+      "target": "components/glassyui/lib/merge-refs.ts"
+    }
+  ],
+  "meta": {
+    "sourceModules": [
+      "textarea"
+    ]
+  },
+  "type": "registry:ui"
+}

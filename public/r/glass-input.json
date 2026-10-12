@@ -1,0 +1,26 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glass-input",
+  "title": "Glass Input",
+  "description": "A recessed glass text field with a label and an optional hint.",
+  "dependencies": [
+    "clsx"
+  ],
+  "registryDependencies": [
+    "@glassyui/glass-provider"
+  ],
+  "files": [
+    {
+      "path": "registry/glassyui/glass-input.tsx",
+      "content": "'use client';\n\nimport './styles/liquid.css';\n\nimport clsx from 'clsx';\nimport { forwardRef, useId } from 'react';\n\nexport interface GlassInputProps extends React.InputHTMLAttributes<HTMLInputElement> {\n  label?: string;\n  hint?: string;\n}\n\nexport const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(\n  (\n    { className, id, label, hint, type = 'text', 'aria-describedby': describedBy, ...props },\n    ref,\n  ) => {\n    const generatedId = useId();\n    const inputId = id ?? `lg-input-${generatedId}`;\n    const hintId = `${inputId}-hint`;\n    const descriptionIds = [describedBy, hint ? hintId : null].filter(Boolean).join(' ');\n\n    return (\n      <div className=\"flex w-full flex-col gap-2 text-sm text-[var(--lg-muted-foreground)]\">\n        {label ? (\n          <label\n            htmlFor={inputId}\n            className=\"font-medium text-[var(--lg-muted-foreground)] select-none\"\n          >\n            {label}\n          </label>\n        ) : null}\n        <input\n          {...props}\n          id={inputId}\n          ref={ref}\n          type={type}\n          aria-describedby={descriptionIds || undefined}\n          data-lg-refraction=\"none\"\n          className={clsx('lg-input', className)}\n        />\n        {hint ? (\n          <span id={hintId} className=\"text-xs text-[var(--lg-muted-foreground)]\">\n            {hint}\n          </span>\n        ) : null}\n      </div>\n    );\n  },\n);\n\nGlassInput.displayName = 'GlassInput';\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glass-input.tsx"
+    }
+  ],
+  "meta": {
+    "sourceModules": [
+      "input"
+    ]
+  },
+  "type": "registry:ui"
+}

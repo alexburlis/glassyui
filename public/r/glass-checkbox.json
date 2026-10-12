@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glass-checkbox",
+  "title": "Glass Checkbox",
+  "description": "A glass checkbox whose mark draws itself in and out, with an indeterminate state.",
+  "dependencies": [
+    "@radix-ui/react-checkbox",
+    "clsx"
+  ],
+  "registryDependencies": [
+    "@glassyui/glass-provider"
+  ],
+  "files": [
+    {
+      "path": "registry/glassyui/glass-checkbox.tsx",
+      "content": "'use client';\n\nimport * as CheckboxPrimitive from '@radix-ui/react-checkbox';\nimport clsx from 'clsx';\nimport { forwardRef, useId } from 'react';\nimport type { ReactNode } from 'react';\n\nexport type GlassCheckboxSize = 'sm' | 'md';\n\nexport type GlassCheckboxProps = Omit<\n  React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>,\n  'children'\n> & {\n  /** A line of muted text under the label. */\n  description?: ReactNode;\n  /** Text beside the box. Clicking it toggles the box. Without one, name the box with `aria-label`. */\n  label?: ReactNode;\n  size?: GlassCheckboxSize;\n};\n\n/**\n * A checkbox for one choice or, with `checked=\"indeterminate\"`, for a parent of several. The\n * mark draws itself in and out, so unchecking is as smooth as checking.\n */\nexport const GlassCheckbox = forwardRef<HTMLButtonElement, GlassCheckboxProps>(\n  (\n    { className, description, id, label, size = 'md', 'aria-describedby': describedBy, ...props },\n    forwardedRef,\n  ) => {\n    const generatedId = useId();\n    const checkboxId = id ?? `lg-checkbox-${generatedId}`;\n    const descriptionId = `${checkboxId}-description`;\n    const described = [describedBy, description ? descriptionId : null].filter(Boolean).join(' ');\n\n    const box = (\n      <CheckboxPrimitive.Root\n        {...props}\n        ref={forwardedRef}\n        id={checkboxId}\n        aria-describedby={described || undefined}\n        className={clsx('lg-checkbox', label === undefined && className)}\n        data-size={size}\n      >\n        <CheckboxPrimitive.Indicator forceMount className=\"lg-check-indicator\">\n          <svg aria-hidden className=\"lg-check-mark\" viewBox=\"0 0 16 16\">\n            <path className=\"lg-check-tick\" d=\"M3.6 8.4 6.6 11.4 12.4 5\" pathLength=\"1\" />\n            <path className=\"lg-check-dash\" d=\"M4 8h8\" pathLength=\"1\" />\n          </svg>\n        </CheckboxPrimitive.Indicator>\n      </CheckboxPrimitive.Root>\n    );\n\n    if (label === undefined) return box;\n\n    return (\n      <div\n        className={clsx('lg-check-field', className)}\n        data-disabled={props.disabled ? '' : undefined}\n        data-size={size}\n      >\n        {box}\n        <div className=\"lg-check-text\">\n          <label htmlFor={checkboxId}>{label}</label>\n          {description ? <span id={descriptionId}>{description}</span> : null}\n        </div>\n      </div>\n    );\n  },\n);\n\nGlassCheckbox.displayName = 'GlassCheckbox';\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glass-checkbox.tsx"
+    }
+  ],
+  "meta": {
+    "sourceModules": [
+      "checkbox"
+    ]
+  },
+  "type": "registry:ui"
+}

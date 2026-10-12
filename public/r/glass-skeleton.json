@@ -1,0 +1,26 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glass-skeleton",
+  "title": "Glass Skeleton",
+  "description": "A quiet glass placeholder with a slow sheen, shaped like what will replace it.",
+  "dependencies": [
+    "clsx"
+  ],
+  "registryDependencies": [
+    "@glassyui/glass-provider"
+  ],
+  "files": [
+    {
+      "path": "registry/glassyui/glass-skeleton.tsx",
+      "content": "import clsx from 'clsx';\nimport { forwardRef } from 'react';\nimport type { HTMLAttributes } from 'react';\n\nexport type GlassSkeletonVariant = 'block' | 'circle' | 'text';\n\nexport type GlassSkeletonProps = Omit<HTMLAttributes<HTMLDivElement>, 'children'> & {\n  /** How many lines a `text` skeleton draws. The last is shorter. Defaults to 3. */\n  lines?: number;\n  /** A `block` is sized with CSS, a `circle` is square and a `text` is a stack of lines. */\n  variant?: GlassSkeletonVariant;\n};\n\n/**\n * A quiet glass placeholder with a slow sheen. It is hidden from assistive technology, so mark\n * the region that is loading with `aria-busy`.\n */\nexport const GlassSkeleton = forwardRef<HTMLDivElement, GlassSkeletonProps>(\n  ({ className, lines = 3, variant = 'block', ...props }, forwardedRef) => {\n    if (variant === 'text') {\n      return (\n        <div\n          aria-hidden\n          {...props}\n          ref={forwardedRef}\n          className={clsx('lg-skeleton-text', className)}\n        >\n          {Array.from({ length: Math.max(1, lines) }, (_, index) => (\n            <span className=\"lg-skeleton\" data-variant=\"line\" key={index} />\n          ))}\n        </div>\n      );\n    }\n\n    return (\n      <div\n        aria-hidden\n        {...props}\n        ref={forwardedRef}\n        className={clsx('lg-skeleton', className)}\n        data-variant={variant}\n      />\n    );\n  },\n);\n\nGlassSkeleton.displayName = 'GlassSkeleton';\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glass-skeleton.tsx"
+    }
+  ],
+  "meta": {
+    "sourceModules": [
+      "skeleton"
+    ]
+  },
+  "type": "registry:ui"
+}

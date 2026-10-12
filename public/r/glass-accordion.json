@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glass-accordion",
+  "title": "Glass Accordion",
+  "description": "Sections that expand and collapse on glass, one at a time or several.",
+  "dependencies": [
+    "@radix-ui/react-accordion",
+    "clsx"
+  ],
+  "registryDependencies": [
+    "@glassyui/glass-panel"
+  ],
+  "files": [
+    {
+      "path": "registry/glassyui/glass-accordion.tsx",
+      "content": "'use client';\n\nimport * as AccordionPrimitive from '@radix-ui/react-accordion';\nimport clsx from 'clsx';\nimport { GlassPanel } from './glass-panel';\n\nconst radixSlotProps = { asChild: true };\n\nexport const GlassAccordion = AccordionPrimitive.Root;\n\nexport const GlassAccordionItem = AccordionPrimitive.Item;\n\nexport function GlassAccordionTrigger(\n  props: React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>,\n) {\n  const { className, children, ...rest } = props;\n\n  return (\n    <AccordionPrimitive.Header>\n      <AccordionPrimitive.Trigger\n        {...rest}\n        className={clsx('lg-button lg-accordion-trigger', className)}\n      >\n        <span>{children}</span>\n        <svg\n          viewBox=\"0 0 20 20\"\n          className=\"lg-accordion-chevron h-4 w-4 text-[var(--lg-muted-foreground)]\"\n          aria-hidden\n        >\n          <path\n            d=\"M5 7.5l5 5 5-5\"\n            fill=\"none\"\n            stroke=\"currentColor\"\n            strokeWidth=\"1.6\"\n            strokeLinecap=\"round\"\n            strokeLinejoin=\"round\"\n          />\n        </svg>\n      </AccordionPrimitive.Trigger>\n    </AccordionPrimitive.Header>\n  );\n}\n\nexport function GlassAccordionContent(\n  props: React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Content>,\n) {\n  const { className, children, ...rest } = props;\n\n  return (\n    <AccordionPrimitive.Content {...rest} {...radixSlotProps}>\n      <GlassPanel\n        variant=\"card\"\n        elevation=\"base\"\n        refraction=\"soft\"\n        className={clsx('lg-accordion-content', className)}\n      >\n        {children}\n      </GlassPanel>\n    </AccordionPrimitive.Content>\n  );\n}\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glass-accordion.tsx"
+    }
+  ],
+  "meta": {
+    "sourceModules": [
+      "accordion"
+    ]
+  },
+  "type": "registry:ui"
+}

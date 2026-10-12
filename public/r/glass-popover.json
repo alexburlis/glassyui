@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "glass-popover",
+  "title": "Glass Popover",
+  "description": "Floating glass content anchored to the control that opens it.",
+  "dependencies": [
+    "@radix-ui/react-popover",
+    "clsx"
+  ],
+  "registryDependencies": [
+    "@glassyui/glass-panel"
+  ],
+  "files": [
+    {
+      "path": "registry/glassyui/glass-popover.tsx",
+      "content": "'use client';\n\nimport * as PopoverPrimitive from '@radix-ui/react-popover';\nimport clsx from 'clsx';\nimport { GlassPanel } from './glass-panel';\n\nconst radixSlotProps = { asChild: true };\n\nexport const GlassPopover = PopoverPrimitive.Root;\n\nexport const GlassPopoverTrigger = PopoverPrimitive.Trigger;\n\nexport const GlassPopoverAnchor = PopoverPrimitive.Anchor;\n\nexport type GlassPopoverContentProps = React.ComponentPropsWithoutRef<\n  typeof PopoverPrimitive.Content\n> & {\n  /** How thick the glass is, as a multiple of regular. See GlassSurface. */\n  thickness?: number;\n};\n\nexport function GlassPopoverContent(props: GlassPopoverContentProps) {\n  const { className, sideOffset = 12, ...rest } = props;\n\n  return (\n    <PopoverPrimitive.Portal>\n      <PopoverPrimitive.Content sideOffset={sideOffset} {...rest} {...radixSlotProps}>\n        <GlassPanel\n          lens\n          preset=\"prominent\"\n          variant=\"card\"\n          elevation=\"raised\"\n          refraction=\"none\"\n          className={clsx('lg-popover-content', className)}\n        >\n          {props.children}\n        </GlassPanel>\n      </PopoverPrimitive.Content>\n    </PopoverPrimitive.Portal>\n  );\n}\n",
+      "type": "registry:ui",
+      "target": "components/glassyui/glass-popover.tsx"
+    }
+  ],
+  "meta": {
+    "sourceModules": [
+      "popover"
+    ]
+  },
+  "type": "registry:ui"
+}

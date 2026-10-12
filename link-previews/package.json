@@ -1,0 +1,12 @@
+{
+  "name": "glassyui-link-previews",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.23.0",
+  "scripts": {
+    "render": "node render.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.61.1"
+  }
+}

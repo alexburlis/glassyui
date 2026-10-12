@@ -1,0 +1,55 @@
+# dependencies
+/node_modules
+/.pnpm-store/
+/.pnp
+.pnp.*
+
+# build caches
+/.next/
+/.build/
+/out/
+/build
+/.turbo
+
+# testing
+/coverage
+/.playwright-mcp/
+
+# workspace artifacts
+.artifacts/
+/research/
+/reports/
+/design-explorations/
+
+# local agent and editor state
+.agent/
+.codex/
+.superpowers/
+.tldr/
+/.tldrignore
+.claude/
+docs/execplan-*.md
+docs/execplans/
+docs/plans/
+docs/archive/
+docs/marketing/
+docs/superpowers/
+docs/seo/28day-*/
+
+# misc
+.DS_Store
+*.tsbuildinfo
+*.pem
+.env*
+!.env.example
+!.env.build.1p.example
+.vercel
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# generated
+next-env.d.ts
