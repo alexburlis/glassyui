@@ -1,18 +1,32 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const rootRequire = createRequire(import.meta.url);
+
+const args = process.argv.slice(2);
+
+const fixtureIndex = args.indexOf('--fixture');
+
+const fixture = fixtureIndex === -1 ? null : realpathSync(resolve(args[fixtureIndex + 1]));
+
+const fixtureCli = fixture ? createRequire(join(fixture, 'package.json')).resolve('shadcn') : null;
+
+if (fixture && !fixtureCli.startsWith(join(fixture, 'node_modules') + sep)) {
+  throw new Error('Fixture proof requires its own installed CLI, without parent-module resolution');
+}
 
 const configRequire = createRequire(rootRequire.resolve('eslint-config-next'));
 
 const pluginRequire = createRequire(configRequire.resolve('@next/eslint-plugin-next'));
 
-const fastGlobPath = pluginRequire.resolve('fast-glob');
+const fastGlobPath = fixture
+  ? createRequire(fixtureCli).resolve('fast-glob')
+  : pluginRequire.resolve('fast-glob');
 
 const fastGlobRequire = createRequire(fastGlobPath);
 
@@ -179,11 +193,13 @@ function runScenario(name) {
   scenario();
 }
 
-if (process.argv[2] === '--case') {
+const caseIndex = args.indexOf('--case');
+
+if (caseIndex !== -1) {
   try {
-    runScenario(process.argv[3]);
+    runScenario(args[caseIndex + 1]);
   } catch (error) {
-    process.stderr.write(`${process.argv[3]} failed: ${error.name}
+    process.stderr.write(`${args[caseIndex + 1]} failed: ${error.name}
 `);
     process.exitCode = 1;
   }
@@ -191,7 +207,9 @@ if (process.argv[2] === '--case') {
   let failed = 0;
 
   for (const name of Object.keys(scenarios)) {
-    const result = spawnSync(process.execPath, [SCRIPT_PATH, '--case', name], {
+    const fixtureArgs = fixture ? ['--fixture', fixture] : [];
+
+    const result = spawnSync(process.execPath, [SCRIPT_PATH, ...fixtureArgs, '--case', name], {
       encoding: 'utf8',
       timeout: WORKER_TIMEOUT_MS,
       maxBuffer: 1024 * 1024,

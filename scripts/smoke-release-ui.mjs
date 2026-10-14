@@ -2087,13 +2087,16 @@ async function assertHomeSettingsFlow(page, audit, capture) {
   await settings.waitFor({ state: 'detached' });
   await assertBodyInteractive(page, 'the desk Settings sheet opened from a menu');
   // A stuck layer would swallow this click, so the next menu must still open.
-  await desk.getByRole('button', { name: 'View', exact: true }).click();
+  const viewTrigger = desk.getByRole('button', { name: 'View', exact: true });
+  await viewTrigger.click();
   const view = await exactlyOne(page.getByRole('menu'), 'desk View menu');
   await view
     .getByRole('menuitemcheckbox', { name: 'Show Widgets', exact: true })
     .waitFor({ state: 'visible' });
   await page.keyboard.press('Escape');
   await view.waitFor({ state: 'detached' });
+  // Radix restores focus after unmount; let it finish before opening another menu.
+  await assertFocusReturned(page, viewTrigger, 'desk View menu closed with Escape');
   await app.focus();
   await page.keyboard.press('Enter');
   await page.waitForFunction(

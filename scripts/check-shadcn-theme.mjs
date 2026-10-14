@@ -2148,14 +2148,7 @@ const LIBRARY_LENS_MAP = (() => {
 // Lays the components' lens over one element's box, with the theme's frost and
 // saturation, and hides the element: the filter is useLensFilter's, primitive for
 // primitive.
-function placeLibraryLens({
-  selector,
-  frostOnly,
-  rimWidth,
-  dispersion = 0.16,
-  saturate,
-  paddingBox = false,
-}) {
+function placeLibraryLens({ selector, frostOnly, rimWidth, dispersion = 0.16, saturate }) {
   const element = document.querySelector(selector);
   const rect = element.getBoundingClientRect();
   const style = getComputedStyle(element);
@@ -2163,15 +2156,15 @@ function placeLibraryLens({
 
   // A drop-in's engine frosts by its own token; the theme by --glassy-lens-frost.
   const frost = Number.parseFloat(
-    style.getPropertyValue(paddingBox ? '--lg-lens-blur' : '--glassy-lens-frost'),
+    style.getPropertyValue(element.dataset.glassyEngine ? '--lg-lens-blur' : '--glassy-lens-frost'),
   );
 
   const saturation = saturate ?? Number.parseFloat(style.getPropertyValue('--glassy-saturate'));
-  // A drop-in's engine measures the padding box, as useLensFilter does, and its glass fills it.
-  const left = paddingBox ? rect.left + element.clientLeft : rect.left;
-  const top = paddingBox ? rect.top + element.clientTop : rect.top;
-  const width = paddingBox ? element.clientWidth : rect.width;
-  const height = paddingBox ? element.clientHeight : rect.height;
+  // Both the theme's inset pseudo-element and useLensFilter fill the padding box.
+  const left = rect.left + element.clientLeft;
+  const top = rect.top + element.clientTop;
+  const width = element.clientWidth;
+  const height = element.clientHeight;
 
   const radius = Math.min(
     Number.parseFloat(after.borderTopLeftRadius),
@@ -2407,7 +2400,6 @@ async function libraryParity(page, selector, strip, directory, name, themeRim) {
         rimWidth,
         dispersion: engine.dispersion,
         saturate: engine.saturate,
-        paddingBox: true,
       }
     : { selector, rimWidth };
 
@@ -2436,12 +2428,12 @@ async function libraryParity(page, selector, strip, directory, name, themeRim) {
 const PANE_ALONE = `[data-check='card'] {
   --card: transparent !important; --glassy-lens-frost: 0.5px !important;
 }
-[data-check='card'] > * { visibility: hidden !important; }
+[data-check='card'] > * { opacity: 0 !important; }
 [data-check='card']::before { background: none !important; box-shadow: none !important; }`;
 
 // A drop-in's glass alone: no gloss, bevel, ring, shadow or content.
 const PANE_ALONE_NATIVE = `[data-check='card'] { box-shadow: none !important; }
-[data-check='card'] > * { visibility: hidden !important; }
+[data-check='card'] > * { opacity: 0 !important; }
 [data-check='card']::before { background: none !important; box-shadow: none !important; }
 [data-check='card']::after { display: none !important; }`;
 
@@ -2764,20 +2756,54 @@ try {
     const fixtureDirectory = path.join(artifactDirectory, fixture.name);
     fs.rmSync(fixtureDirectory, { recursive: true, force: true });
     fs.mkdirSync(fixtureDirectory, { recursive: true });
-    const temporaryRoot = fs.mkdtempSync(temporaryPrefix);
+    const temporaryContainer = fs.mkdtempSync(temporaryPrefix);
 
-    if (!temporaryRoot.startsWith(temporaryPrefix))
-      throw new Error(`refusing unexpected temporary directory ${temporaryRoot}`);
+    const temporaryRoot = path.join(
+      temporaryContainer,
+      'fixtures',
+      'shadcn-theme-consumer',
+      fixture.app,
+    );
+
+    if (!temporaryContainer.startsWith(temporaryPrefix))
+      throw new Error(`refusing unexpected temporary directory ${temporaryContainer}`);
     console.log(`\n${fixture.name}: ${temporaryRoot}`);
     let app;
 
     try {
-      fs.cpSync(path.join(root, 'fixtures', 'shadcn-theme-consumer', fixture.app), temporaryRoot, {
+      const sourceFixture = path.join(root, 'fixtures', 'shadcn-theme-consumer', fixture.app);
+
+      fs.cpSync(sourceFixture, temporaryRoot, {
         recursive: true,
+        filter: (source) =>
+          !['node_modules', '.next'].includes(
+            path.relative(sourceFixture, source).split(path.sep)[0],
+          ),
       });
+
+      // Keep the fixture's relative reference to the single repository patch.
+      fs.mkdirSync(path.join(temporaryContainer, 'patches'));
+      fs.copyFileSync(
+        path.join(root, 'patches', 'braces@3.0.3.patch'),
+        path.join(temporaryContainer, 'patches', 'braces@3.0.3.patch'),
+      );
 
       if (fixture.palette) applyPalette(temporaryRoot, PALETTES[fixture.palette]);
       run('pnpm', ['install', '--frozen-lockfile', '--prefer-offline'], temporaryRoot);
+
+      if (fixture.app === 'base-nova') {
+        run(
+          process.execPath,
+          [path.join(root, 'scripts', 'test-braces-security.mjs'), '--fixture', temporaryRoot],
+          temporaryRoot,
+        );
+        check(
+          'the installed CLI rejects unsafe glob nesting and cycles',
+          true,
+          '15 security scenarios passed',
+        );
+      }
+
       run('pnpm', ['exec', 'next', 'build'], temporaryRoot);
       app = await startApp(temporaryRoot);
       console.log('  baseline');
@@ -2995,7 +3021,7 @@ try {
       await exportGuideImages(browser, app.url, 'glassy');
     } finally {
       await stopApp(app);
-      fs.rmSync(temporaryRoot, { recursive: true, force: true });
+      fs.rmSync(temporaryContainer, { recursive: true, force: true });
     }
   }
 } finally {
