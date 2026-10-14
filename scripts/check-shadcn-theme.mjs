@@ -2557,10 +2557,10 @@ async function lensAssertions(browser, base, fixtureDirectory) {
     );
   }
 
-  // Within 30% of what the lens itself changes, over the rim. Measured: 15-24%
-  // across both styles, 1x and 2x and every button height (the theme reads the
-  // slope half a pixel along and splits two colours, not three); a rim 2 px too
-  // wide 24-49%; no lens 100%.
+  // Within 30% of what the lens itself changes, over the rim. A small button
+  // covers few bands, so font metrics can choose an unrepresentative phase.
+  // Average its signal and error over a complete stripe cycle; a pane already
+  // spans many periods. Every phase must retain the same frost baseline.
   const bands = await page.addStyleTag({ content: BANDS });
 
   // A card's rim is 14 px, the corner of shadcn's default card, whatever the
@@ -2570,7 +2570,33 @@ async function lensAssertions(browser, base, fixtureDirectory) {
     ['pane', '[data-check="card"]', dropins ? PANE_ALONE_NATIVE : PANE_ALONE, 14],
     ['slab', '[data-check="button-outline"]', dropins ? SLAB_ALONE_NATIVE : SLAB_ALONE, null],
   ]) {
-    const parity = await libraryParity(page, selector, strip, directory, name, rimWidth);
+    const phases = name === 'slab' ? [0, 12, 24, 36] : [0];
+    const samples = [];
+
+    for (const phase of phases) {
+      const shifted = await page.addStyleTag({
+        // A 45-degree band's horizontal period is sqrt(2) times its stripe period.
+        content: `html body { background-position: ${phase * Math.SQRT2}px 0 !important; }`,
+      });
+
+      try {
+        samples.push(
+          await libraryParity(page, selector, strip, directory, `${name}-${phase}`, rimWidth),
+        );
+      } finally {
+        await shifted.evaluate((node) => node.remove());
+      }
+    }
+
+    const parity = {
+      corner: samples[0].corner,
+      bevel: samples[0].bevel,
+      frostOff: Math.max(...samples.map((sample) => sample.frostOff)),
+      lens: samples.reduce((sum, sample) => sum + sample.lens, 0) / samples.length,
+      off: samples.reduce((sum, sample) => sum + sample.off, 0) / samples.length,
+      phases: samples,
+    };
+
     check(
       `lens: a ${name}'s glass matches Glassy UI's own lens`,
       parity.frostOff <= 0.5 &&
