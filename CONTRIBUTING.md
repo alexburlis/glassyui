@@ -32,13 +32,27 @@ retained `link-previews/` JavaScript uses the same root lint rules and
 formatter.
 
 The production build type-checks the root tsconfig. Native sources, stock
-fixtures and drop-ins use their clean consumer owners below; they are not
-automatically type-checked by default CI. Default CI uses one credential-free
-job for static checks, the web consumer, served routes/agent HTTP/launch assets,
-platform choice, release UI/accessibility, refraction, material, public Pro
-links, intercepted free-site consent and development diagnostics interactions.
-It runs on PRs, main pushes or manual dispatch without a separate install mode.
-Hosted CI is separate evidence from local checks.
+fixtures and drop-ins use their clean consumer owners below. CI selects them
+automatically when their source, fixtures, generators or shared inputs change.
+Both stock shadcn styles run; retain the full palette checks for styling
+semantics and release work.
+
+Every CI run checks formatting, generated registries, lint/security/privacy,
+build/types, the clean three-browser web consumer, served routes/agent
+HTTP/launch assets, platform choice, public Pro links, intercepted consent and
+development interactions. Relevant PR changes also run the full release
+UI/accessibility, refraction and material matrix. Documentation-only PRs skip
+that separate matrix. Common toolchain/CI inputs and unclassified files select
+all owners; deleted and renamed paths still select their owners.
+`node scripts/check-ci-routing.mjs` exercises those decisions through real Git
+history and rejects failed gate inputs.
+
+`release-gate` is the single required result: all selected owners must pass.
+Newer commits cancel older runs of the same PR. Manual dispatch runs all owners.
+Protected `main` accepts a verified PR or an exact locally verified maintenance
+candidate; its push workflow reruns the final-source checks without repeating
+pre-merge consumer matrices. Coolify deploys after that verified change reaches
+`main`. Hosted CI remains separate evidence from local verification.
 
 GlassCommand guards scrolling on its own result and heading nodes while the menu
 does not own focus. The guard ships with the registry component; no cmdk patch
@@ -49,8 +63,8 @@ also covers the docs page's lazy command demo.
 ### Development checks
 
 The native/catalog/Expo, theme/lens/generator/fixture and drop-in/engine checks
-are maintainer checks for affected PRs. Run each with a separate artifact
-directory and inspect its report. Default CI currently covers the web consumer.
+run automatically for affected PRs. Run each locally with a separate artifact
+directory and inspect its report when developing the corresponding source.
 
 - **shadcn theme:** after changing `registry/glassyui/themes/glassy-theme.css`
   or its lens in `scripts/shadcn-theme-lens.mjs`, the generator

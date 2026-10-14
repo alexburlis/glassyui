@@ -178,6 +178,13 @@
 
 ## Testing guidelines
 
+- CI uses Git history to select expensive visual and consumer owners. Keep
+  `scripts/ci-scope.mjs` conservative when adding a new shared input. The
+  always-running `release-gate` must reject failed, cancelled or unexpectedly
+  skipped owners. `main` requires this result, including for administrators;
+  ordinary changes land through verified PRs. Maintenance may report the same
+  status only after its exact candidate passes local gates and is published to
+  its existing source branch. See `CONTRIBUTING.md` for coverage and release runs.
 - Select the affected generated-registry, registry-install, served-route,
   native-platform, browser, lint or build checks from `CONTRIBUTING.md`; use the
   full set for broad package/release changes.
