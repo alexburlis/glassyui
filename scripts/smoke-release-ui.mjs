@@ -113,6 +113,17 @@ async function assertAttribute(page, locator, name, value, message) {
   assert.equal(await locator.getAttribute(name), value, message);
 }
 
+async function selectRadioWithArrow(page, key, radio, message) {
+  // Radix defers focus and checks the radio while the arrow key is held.
+  await page.keyboard.down(key);
+
+  try {
+    await assertAttribute(page, radio, 'aria-checked', 'true', message);
+  } finally {
+    await page.keyboard.up(key);
+  }
+}
+
 async function assertBodyInteractive(page, description) {
   assert.equal(
     await page.evaluate(() => getComputedStyle(document.body).pointerEvents),
@@ -1089,8 +1100,12 @@ async function assertSegmentedControlState(page, audit, capture) {
   await assertSegmentedIndicator(page, group, 'GlassSegmentedControl indicator at Month');
   await assertAnnouncementChanged(page, before, 'GlassSegmentedControl selection');
   const beforeKeyboard = await announcementText(page);
-  // Radix checks a radio only while the arrow key is down, so hold it like a person does.
-  await page.keyboard.press('ArrowLeft', { delay: 50 });
+  await selectRadioWithArrow(
+    page,
+    'ArrowLeft',
+    week,
+    'GlassSegmentedControl arrow keys must move the selection',
+  );
   await assertAttribute(
     page,
     week,
@@ -1523,8 +1538,7 @@ async function assertRadioGroupState(page, audit, capture) {
 
   const before = await announcementText(page);
   await pro.focus();
-  // Radix checks a radio only while the arrow key is down, so hold it like a person does.
-  await page.keyboard.press('ArrowDown', { delay: 50 });
+  await selectRadioWithArrow(page, 'ArrowDown', scale, 'ArrowDown must move the choice');
   await assertAttribute(page, scale, 'aria-checked', 'true', 'ArrowDown must move the choice');
   await assertAttribute(page, pro, 'aria-checked', 'false', 'the previous choice must clear');
   await assertAnnouncementChanged(page, before, 'GlassRadioGroup keyboard choice');
