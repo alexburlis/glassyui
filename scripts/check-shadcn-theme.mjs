@@ -2418,6 +2418,7 @@ async function libraryParity(page, selector, strip, directory, name, themeRim) {
   return {
     corner: measured.radius,
     bevel: rim.bevel,
+    frostOff: regionDifference(themeFrost, libraryFrost, rim, 2, rim.bevel).change,
     lens: regionDifference(library, libraryFrost, rim, 2, rim.bevel).change,
     off: lensDifference(theme, themeFrost, library, libraryFrost, rim, 2, rim.bevel),
   };
@@ -2453,7 +2454,9 @@ const SLAB_ALONE = `[data-check='button-outline'] {
 [data-check='button-outline']::before {
   background: none !important; backdrop-filter: none !important; box-shadow: none !important;
 }
-[data-check='button-outline']::after { box-shadow: none !important; }`;
+[data-check='button-outline']::after {
+  background: none !important; box-shadow: none !important;
+}`;
 
 // The lens in Chrome: glass is as frosted at its rim as in its body, so fine
 // stripes, moved half a period, change nothing under it; over wide bands the rims
@@ -2570,7 +2573,9 @@ async function lensAssertions(browser, base, fixtureDirectory) {
     const parity = await libraryParity(page, selector, strip, directory, name, rimWidth);
     check(
       `lens: a ${name}'s glass matches Glassy UI's own lens`,
-      parity.lens >= (dropins ? LENS_BEND : 2) && parity.off <= parity.lens * 0.3,
+      parity.frostOff <= 0.5 &&
+        parity.lens >= (dropins ? LENS_BEND : 2) &&
+        parity.off <= parity.lens * 0.3,
       parity,
     );
   }
