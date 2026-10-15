@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
+      site: ${{ steps.scope.outputs.site }}
       visual: ${{ steps.scope.outputs.visual }}
       native: ${{ steps.scope.outputs.native }}
       theme: ${{ steps.scope.outputs.theme }}
@@ -48,14 +49,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
 
-      - name: Install release browsers
-        run: pnpm exec playwright install --with-deps chrome chromium firefox webkit
-
-      - name: Run static release checks
+      - name: Check formatting and CI routing
         run: |
           pnpm format:check
           mkdir -p .artifacts/ci-routing
           node scripts/check-ci-routing.mjs > .artifacts/ci-routing/report.json
+
+      - name: Install release browsers
+        if: github.event_name == 'workflow_dispatch'
+        run: pnpm exec playwright install --with-deps chrome chromium firefox webkit
+
+      - name: Run static release checks
+        if: needs.changes.outputs.site == 'true'
+        run: |
           pnpm registry:check-generated
           pnpm check:registry
           pnpm check:dead-code
@@ -67,7 +73,14 @@ jobs:
           pnpm lint
           pnpm build
 
+      - name: Check source-copy installation
+        if: needs.changes.outputs.visual == 'true' && github.event_name != 'workflow_dispatch'
+        run: |
+          bash scripts/ci-server.sh start "$RUNNER_TEMP/glassyui-site"
+          pnpm smoke:registry-install http://127.0.0.1:3100 --install-only
+
       - name: Run production release smokes
+        if: github.event_name == 'workflow_dispatch'
         timeout-minutes: 50
         # Headless Firefox needs a Linux display to create its WebGL context.
         shell: xvfb-run --auto-servernum bash --noprofile --norc -e -o pipefail {0}
@@ -83,7 +96,7 @@ jobs:
           pnpm check:analytics-consent http://127.0.0.1:3100 .artifacts/analytics-consent
 
       - name: Run full visual and release matrix
-        if: needs.changes.outputs.visual == 'true'
+        if: github.event_name == 'workflow_dispatch'
         timeout-minutes: 50
         shell: xvfb-run --auto-servernum bash --noprofile --norc -e -o pipefail {0}
         run: |
@@ -92,10 +105,11 @@ jobs:
           pnpm smoke:release-ui http://127.0.0.1:3100 .artifacts/release-ui
 
       - name: Stop production server
-        if: always()
+        if: always() && needs.changes.outputs.visual == 'true'
         run: bash scripts/ci-server.sh stop "$RUNNER_TEMP/glassyui-site"
 
       - name: Run development diagnostics interactions
+        if: github.event_name == 'workflow_dispatch'
         run: |
           setsid pnpm exec next dev -H 127.0.0.1 -p 3101 > /tmp/glassyui-dev.log 2>&1 &
           echo "$!" > /tmp/glassyui-dev.pid
@@ -112,7 +126,7 @@ jobs:
           pnpm exec node scripts/smoke-liquid-interactions.mjs http://127.0.0.1:3101/diagnostics .artifacts/liquid-interactions
 
       - name: Stop development server
-        if: always()
+        if: always() && github.event_name == 'workflow_dispatch'
         run: |
           if [ -f /tmp/glassyui-dev.pid ]; then
             server_pid="$(cat /tmp/glassyui-dev.pid)"
@@ -186,21 +200,34 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
       - name: Install consumer browsers
+        if: github.event_name == 'workflow_dispatch'
         run: pnpm exec playwright install --with-deps chrome chromium firefox webkit
       - name: Check theme in both stock styles
         if: needs.changes.outputs.theme == 'true'
         timeout-minutes: 45
-        shell: xvfb-run --auto-servernum bash --noprofile --norc -e -o pipefail {0}
+        shell: bash
         run: |
-          pnpm check:shadcn-theme .artifacts/shadcn-theme/new-york --fixture new-york
-          pnpm check:shadcn-theme .artifacts/shadcn-theme/base-nova --fixture base-nova
+          runner=()
+          install_args=(--install-only)
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            runner=(xvfb-run --auto-servernum)
+            install_args=()
+          fi
+          "${runner[@]}" pnpm check:shadcn-theme .artifacts/shadcn-theme/new-york --fixture new-york "${install_args[@]}"
+          "${runner[@]}" pnpm check:shadcn-theme .artifacts/shadcn-theme/base-nova --fixture base-nova "${install_args[@]}"
       - name: Check drop-ins in both stock styles
         if: needs.changes.outputs.dropins == 'true'
         timeout-minutes: 45
-        shell: xvfb-run --auto-servernum bash --noprofile --norc -e -o pipefail {0}
+        shell: bash
         run: |
-          pnpm check:shadcn-dropins .artifacts/shadcn-dropins/new-york --fixture new-york
-          pnpm check:shadcn-dropins .artifacts/shadcn-dropins/base-nova --fixture base-nova
+          runner=()
+          install_args=(--install-only)
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            runner=(xvfb-run --auto-servernum)
+            install_args=()
+          fi
+          "${runner[@]}" pnpm check:shadcn-dropins .artifacts/shadcn-dropins/new-york --fixture new-york "${install_args[@]}"
+          "${runner[@]}" pnpm check:shadcn-dropins .artifacts/shadcn-dropins/base-nova --fixture base-nova "${install_args[@]}"
       - name: Upload failed shadcn proof
         if: failure() || cancelled()
         uses: actions/upload-artifact@v4

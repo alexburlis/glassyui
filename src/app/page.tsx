@@ -1,13 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import {
-  componentDocs,
-  getComponentDoc,
-  initializeShadcn,
-  publicRegistryMapping,
-} from '@/components/docs/component-docs-data';
-import { CopyCodeBlock } from '@/components/docs/copy-code-block';
+import { componentDocs, getComponentDoc } from '@/components/docs/component-docs-data';
 import {
   KeynoteBootstrap,
   KeynoteOpener,
@@ -16,9 +10,8 @@ import {
 import { KeynoteTurn } from '@/components/keynote/keynote-turn';
 import { GlassButton } from '@/components/liquid';
 import { ComponentGrid, ReleaseFeedbackProvider } from '@/components/site/component-grid';
-import { CopyChip } from '@/components/site/copy-chip';
 import { GithubMark } from '@/components/site/github-mark';
-import { INSTALL_COMMAND } from '@/components/site/install-command';
+import { GithubStarButton } from '@/components/site/github-star-button';
 import { JsonLd } from '@/components/site/json-ld';
 import { Desk } from '@/components/site/desk';
 import { FeatureBento } from '@/components/site/feature-bento';
@@ -76,10 +69,9 @@ export const metadata: Metadata = shareMetadata({
 export default function Home() {
   const showcase = SHOWCASE.map(requireComponent);
   const dock = getComponentDoc('glass-dock');
-  const button = getComponentDoc('glass-button');
 
-  if (!dock || !button?.usage) {
-    throw new Error('The homepage needs the dock files and the Glass Button usage example.');
+  if (!dock) {
+    throw new Error('The homepage needs the dock files.');
   }
 
   return (
@@ -118,11 +110,8 @@ export default function Home() {
               <GlassButton asChild size="lg" variant="prominent">
                 <Link href="/components">Browse components</Link>
               </GlassButton>
-              <Link className="home-section-link" href="/docs">
-                Get started<span aria-hidden> ›</span>
-              </Link>
+              <GithubStarButton />
             </div>
-            <CopyChip command={INSTALL_COMMAND} />
             <KeynoteReplay />
           </section>
 
@@ -204,60 +193,48 @@ export default function Home() {
         <section aria-labelledby="home-install-title" className="home-section">
           <header className="home-section-header">
             <h2 className="home-section-title" id="home-install-title">
-              Install Glassy UI with shadcn.
+              From preview to your app.
             </h2>
             <p className="home-section-lead">
               Glassy UI installs through the shadcn CLI, so every file lands in your repo.
             </p>
           </header>
-          <ol className="home-steps">
+          <ol className="home-steps home-discovery-steps">
             <li className="home-step">
               <div className="home-step-text">
                 <span aria-hidden className="home-step-number">
                   1
                 </span>
-                <h3>Set up shadcn</h3>
-                <p>Any React app with Tailwind CSS 4.</p>
+                <h3>Choose a component</h3>
+                <p>Try the preview and find your starting point.</p>
+                <Link className="home-section-link" href="/components">
+                  Browse components<span aria-hidden> ›</span>
+                </Link>
               </div>
-              <CopyCodeBlock code={initializeShadcn} label="Initialize shadcn" language="shell" />
             </li>
             <li className="home-step">
               <div className="home-step-text">
                 <span aria-hidden className="home-step-number">
                   2
                 </span>
-                <h3>Add the registry</h3>
-                <p>Map @glassyui in components.json.</p>
+                <h3>Install it your way</h3>
+                <p>Use the CLI or copy the source into your app.</p>
+                <Link className="home-section-link" href="/docs#installation">
+                  Installation guide<span aria-hidden> ›</span>
+                </Link>
               </div>
-              <CopyCodeBlock
-                code={publicRegistryMapping}
-                label="components.json mapping"
-                language="json"
-              />
             </li>
             <li className="home-step">
               <div className="home-step-text">
                 <span aria-hidden className="home-step-number">
                   3
                 </span>
-                <h3>Add a component</h3>
-                <p>Only what you install ships.</p>
+                <h3>Make it yours</h3>
+                <p>Every file is in your repo, ready to change.</p>
+                <Link className="home-section-link" href="/components/glass-button">
+                  Explore Glass Button<span aria-hidden> ›</span>
+                </Link>
               </div>
-              <CopyCodeBlock code={INSTALL_COMMAND} label="Install Glass Button" language="shell" />
-            </li>
-            <li className="home-step">
-              <div className="home-step-text">
-                <span aria-hidden className="home-step-number">
-                  4
-                </span>
-                <h3>Use it in your React app</h3>
-                <p>
-                  Import the source you installed. See the{' '}
-                  <Link href="/components/glass-button">Glass Button docs</Link> for variants and
-                  props.
-                </p>
-              </div>
-              <CopyCodeBlock code={button.usage} label="React usage" />
             </li>
           </ol>
         </section>

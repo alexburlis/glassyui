@@ -6,8 +6,19 @@ if (needs.changes?.result !== 'success' || needs['site-checks']?.result !== 'suc
   throw new Error('Changed-input routing and site checks must both succeed');
 }
 
-if (!['native', 'theme', 'dropins'].every((key) => ['true', 'false'].includes(scope?.[key]))) {
-  throw new Error('Consumer selection must contain explicit boolean outputs');
+if (
+  !['site', 'visual', 'native', 'theme', 'dropins'].every((key) =>
+    ['true', 'false'].includes(scope?.[key]),
+  )
+) {
+  throw new Error('Verification selection must contain explicit boolean outputs');
+}
+
+if (
+  scope.site === 'false' &&
+  ['visual', 'native', 'theme', 'dropins'].some((key) => scope[key] === 'true')
+) {
+  throw new Error('Expensive verification requires site checks');
 }
 
 for (const [job, selected] of [

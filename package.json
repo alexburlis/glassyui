@@ -42,7 +42,7 @@
     "brand:build": "node scripts/build-brand-mark.mjs",
     "brand:export": "node scripts/export-brand-assets.mjs",
     "wallpaper:build": "node scripts/build-desk-wallpaper.mjs",
-    "registry:build": "shadcn build && shadcn build registry-native.json --output public/r/native",
+    "registry:build": "node scripts/build-install-registry.mjs",
     "registry:check-generated": "node scripts/check-generated-registry.mjs",
     "theme:build": "node scripts/build-shadcn-theme.mjs && pnpm registry:build",
     "check:shadcn-theme": "node scripts/check-shadcn-theme.mjs",

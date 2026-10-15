@@ -37,18 +37,33 @@ automatically when their source, fixtures, generators or shared inputs change.
 CI checks both stock shadcn styles; retain the full palette checks for styling
 semantics and release work.
 
-Every CI run checks formatting, generated registries, lint, security, privacy,
-builds and types. It also checks the clean three-browser web consumer, served
-routes, agent HTTP, launch assets, platform choice, public Pro links,
-intercepted consent and development interactions. Relevant PR changes also run
-the full release UI/accessibility, refraction and material matrix.
-Documentation-only PRs skip that separate matrix. Common toolchain/CI inputs and
-unclassified files select all owners; deleted and renamed paths still select
-their owners. `node scripts/check-ci-routing.mjs` exercises those decisions
-through real Git history and rejects failed gate inputs.
+Every CI run checks formatting and exercises routing through real Git history.
+Documentation-only changes to the root Markdown files, `docs/*.md` or issue
+templates stop there: no browser installation, app build or consumer matrix.
+Other changes also check generated registries, lint, security, privacy, builds
+and types. Changes to the web components or registry also install the source
+into a clean consumer and compile the full API and documented examples.
+
+Known analytics/diagnostics source and their base-check scripts use those base
+checks. Native, theme and drop-in changes select their consumer owners as
+described above. Theme and drop-in PR checks use `--install-only`: frozen
+installs, exact CLI output, API parity and production builds, without browser
+captures. Common toolchain/CI inputs and unclassified files select all owners;
+empty diffs stay conservative, and deleted or renamed paths still select their
+owners. `node scripts/check-ci-routing.mjs` exercises those decisions and
+rejects failed, missing or inconsistent gate inputs.
 
 `release-gate` is the single required result: all selected owners must pass.
-Newer commits cancel older runs of the same PR. Manual dispatch runs all owners.
+Newer commits cancel older runs of the same PR. Manual dispatch runs all owners
+with their full browser checks: the three-browser web consumer, served routes,
+agent HTTP, launch assets, platform choice, public Pro links, consent,
+development interactions, release UI/accessibility, refraction and material. Run
+that release proof explicitly before a release:
+
+```bash
+gh workflow run ci.yml --ref <release-branch>
+```
+
 Protected `main` accepts a verified PR or an exact locally verified maintenance
 candidate; its push workflow reruns the final-source checks without repeating
 pre-merge consumer matrices. Coolify deploys after that verified change reaches
@@ -200,8 +215,8 @@ For a new or changed Expo component:
 1. Edit the source under `registry/glassyui-native` and its item in
    `registry-native.json`, declaring every package it imports.
 2. Rebuild the payloads with
-   `pnpm exec shadcn build registry-native.json --output public/r/native` and
-   run `pnpm check:native-registry`.
+   `node scripts/build-install-registry.mjs registry-native.json --output public/r/native`
+   and run `pnpm check:native-registry`.
 3. Copy the source into `fixtures/expo-consumer/components/glassyui`, show the
    component in `fixtures/expo-consumer/showcase`, write its usage example in
    `fixtures/expo-consumer/usage/<name>.tsx` (its component page shows that

@@ -10,9 +10,10 @@ import {
 import { CopyCodeBlock } from '@/components/docs/copy-code-block';
 import { DocsShell } from '@/components/docs/docs-shell';
 import { PRO_ORIGIN } from '@/lib/site-links';
+import { installCommand } from '@/lib/install-command';
 
 const description =
-  'Configure the Glassy UI registry namespace, install a component, and use the delivered source in a React app.';
+  'Install a Glassy UI component with the shadcn CLI or copy its source into your React app.';
 
 export const metadata: Metadata = {
   title: 'Getting Started',
@@ -57,39 +58,43 @@ export default function DocsPage() {
         <div className="docs-page-header">
           <p className="docs-eyebrow">Getting Started</p>
           <h1>Add Glassy UI to your app</h1>
-          <p>
-            Glassy UI ships as source through a shadcn-compatible registry. Configure the namespace
-            once, then add only the components you need.
-          </p>
+          <p>Browse a component, preview it, then install it with the CLI or copy its source.</p>
         </div>
 
         <section className="docs-section" id="installation">
           <h2>Installation</h2>
           <p>
-            Start with a React 19+ and Tailwind CSS 4 app initialized for shadcn, then merge this
-            exact top-level mapping into its <code>components.json</code>.
+            Start with a React 19+ app on Tailwind CSS 4. If it does not have a shadcn{' '}
+            <code>components.json</code>, initialize it first:
           </p>
           <CopyCodeBlock code={initializeShadcn} label="Initialize shadcn" language="shell" />
+          <p>Install a component directly from its URL:</p>
           <CopyCodeBlock
-            code={publicRegistryMapping}
-            label="components.json registry mapping"
-            language="json"
-          />
-          <p>Then install a component with the pinned CLI version:</p>
-          <CopyCodeBlock
-            code="pnpm dlx shadcn@4.14.1 add @glassyui/glass-button"
+            code={installCommand(['glass-button'], 'react')}
             label="Install Glass Button"
             language="shell"
           />
           <p>
-            Using npm, yarn or bun? Swap <code>pnpm dlx</code> for <code>npx</code>,{' '}
-            <code>yarn dlx</code> or <code>bunx --bun</code>. The rest of each command stays the
-            same.
+            Each <Link href="/components">component page</Link> offers npm, pnpm, yarn and bun
+            commands, plus Manual installation with every required file. The Yarn command uses
+            modern Yarn with <code>dlx</code>.
           </p>
           <p>
-            Building with Expo? The React Native components install from their own namespace; see{' '}
-            <Link href="/guides/expo">Add Glassy UI to an Expo app</Link>.
+            Building with Expo? See <Link href="/guides/expo">Add Glassy UI to an Expo app</Link>.
           </p>
+          <details>
+            <summary>Optional registry shorthand</summary>
+            <p>
+              Existing namespace commands still work. Merge this mapping into your{' '}
+              <code>components.json</code> to use <code>@glassyui/glass-button</code> instead of the
+              full URL.
+            </p>
+            <CopyCodeBlock
+              code={publicRegistryMapping}
+              label="Optional components.json registry mapping"
+              language="json"
+            />
+          </details>
           <p>
             Already have stock shadcn/ui components? The Glassy UI theme restyles them without code
             changes; see{' '}
@@ -128,7 +133,7 @@ export default function DocsPage() {
           <h2>Next steps</h2>
           <p>
             Browse all <Link href="/components">{componentDocs.length} components</Link>. Each page
-            lists its direct registry declarations and every file it installs.
+            offers CLI and Manual installation with every required file.
           </p>
           <p>
             Follow the <Link href="/guides/shadcn">step-by-step installation guide</Link>, or start

@@ -40,8 +40,10 @@ function route(event, base, head) {
 function check(name, file, expected, event = 'pull_request') {
   const base = git('rev-parse', 'HEAD');
 
-  write(file);
-  git('add', '--', file);
+  const files = Array.isArray(file) ? file : [file];
+
+  for (const changed of files) write(changed);
+  git('add', '--', ...files);
   git('-c', 'commit.gpgsign=false', 'commit', '-qm', name);
   const head = git('rev-parse', 'HEAD');
   const result = route(event, base, head);
@@ -49,8 +51,8 @@ function check(name, file, expected, event = 'pull_request') {
   assert.equal(result.status, 0, result.stderr);
   const actual = JSON.parse(result.stdout);
 
-  for (const key of ['visual', 'native', 'theme', 'dropins']) {
-    assert.equal(actual[key], expected[key] ?? false, `${name}: ${key}`);
+  for (const key of ['site', 'visual', 'native', 'theme', 'dropins']) {
+    assert.equal(actual[key], expected[key] ?? key === 'site', `${name}: ${key}`);
   }
 
   results.push({ name, passed: true });
@@ -64,7 +66,64 @@ try {
   git('add', '--', 'README.md');
   git('-c', 'commit.gpgsign=false', 'commit', '-qm', 'Initial fixture');
 
-  check('Documentation only', 'docs/install.md', {});
+  check('Documentation only', 'docs/install.md', { site: false });
+  check('Root documentation only', 'CONTRIBUTING.md', { site: false });
+  check('Issue template only', '.github/ISSUE_TEMPLATE/bug.yml', { site: false });
+  check('Documentation on main', 'docs/main.md', { site: false }, 'push');
+
+  for (const file of [
+    'src/lib/analytics/browser.ts',
+    'src/lib/diagnostics/browser.ts',
+    'src/components/site/analytics-consent.tsx',
+    'src/app/api/analytics-config/route.ts',
+    'scripts/check-analytics-consent.mjs',
+    'scripts/check-error-reports.mjs',
+    'scripts/test-analytics-consent.mjs',
+    'scripts/test-server-error-reports.mjs',
+    'scripts/test-error-startup.mjs',
+    'scripts/test-build-upload.mjs',
+    'scripts/test-braces-security.mjs',
+    'scripts/check-agent-discovery.mjs',
+    'scripts/check-generated-registry.mjs',
+    'scripts/check-registry.mjs',
+    'scripts/smoke-docs-routes.mjs',
+    'scripts/smoke-launch.mjs',
+    'scripts/smoke-pro-links.mjs',
+    'scripts/smoke-registry-routes.mjs',
+  ]) {
+    check(`Base-check input: ${file}`, file, {});
+  }
+
+  check(
+    'Mixed documentation and privacy source',
+    ['docs/mixed.md', 'src/lib/analytics/config.ts'],
+    {},
+  );
+  check('App route behavior', 'src/app/page.tsx', { visual: true });
+  check('Source-copy install proof changes', 'scripts/smoke-registry-install.mjs', {
+    visual: true,
+  });
+  check('Visual proof changes', 'scripts/check-refraction-visuals.mjs', {
+    visual: true,
+    native: true,
+    theme: true,
+    dropins: true,
+  });
+  check('CI workflow changes', '.github/workflows/ci.yml', {
+    visual: true,
+    native: true,
+    theme: true,
+    dropins: true,
+  });
+  const empty = route('pull_request', git('rev-parse', 'HEAD'), git('rev-parse', 'HEAD'));
+
+  assert.equal(empty.status, 0, empty.stderr);
+  assert.ok(
+    ['site', 'visual', 'native', 'theme', 'dropins'].every(
+      (key) => JSON.parse(empty.stdout)[key] === true,
+    ),
+  );
+  results.push({ name: 'Empty diff stays conservative', passed: true });
   check('Web behavior', 'src/components/liquid/button.tsx', { visual: true });
   check('Native component', 'registry/glassyui-native/button.tsx', { native: true });
   check('Native docs example', 'fixtures/expo-consumer/usage/button.tsx', {
@@ -115,7 +174,7 @@ try {
     theme: true,
     dropins: true,
   });
-  check('Protected main uses prior candidate proof', 'src/app/page.tsx', {}, 'push');
+  check('Protected main uses prior candidate proof', 'src/app/layout.tsx', {}, 'push');
   check(
     'Release dispatch runs all consumers',
     'docs/release.md',
@@ -162,14 +221,56 @@ try {
   const gateScript = fileURLToPath(new URL('./ci-release-gate.mjs', import.meta.url));
 
   const passing = {
-    changes: { result: 'success', outputs: { native: 'false', theme: 'false', dropins: 'false' } },
+    changes: {
+      result: 'success',
+      outputs: {
+        site: 'false',
+        visual: 'false',
+        native: 'false',
+        theme: 'false',
+        dropins: 'false',
+      },
+    },
     'site-checks': { result: 'success' },
     'native-consumer': { result: 'skipped' },
     'shadcn-consumers': { result: 'skipped' },
   };
 
   for (const [name, needs, expectedPass] of [
-    ['Unneeded consumers may skip', passing, true],
+    ['Documentation-only site job succeeds without consumers', passing, true],
+    [
+      'Base site checks succeed without consumers',
+      {
+        ...passing,
+        changes: { result: 'success', outputs: { ...passing.changes.outputs, site: 'true' } },
+      },
+      true,
+    ],
+    ...['site', 'visual', 'native', 'theme', 'dropins'].map((key) => [
+      `Missing ${key} output rejects release`,
+      {
+        ...passing,
+        changes: { result: 'success', outputs: { ...passing.changes.outputs, [key]: undefined } },
+      },
+      false,
+    ]),
+    [
+      'Invalid site output rejects release',
+      {
+        ...passing,
+        changes: { result: 'success', outputs: { ...passing.changes.outputs, site: 'yes' } },
+      },
+      false,
+    ],
+    [
+      'Visual work requires site checks',
+      {
+        ...passing,
+        changes: { result: 'success', outputs: { ...passing.changes.outputs, visual: 'true' } },
+      },
+      false,
+    ],
+    ['Skipped site rejects release', { ...passing, 'site-checks': { result: 'skipped' } }, false],
     ['Failed site rejects release', { ...passing, 'site-checks': { result: 'failure' } }, false],
     ['Cancelled scope rejects release', { ...passing, changes: { result: 'cancelled' } }, false],
     ['Missing jobs reject release', {}, false],
@@ -179,7 +280,13 @@ try {
         ...passing,
         changes: {
           result: 'success',
-          outputs: { native: 'true', theme: 'false', dropins: 'false' },
+          outputs: {
+            site: 'true',
+            visual: 'false',
+            native: 'true',
+            theme: 'false',
+            dropins: 'false',
+          },
         },
       },
       false,
@@ -190,7 +297,13 @@ try {
         ...passing,
         changes: {
           result: 'success',
-          outputs: { native: 'false', theme: 'true', dropins: 'false' },
+          outputs: {
+            site: 'true',
+            visual: 'true',
+            native: 'false',
+            theme: 'true',
+            dropins: 'false',
+          },
         },
       },
       false,
@@ -199,7 +312,10 @@ try {
       'All consumers passed',
       {
         ...passing,
-        changes: { result: 'success', outputs: { native: 'true', theme: 'true', dropins: 'true' } },
+        changes: {
+          result: 'success',
+          outputs: { site: 'true', visual: 'true', native: 'true', theme: 'true', dropins: 'true' },
+        },
         'native-consumer': { result: 'success' },
         'shadcn-consumers': { result: 'success' },
       },

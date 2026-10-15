@@ -18,23 +18,17 @@ tag, or announcement.
 - `package.json` pins `shadcn@4.14.1` for registry generation and install
   verification.
 
-The supported local consumer flow is:
-
-```json
-{
-  "registries": {
-    "@glassyui": "http://127.0.0.1:3000/r/{name}.json"
-  }
-}
-```
+The primary local consumer flow requires no Glassy UI namespace mapping:
 
 ```bash
-pnpm dlx shadcn@4.14.1 add @glassyui/glass-button
+npx shadcn@4.14.1 add http://127.0.0.1:3100/r/glass-button.json
 ```
 
-The install command requires this site to be running at the configured local
-URL. The registry's namespaced dependencies pull in shared source and the
-provider-owned stylesheet transitively.
+Run the local site at that URL. Each published component item contains its
+complete source closure, package dependencies and provider-owned stylesheet.
+Existing configured namespaces continue to resolve these same item URLs. The
+editable registry retains its namespaced graph; `pnpm registry:build` publishes
+the complete payloads through the pinned CLI and publication transform.
 
 ## Static gate
 

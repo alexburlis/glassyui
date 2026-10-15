@@ -200,6 +200,12 @@ html[data-keynote]:not([data-keynote-intro]) .keynote-replay {
   padding: 0 24px;
 }
 
+/* The pinning margin extends this empty section over the hero. Only the live
+   desk and phone should receive pointers there; their own hosts opt back in. */
+html[data-keynote] .home-desk {
+  pointer-events: none;
+}
+
 html[data-keynote] .turn {
   height: calc((1 + var(--keynote-turn)) * 100svh);
   margin-top: calc(-1 * var(--turn-inset));

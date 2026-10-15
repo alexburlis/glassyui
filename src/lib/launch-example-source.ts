@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { installCommand } from './install-command';
 
 const exampleFiles = new Map([
   ['glass-scene', 'scene-example.tsx'],
@@ -28,6 +29,7 @@ export function getLaunchExampleSource(id: string) {
   return {
     source,
     file,
-    install: `pnpm dlx shadcn@4.14.1 add ${[...installedItems].map((item) => `@glassyui/${item}`).join(' ')}`,
+    items: [...installedItems],
+    install: installCommand([...installedItems], 'react'),
   };
 }

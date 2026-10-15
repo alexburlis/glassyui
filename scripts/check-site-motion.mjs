@@ -82,9 +82,8 @@ const HERO = [
   '.home-announce',
   '.home-title',
   '.home-lead',
-  '.home-hero .home-actions > .lg-button',
-  '.home-hero .home-actions > .home-section-link',
-  '.home-hero .copy-chip',
+  '.home-hero .home-actions > .lg-button--prominent',
+  '.home-hero .home-actions a[href="https://github.com/alexburlis/glassyui"]',
   '.home-desk-frame',
   '.desk-widgets > :first-child',
   '.desk-dock',
@@ -969,17 +968,45 @@ function readSlab(page) {
 
 const overhead = (slab) => slab.rise === 1 && slab.angle === 0;
 
-// The slab about every 30 ms for the given time.
-async function sampleSlab(page, duration) {
-  const samples = [];
-  const start = Date.now();
+// Arm before moving the pointer: protocol latency must not hide the short return transition.
+// A page-owned animation-frame loop records the same window without driver round trips.
+function armSlabSamples(page, duration) {
+  return page.evaluateHandle(
+    ({ selector, duration }) => {
+      const element = document.querySelector(selector);
+      const samples = [];
+      const started = performance.now();
 
-  while (Date.now() - start < duration) {
-    samples.push(await readSlab(page));
-    await page.waitForTimeout(30);
-  }
+      const done = new Promise((resolve) => {
+        const sample = () => {
+          const timestamp = performance.now();
+          const elapsedMs = timestamp - started;
 
-  return samples;
+          if (elapsedMs <= duration) {
+            const style = getComputedStyle(element);
+
+            samples.push({
+              timestamp,
+              elapsedMs,
+              angle: Number.parseFloat(style.getPropertyValue('--lg-button-light-angle')),
+              rise: Number(style.getPropertyValue('--lg-button-rise')),
+              shadowX: [...style.boxShadow.matchAll(/\)\s+(-?[\d.]+)px/g)].map((match) =>
+                Number(match[1]),
+              ),
+            });
+          }
+
+          if (elapsedMs >= duration) resolve(samples);
+          else requestAnimationFrame(sample);
+        };
+
+        requestAnimationFrame(sample);
+      });
+
+      return { done };
+    },
+    { selector: PROMINENT, duration },
+  );
 }
 
 // Frames with the light part of the way between the top and the top left.
@@ -1001,6 +1028,9 @@ async function checkButtonLight(browser, name) {
   ]) {
     await check(`${name} button light (${mode})`, async () => {
       const { context, page } = await open(browser, options);
+      const result = {};
+
+      results[mode] = result;
 
       try {
         await page.goto(new URL('/#home-cta-title', baseUrl).href, { waitUntil: 'networkidle' });
@@ -1023,6 +1053,8 @@ async function checkButtonLight(browser, name) {
 
         const rest = await readSlab(page);
 
+        result.rest = rest;
+
         assert.ok(
           overhead(rest),
           `at rest the slab must stand at full height under an overhead light (${JSON.stringify(rest)})`,
@@ -1035,12 +1067,24 @@ async function checkButtonLight(browser, name) {
           'nothing may cover the button',
         );
         await shot('rest');
-        await page.mouse.move(centre.x, centre.y);
 
         // The light takes 0.55 s to swing over. No screenshot is taken while anything moves: in
         // WebKit one leaves running transitions at their end values.
-        const arriving = await sampleSlab(page, 1300);
+        const arrivalCapture = await armSlabSamples(page, 1300);
+        let arriving;
+
+        try {
+          await page.mouse.move(centre.x, centre.y);
+          arriving = await arrivalCapture.evaluate((capture) => capture.done);
+        } finally {
+          await arrivalCapture.dispose();
+        }
+
+        result.arriving = arriving;
         const settled = arriving.at(-1);
+
+        result.angle = settled?.angle;
+        result.rise = settled?.rise;
 
         assert.ok(
           settled.rise === 0.5,
@@ -1065,7 +1109,6 @@ async function checkButtonLight(browser, name) {
             ),
             'under reduced motion the slab and its light must change at once',
           );
-          results[mode] = { angle: settled.angle, rise: settled.rise };
 
           return;
         }
@@ -1076,20 +1119,24 @@ async function checkButtonLight(browser, name) {
         );
         assert.ok(swinging(arriving) >= 2, 'the light must swing over through frames in between');
 
-        await page.mouse.move(2, 2);
+        const departureCapture = await armSlabSamples(page, 1000);
+        let leaving;
 
-        const leaving = await sampleSlab(page, 1000);
+        try {
+          await page.mouse.move(2, 2);
+          leaving = await departureCapture.evaluate((capture) => capture.done);
+        } finally {
+          await departureCapture.dispose();
+        }
+
+        result.leaving = leaving;
+        result.swingingFrames = { arriving: swinging(arriving), leaving: swinging(leaving) };
 
         assert.ok(swinging(leaving) >= 2, 'leaving, the light must ease back to the top');
         assert.ok(
           overhead(leaving.at(-1)),
           `left alone the slab must stand at full height under an overhead light (${JSON.stringify(leaving.at(-1))})`,
         );
-        results[mode] = {
-          angle: settled.angle,
-          rise: settled.rise,
-          swingingFrames: { arriving: swinging(arriving), leaving: swinging(leaving) },
-        };
       } finally {
         await context.close();
       }

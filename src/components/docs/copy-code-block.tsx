@@ -1,22 +1,40 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 
-type CodeLanguage = 'json' | 'shell' | 'tsx';
+type CodeLanguage = 'json' | 'shell' | 'tsx' | 'plain';
 
 type CopyCodeBlockProps = {
   code: string;
   label: string;
   language?: CodeLanguage;
+  header?: ReactNode;
+  command?: boolean;
+  expanded?: boolean;
+  onReveal?: () => void;
+  disabled?: boolean;
+  emptyMessage?: string;
+  viewerId?: string;
+  file?: boolean;
+  target?: string;
+  copyLabel?: string;
 };
 
 type CopyState = 'idle' | 'copying' | 'copied' | 'failed';
+
+type CopyResult = {
+  code: string;
+  label: string;
+  state: CopyState;
+  request: symbol | null;
+};
 
 type TokenKind = 'attr' | 'comment' | 'keyword' | 'number' | 'string' | 'tag';
 
 // Earlier rules win where two could match at the same place.
 const GRAMMARS = {
+  plain: [],
   json: [
     ['attr', /"(?:[^"\\\n]|\\.)*"(?=\s*:)/],
     ['string', /"(?:[^"\\\n]|\\.)*"/],
@@ -43,6 +61,8 @@ const GRAMMARS = {
 
 function highlight(code: string, language: CodeLanguage) {
   const grammar = GRAMMARS[language];
+
+  if (!grammar.length) return code;
   const pattern = new RegExp(grammar.map(([, rule]) => `(${rule.source})`).join('|'), 'gm');
   const nodes: ReactNode[] = [];
   let cursor = 0;
@@ -64,18 +84,84 @@ function highlight(code: string, language: CodeLanguage) {
   return nodes;
 }
 
-export function CopyCodeBlock({ code, label, language = 'tsx' }: CopyCodeBlockProps) {
-  const [copyState, setCopyState] = useState<CopyState>('idle');
-  const highlighted = useMemo(() => highlight(code, language), [code, language]);
+function wrappedCommand(code: string) {
+  return code.split(/(\s+)/).map((word, index) => {
+    if (/^\s+$/.test(word)) return word;
+
+    return (
+      <Fragment key={index}>
+        {word.startsWith('https://') ? (
+          word.split('/').map((segment, part, segments) => (
+            <Fragment key={part}>
+              <span className="docs-command-word">
+                {segment}
+                {part < segments.length - 1 ? '/' : ''}
+              </span>
+              {part < segments.length - 1 ? <wbr /> : null}
+            </Fragment>
+          ))
+        ) : (
+          <span className="docs-command-word">{word}</span>
+        )}
+      </Fragment>
+    );
+  });
+}
+
+export function CopyCodeBlock({
+  code,
+  label,
+  language = 'tsx',
+  header,
+  command = false,
+  expanded = true,
+  onReveal,
+  disabled = false,
+  emptyMessage,
+  viewerId,
+  file = false,
+  target,
+  copyLabel = label,
+}: CopyCodeBlockProps) {
+  const [result, setResult] = useState<CopyResult>({ code, label, state: 'idle', request: null });
+  const changed = result.code !== code || result.label !== label;
+  const copyState = changed ? 'idle' : result.state;
+
+  // Reset in this render while retaining the header controls and their keyboard focus.
+  if (changed) setResult({ code, label, state: 'idle', request: null });
+  const codeRef = useRef<HTMLElement>(null);
+  const generatedId = useId();
+  const codeId = `${generatedId}-code`;
+
+  const highlighted = useMemo(
+    () => (expanded ? (command ? wrappedCommand(code) : highlight(code, language)) : null),
+    [code, command, expanded, language],
+  );
+
+  useEffect(() => {
+    if (copyState !== 'failed' || !codeRef.current) return;
+
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(codeRef.current);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  }, [copyState, expanded]);
 
   async function copyCode() {
-    setCopyState('copying');
+    onReveal?.();
+    const request = Symbol('copy');
+    setResult({ code, label, state: 'copying', request });
+
+    function finish(state: CopyState) {
+      setResult((current) => (current.request === request ? { ...current, state } : current));
+    }
 
     try {
       await navigator.clipboard.writeText(code);
-      setCopyState('copied');
+      finish('copied');
     } catch {
-      setCopyState('failed');
+      finish('failed');
     }
   }
 
@@ -90,33 +176,64 @@ export function CopyCodeBlock({ code, label, language = 'tsx' }: CopyCodeBlockPr
 
   const feedback =
     copyState === 'copying'
-      ? `Copying ${label}.`
+      ? `Copying ${copyLabel}.`
       : copyState === 'copied'
-        ? `Copied ${label} to the clipboard.`
+        ? `Copied ${copyLabel} to the clipboard.`
         : copyState === 'failed'
-          ? `Could not copy ${label}. Select the code and copy it manually.`
+          ? `Couldn't copy. The ${file ? 'file' : command ? 'command' : 'code'} is selected, so you can copy it yourself.`
           : '';
 
   return (
-    <div className="docs-code-block" data-language={language}>
+    <div
+      className={`docs-code-block${command ? ' docs-command-block' : ''}${file ? ' docs-install-file' : ''}`}
+      data-language={language}
+      data-target={target}
+      role="region"
+      aria-label={label}
+    >
       <div className="docs-code-header">
-        <span>{label}</span>
+        {header ?? <span>{label}</span>}
         <button
           type="button"
+          className="docs-copy-button"
           data-state={copyState}
+          aria-describedby={codeId}
           onClick={copyCode}
-          disabled={copyState === 'copying'}
+          disabled={disabled || copyState === 'copying'}
         >
           {buttonLabel}
         </button>
       </div>
-      <p className="docs-copy-status" role="status" aria-live="polite" aria-label="Copy feedback">
+      <p
+        className="docs-copy-status"
+        data-failed={copyState === 'failed' || undefined}
+        role="status"
+        aria-live="polite"
+        aria-label="Copy feedback"
+      >
         {feedback}
       </p>
-      {/* Long lines scroll sideways on phones, so keyboard users need a way in. */}
-      <pre tabIndex={0}>
-        <code>{highlighted}</code>
-      </pre>
+      <div
+        id={viewerId}
+        hidden={!expanded}
+        role={file ? 'region' : undefined}
+        aria-label={file ? `${label} source` : undefined}
+      >
+        {emptyMessage ? (
+          <p className="docs-file-state">{emptyMessage}</p>
+        ) : (
+          <pre tabIndex={0}>
+            {command ? (
+              <span className="docs-command-prompt" aria-hidden="true">
+                ${' '}
+              </span>
+            ) : null}
+            <code id={codeId} ref={codeRef}>
+              {highlighted}
+            </code>
+          </pre>
+        )}
+      </div>
     </div>
   );
 }

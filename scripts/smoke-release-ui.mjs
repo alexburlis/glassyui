@@ -2375,7 +2375,7 @@ async function assertLaunchLinks() {
 
   for (const id of components) {
     assert.ok(
-      full.text.includes(`@glassyui/${id}`),
+      full.text.includes(`${site}/r/${id}.json`),
       `llms-full.txt carries the install command for ${id}`,
     );
   }
@@ -2794,42 +2794,15 @@ async function assertSiteSearch() {
     await dialog.waitFor({ state: 'detached' });
     await assertFocusReturned(page, pill, `${context} after Escape`);
 
-    // Copying the install command says so, then closes.
+    // Search sends installation intent to the shared guide.
     await pill.click();
     await dialog.waitFor({ state: 'visible' });
     await input.fill('install');
-    await dialog.getByRole('option', { name: 'Copy the install command' }).click();
-
-    // The write finishes a moment after the click, so wait for the item to say so.
-    const copied = dialog.getByRole('option', { name: 'Copied to the clipboard' });
-
-    await copied.waitFor({ state: 'visible', timeout: 2_000 });
-    await exactlyOne(copied, 'the copy confirmation');
-
-    // It is announced from outside the dialog, which closes a moment later.
-    await page
-      .getByRole('banner')
-      .getByRole('status')
-      .filter({ hasText: 'Copied the install command' })
-      .waitFor({ state: 'attached', timeout: 2_000 });
-    assert.equal(
-      await page.evaluate(() => navigator.clipboard.readText()),
-      'pnpm dlx shadcn@4.14.1 add @glassyui/glass-button',
-      'the search must copy the same command the home page offers',
-    );
-
-    await dialog.waitFor({ state: 'detached' });
-
-    // Opening the search again starts from the label, not the last confirmation.
-    await pill.click();
-    await dialog.waitFor({ state: 'visible' });
-    await input.fill('install');
-    await exactlyOne(
-      dialog.getByRole('option', { name: 'Copy the install command' }),
-      'the copy item after reopening',
-    );
-    await page.keyboard.press('Escape');
-    await dialog.waitFor({ state: 'detached' });
+    await dialog.getByRole('option', { name: 'Installation guide' }).click();
+    await page.waitForURL('**/docs#installation');
+    await page.locator('#installation').waitFor({ state: 'visible' });
+    await page.goto(new URL('/', baseUrl).href, { waitUntil: 'networkidle' });
+    await landHome(page);
 
     if (width >= 1024) {
       // A bare key must never open it: a shortcut of one character has to be switchable off.
@@ -2951,7 +2924,14 @@ async function assertSiteSearch() {
 
     await pill.click();
     await dialog.waitFor({ state: 'visible' });
+    // Dialog visibility precedes its deferred focus handoff and cmdk selection.
+    await input.focus();
     await page.keyboard.type('pagi');
+    await page.waitForFunction(() =>
+      document
+        .querySelector('[role="dialog"] [cmdk-item][aria-selected="true"]')
+        ?.textContent?.startsWith('Pagination'),
+    );
     await page.keyboard.press('Enter');
     await page.waitForURL('**/components/glass-pagination');
     await exactlyOne(
@@ -3335,34 +3315,16 @@ async function assertExitMotion() {
   await demo(page, 'glass-alert').getByRole('button', { name: 'Dismiss' }).click();
   expectExit('glass-alert', await alertClosing.result);
 
-  // The header search says it copied the install command and then fades out. The item must keep
-  // saying so while the dialog fades, not go back to its label for the last few frames.
+  // The search keeps its installation label while it fades out after Escape.
   await page.goto(new URL('/', baseUrl).href, { waitUntil: 'networkidle' });
   await landHome(page);
   await page.getByRole('banner').getByRole('button', { name: 'Search', exact: true }).click();
-
   const searchDialog = page.getByRole('dialog', { name: 'Search Glassy UI' });
-
   await searchDialog.getByRole('combobox').fill('install');
-  const searchClosing = await closingFrames('[role="dialog"]', 'motion', 1500, 3000);
-  await searchDialog.getByRole('option', { name: 'Copy the install command' }).click();
-  await searchDialog
-    .getByRole('option', { name: 'Copied to the clipboard' })
-    .waitFor({ state: 'visible', timeout: 2_000 });
-
-  const said = [];
-
-  while ((await searchDialog.count()) > 0) {
-    said.push(...(await searchDialog.getByRole('option').allTextContents()));
-    await page.waitForTimeout(40);
-  }
-
+  await searchDialog.getByRole('option', { name: 'Installation guide' }).waitFor();
+  const searchClosing = await closingFrames('[role="dialog"]', 'motion');
+  await page.keyboard.press('Escape');
   expectExit('site search', await searchClosing.result);
-  assert.ok(said.includes('Copied to the clipboard'), 'the search must say it copied');
-  assert.ok(
-    !said.includes('Copy the install command'),
-    'the copy item must not go back to its label while the search fades',
-  );
   await browserContext.close();
 }
 

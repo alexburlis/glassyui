@@ -101,12 +101,16 @@ const expect = (engine, condition, message) => {
   if (!condition) fail(engine, message);
 };
 
+const HERO_ACTIONS = [
+  '.home-hero .home-actions > .lg-button--prominent',
+  '.home-hero .home-actions a[href="https://github.com/alexburlis/glassyui"]',
+];
+
 const HERO = [
   '.home-announce',
   '.home-title',
   '.home-lead',
-  '.home-hero .home-actions > .lg-button',
-  '.home-hero .copy-chip',
+  ...HERO_ACTIONS,
   '.home-desk .desk-screen',
 ];
 
@@ -1388,11 +1392,14 @@ async function checkEngine(browserType) {
       `the page scrolled ${landedState.scrolled}px under the opener`,
     );
     expect(engine, await reachable(page, '.home-title'), 'something still covers the landed hero');
-    expect(
-      engine,
-      await reachable(page, '.home-hero .home-actions > .lg-button'),
-      'the landed hero does not take its clicks',
-    );
+
+    for (const selector of HERO_ACTIONS) {
+      expect(
+        engine,
+        await reachable(page, selector),
+        `the landed hero action ${selector} does not take its clicks`,
+      );
+    }
 
     await page.waitForTimeout(700);
 
@@ -1700,7 +1707,6 @@ async function checkEngine(browserType) {
       await inputPage.mouse.move(720, 450);
       await inputPage.mouse.wheel(0, 600);
       await inputPage.mouse.click(720, 450);
-      await shot(inputPage, `${engine}-opener-skip-hint`);
 
       const before = await frameOf(inputPage, '.keynote-stage');
 
@@ -1708,6 +1714,9 @@ async function checkEngine(browserType) {
 
       const after = await frameOf(inputPage, '.keynote-stage');
       const scrolled = await inputPage.evaluate(() => window.scrollY);
+
+      // Photograph after sampling: capture can hold rendering while playback time advances.
+      await shot(inputPage, `${engine}-opener-skip-hint`);
 
       report.inputFrames = [before, after];
       expect(
@@ -2040,7 +2049,8 @@ async function checkEngine(browserType) {
       );
       expect(
         engine,
-        state.scrolled > 0 && state.target >= 0 && state.target < state.viewport,
+        // Native anchor scrolling rounds its position to a CSS pixel, while the box stays fractional.
+        state.scrolled > 0 && Math.round(state.target) >= 0 && state.target < state.viewport,
         `the address does not take the page to its place (scrolled ${state.scrolled}px, target at ${state.target}px)`,
       );
       await hashContext.close();

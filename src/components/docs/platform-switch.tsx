@@ -75,13 +75,13 @@ function choosePlatform(platform: DocsPlatform) {
   listeners.forEach((listener) => listener());
 }
 
-function usePlatform() {
+export function useDocsPlatform() {
   return useSyncExternalStore(subscribe, readPlatform, serverPlatform);
 }
 
 /** Switches a component page between its React and React Native install and usage. */
 export function PlatformSwitch() {
-  const platform = usePlatform();
+  const platform = useDocsPlatform();
 
   return (
     <GlassSegmentedControl
@@ -104,7 +104,7 @@ export function PlatformPane({
   children: ReactNode;
   platform: DocsPlatform;
 }) {
-  const current = usePlatform();
+  const current = useDocsPlatform();
 
   return (
     <div className="docs-platform-pane" hidden={current !== platform}>

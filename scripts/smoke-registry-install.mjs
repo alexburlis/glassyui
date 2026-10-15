@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { createHash } from 'node:crypto';
 import { chromium, firefox, webkit } from 'playwright';
 import { checkConsumerCommand } from './check-consumer-command.mjs';
 import { checkConsumerTransparency } from './check-consumer-transparency.mjs';
@@ -108,14 +109,24 @@ const nextPaint = (page) =>
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
   );
 
-const baseUrl = process.argv[2];
+// --install-only keeps real CLI, dependency, source and production-build contracts;
+// the default also exercises the installed consumer in all three browsers.
+const argv = process.argv.slice(2);
 
-const artifactDirectory = path.resolve(process.argv[3] ?? '.artifacts/prelaunch/registry-install');
+const installOnly = argv.includes('--install-only');
+
+const positional = argv.filter((argument) => argument !== '--install-only');
+
+const baseUrl = positional[0];
+
+const artifactDirectory = path.resolve(positional[1] ?? '.artifacts/prelaunch/registry-install');
 
 fs.mkdirSync(artifactDirectory, { recursive: true });
 
 if (!baseUrl) {
-  console.error('Usage: node scripts/smoke-registry-install.mjs http://127.0.0.1:3100');
+  console.error(
+    'Usage: node scripts/smoke-registry-install.mjs <base-url> [artifact-dir] [--install-only]',
+  );
   process.exit(1);
 }
 
@@ -273,13 +284,39 @@ for (const dependency of expectedLibraryDependencies) {
 
 const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'glassyui-shadcn-consumer-'));
 
+const auxiliaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'glassyui-install-methods-'));
+
 const expectedPrefix = path.join(os.tmpdir(), 'glassyui-shadcn-consumer-');
 
 if (!temporaryRoot.startsWith(expectedPrefix))
   throw new Error(`refusing to clean unexpected temporary directory ${temporaryRoot}`);
 
-function run(command, args) {
-  const result = spawnSync(command, args, { cwd: temporaryRoot, encoding: 'utf8', stdio: 'pipe' });
+const report = {
+  baseUrl,
+  mode: installOnly ? 'install-only' : 'full',
+  shadcn: shadcnManifest.version,
+  status: 'running',
+  scratch: {
+    consumer: temporaryRoot,
+    methods: auxiliaryRoot,
+    purpose:
+      'Disposable clean web consumers from fixtures/shadcn-consumer and the served registry.',
+  },
+  browsers: [],
+};
+
+fs.writeFileSync(
+  path.join(artifactDirectory, 'report.json'),
+  `${JSON.stringify(report, null, 2)}\n`,
+);
+
+function run(command, args, cwd = temporaryRoot) {
+  const result = spawnSync(command, args, {
+    cwd,
+    encoding: 'utf8',
+    stdio: 'pipe',
+    maxBuffer: 64 * 1024 * 1024,
+  });
 
   if (result.status !== 0)
     throw new Error(
@@ -429,36 +466,167 @@ async function startConsumer() {
 }
 
 async function captureDisplayedExamples() {
-  browser = await chromium.launch({
-    args: ['--disable-updater-scheduler'],
-    channel: 'chrome',
-    headless: true,
-  });
-  const page = await browser.newPage();
+  let page;
+
+  if (!installOnly) {
+    browser = await chromium.launch({
+      args: ['--disable-updater-scheduler'],
+      channel: 'chrome',
+      headless: true,
+    });
+    page = await browser.newPage();
+  }
+
   const directory = path.join(temporaryRoot, 'components', 'examples');
   fs.mkdirSync(directory, { recursive: true });
 
   for (const name of ['scene', 'lens', 'dock']) {
-    const response = await page.goto(`${baseUrl.replace(/\/$/, '')}/components/glass-${name}`, {
-      waitUntil: 'networkidle',
-    });
+    const url = `${baseUrl.replace(/\/$/, '')}/components/glass-${name}`;
+    let source;
 
-    assert.equal(response.status(), 200, `${name} documentation must resolve`);
-    const source = await page.locator('#usage .docs-code-block pre code').first().innerText();
+    if (installOnly) {
+      // These are the real served examples, compiled in the clean consumer below.
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(30_000),
+        // Synchronous CLI installs below can outlive the server's idle socket timeout.
+        headers: { Connection: 'close' },
+      });
+
+      assert.equal(response.status, 200, `${name} documentation must resolve`);
+      const { JSDOM } = await import('jsdom');
+      const dom = new JSDOM(await response.text());
+
+      try {
+        source = dom.window.document.querySelector('#usage .docs-code-block pre code')?.textContent;
+        assert.ok(source, `${name} documentation must contain its usage example`);
+      } finally {
+        dom.window.close();
+      }
+    } else {
+      const response = await page.goto(url, { waitUntil: 'networkidle' });
+      assert.equal(response.status(), 200, `${name} documentation must resolve`);
+      source = await page.locator('#usage .docs-code-block pre code').first().innerText();
+    }
+
     assert.match(source, /@\/components\/glassyui\//, `${name} example needs installed imports`);
     fs.writeFileSync(path.join(directory, `${name}-example.tsx`), source);
     fs.writeFileSync(path.join(artifactDirectory, `${name}-example.tsx`), source);
   }
 
-  await browser.close();
+  await browser?.close();
   browser = undefined;
+}
+
+async function checkNpmAndManualButton() {
+  const response = await fetch(`${baseUrl.replace(/\/$/, '')}/r/glass-button.json`);
+  assert.equal(response.status, 200, 'button Manual source must load');
+  const payload = await response.json();
+  assert.equal(payload.registryDependencies, undefined, 'button payload needs no registry mapping');
+  // A fixed button contract catches missing source while content is checked against the real source.
+  assert.equal(payload.files.length, 10, 'button must include its provider closure');
+  const report = { npm: {}, manual: {}, namespaceCompatibility: true, pnpmUrlInstall: true };
+
+  for (const method of ['npm', 'manual']) {
+    const directory = path.join(auxiliaryRoot, method);
+    fs.mkdirSync(path.join(directory, 'app'), { recursive: true });
+
+    for (const file of [
+      'package.json',
+      'components.json',
+      'tsconfig.json',
+      'postcss.config.mjs',
+      'app/globals.css',
+      'app/layout.tsx',
+    ])
+      fs.copyFileSync(path.join(fixture, file), path.join(directory, file));
+    const configPath = path.join(directory, 'components.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    config.registries = {};
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+    fs.writeFileSync(
+      path.join(directory, 'app/page.tsx'),
+      `import { GlassButton } from '@/components/glassyui/glass-button';\nimport { GlassProvider } from '@/components/glassyui/glass-provider';\nexport default function Page() { return <GlassProvider><GlassButton>Installed button</GlassButton></GlassProvider>; }\n`,
+    );
+    run('npm', ['install', '--no-audit', '--no-fund'], directory);
+
+    if (method === 'npm') {
+      run(
+        'npx',
+        [
+          '--yes',
+          'shadcn@4.14.1',
+          'add',
+          `${baseUrl.replace(/\/$/, '')}/r/glass-button.json`,
+          '--yes',
+        ],
+        directory,
+      );
+    } else {
+      run('npm', ['install', '--no-audit', '--no-fund', ...payload.dependencies], directory);
+
+      for (const file of payload.files) {
+        assert.equal(
+          file.content,
+          fs.readFileSync(path.join(root, file.path), 'utf8'),
+          `Manual source differs: ${file.target}`,
+        );
+        const target = path.resolve(directory, file.target);
+        assert.ok(target.startsWith(`${directory}${path.sep}`), 'Manual target escaped consumer');
+        fs.mkdirSync(path.dirname(target), { recursive: true });
+        fs.writeFileSync(target, file.content);
+      }
+    }
+
+    const actual = listFiles(path.join(directory, 'components/glassyui'), 'components/glassyui');
+    assertExactSet(
+      `${method} button closure`,
+      actual,
+      payload.files.map((file) => file.target),
+    );
+
+    const installedManifest = JSON.parse(
+      fs.readFileSync(path.join(directory, 'package.json'), 'utf8'),
+    );
+
+    for (const dependency of ['@radix-ui/react-slot', 'clsx'])
+      assert.ok(installedManifest.dependencies[dependency], `${method} omitted ${dependency}`);
+    run('npm', ['run', 'build'], directory);
+    report[method] = {
+      files: Object.fromEntries(
+        actual.map((file) => [
+          file,
+          createHash('sha256')
+            .update(fs.readFileSync(path.join(directory, file)))
+            .digest('hex'),
+        ]),
+      ),
+      packages: payload.dependencies,
+      build: 'passed',
+    };
+  }
+
+  const imports = (source) =>
+    [...source.matchAll(/(?:import|export)\s+(?:type\s+)?(?:[^'"]*?\s+from\s+)?['"]([^'"]+)['"]/g)]
+      .map((match) => match[1])
+      .sort();
+
+  for (const file of payload.files.filter((file) => /\.tsx?$/.test(file.target)))
+    assert.deepEqual(
+      imports(fs.readFileSync(path.join(auxiliaryRoot, 'npm', file.target), 'utf8')),
+      imports(fs.readFileSync(path.join(auxiliaryRoot, 'manual', file.target), 'utf8')),
+      `Manual import graph differs from CLI: ${file.target}`,
+    );
+  fs.writeFileSync(
+    path.join(artifactDirectory, 'installation-methods.json'),
+    `${JSON.stringify(report, null, 2)}\n`,
+  );
 }
 
 try {
   fs.cpSync(fixture, temporaryRoot, { recursive: true });
   const configPath = path.join(temporaryRoot, 'components.json');
   const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-  config.registries['@glassyui'] = `${baseUrl.replace(/\/$/, '')}/r/{name}.json`;
+  config.registries = {}; // The primary workflow must not inherit the fixture's optional mapping.
   fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
 
   await captureDisplayedExamples();
@@ -481,7 +649,13 @@ try {
     /4\.14\.1/,
     `absolute shadcn CLI did not report version 4.14.1: ${versionOutput}`,
   );
-  run(process.execPath, [shadcnBin, 'add', '@glassyui/glass-dialog', '--yes']);
+  run('pnpm', [
+    'dlx',
+    'shadcn@4.14.1',
+    'add',
+    `${baseUrl.replace(/\/$/, '')}/r/glass-dialog.json`,
+    '--yes',
+  ]);
 
   const installed = JSON.parse(fs.readFileSync(path.join(temporaryRoot, 'package.json'), 'utf8'));
   const installedDependencies = installed.dependencies ?? {};
@@ -525,7 +699,7 @@ try {
   run(process.execPath, [
     shadcnBin,
     'add',
-    ...remainingItems.map((name) => `@glassyui/${name}`),
+    ...remainingItems.map((name) => `${baseUrl.replace(/\/$/, '')}/r/${name}.json`),
     '--yes',
   ]);
   const library = JSON.parse(fs.readFileSync(path.join(temporaryRoot, 'package.json'), 'utf8'));
@@ -554,6 +728,35 @@ try {
     listFiles(path.join(temporaryRoot, 'components', 'glassyui'), 'components/glassyui'),
     expectedLibraryFiles,
   );
+
+  // Existing configured namespace users resolve to the same complete URL and unchanged bytes.
+  const beforeCompatibility = Object.fromEntries(
+    expectedLibraryFiles.map((file) => [
+      file,
+      fs.readFileSync(path.join(temporaryRoot, file), 'utf8'),
+    ]),
+  );
+
+  config.registries = { '@glassyui': `${baseUrl.replace(/\/$/, '')}/r/{name}.json` };
+  fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+  run(process.execPath, [shadcnBin, 'add', '@glassyui/glass-dialog', '--yes']);
+
+  for (const file of expectedLibraryFiles)
+    assert.equal(
+      fs.readFileSync(path.join(temporaryRoot, file), 'utf8'),
+      beforeCompatibility[file],
+      `namespace compatibility changed ${file}`,
+    );
+
+  report.primary = {
+    packageManager: 'pnpm',
+    urlWithoutMapping: true,
+    namespaceCompatibility: true,
+    files: expectedLibraryFiles,
+    packages: expectedLibraryDependencies,
+  };
+  await checkNpmAndManualButton();
+  report.installationMethods = 'installation-methods.json';
   // next build type-checks every installed file, not only the ones the page imports.
   run('pnpm', ['build']);
   const nextStaticDirectory = path.join(temporaryRoot, '.next', 'static');
@@ -568,13 +771,18 @@ try {
     `built consumer CSS is missing the installed liquid.css sentinel ${liquidCssSentinel}`,
   );
 
-  const fixtureUrl = await startConsumer();
+  report.build = 'passed';
+  const fixtureUrl = installOnly ? null : await startConsumer();
 
-  for (const [browserName, browserType] of [
-    ['Chromium', chromium],
-    ['Firefox', firefox],
-    ['WebKit', webkit],
-  ]) {
+  const browserTypes = installOnly
+    ? []
+    : [
+        ['Chromium', chromium],
+        ['Firefox', firefox],
+        ['WebKit', webkit],
+      ];
+
+  for (const [browserName, browserType] of browserTypes) {
     browser = await browserType.launch(
       browserName === 'Chromium'
         ? { args: ['--disable-updater-scheduler'], channel: 'chrome', headless: true }
@@ -930,16 +1138,33 @@ try {
     await menu.waitFor({ state: 'detached' });
     await browser.close();
     browser = undefined;
+    report.browsers.push(browserName);
   }
 
+  report.status = 'passed';
   console.log(
-    `Registry install smoke passed with verified shadcn CLI ${shadcnManifest.version}, Tailwind output, consumer overrides, preference guards, and rendered dialog and menu-to-sheet flow in Chromium, Firefox, and WebKit (${shadcnBin}).`,
+    installOnly
+      ? `Registry install-only passed with shadcn ${shadcnManifest.version}, exact source/dependency closures, served examples, Tailwind output and production builds.`
+      : `Registry install smoke passed with verified shadcn CLI ${shadcnManifest.version}, Tailwind output, consumer overrides, preference guards, and rendered dialog and menu-to-sheet flow in Chromium, Firefox, and WebKit (${shadcnBin}).`,
   );
+} catch (error) {
+  report.status = 'failed';
+  report.error = error.message.slice(-16000);
+  throw error;
 } finally {
   try {
     await browser?.close();
   } finally {
     await stopChild(fixtureServer);
     fs.rmSync(temporaryRoot, { recursive: true, force: true });
+    fs.rmSync(auxiliaryRoot, { recursive: true, force: true });
+    report.cleanup = {
+      consumerAbsent: !fs.existsSync(temporaryRoot),
+      methodsAbsent: !fs.existsSync(auxiliaryRoot),
+    };
+    fs.writeFileSync(
+      path.join(artifactDirectory, 'report.json'),
+      `${JSON.stringify(report, null, 2)}\n`,
+    );
   }
 }

@@ -18,7 +18,6 @@ import {
   usePreferences,
 } from '@/components/liquid';
 import { PRO_ORIGIN, REPOSITORY } from '@/lib/site-links';
-import { INSTALL_COMMAND } from './install-command';
 import { crossfadeTheme } from '@/lib/crossfade-theme';
 
 type Entry = { category?: string; description: string; href: string; title: string };
@@ -30,7 +29,7 @@ export const OPEN_SEARCH_EVENT = 'glassy:open-search';
 
 const PAGES: Entry[] = [
   {
-    description: 'Set up the registry and add a component',
+    description: 'Set up your app and install a component',
     href: '/docs',
     title: 'Getting started',
   },
@@ -38,9 +37,6 @@ const PAGES: Entry[] = [
   { description: 'Complete sites in Glassy UI Pro', href: PRO_ORIGIN, title: 'Templates' },
   { description: 'Step-by-step tutorials', href: '/guides', title: 'Guides' },
 ];
-
-// How long the search says it copied before it closes.
-const COPIED_MS = 700;
 
 /**
  * How well one item answers the query, from 0 (hide it) to 1. Titles count most: the whole title,
@@ -89,8 +85,6 @@ const usesCommandKey = () => /Mac|iPhone|iPad/.test(navigator.userAgent);
 const assumeCommandKey = () => true;
 
 const LOAD_FAILED = 'The component list did not load. Close the search and open it again to retry.';
-
-const COPY_REFUSED = 'The browser would not copy. Select the command on the home page.';
 
 /**
  * What the search tells a screen reader as the list narrows. It stays mounted while the search is
@@ -141,17 +135,8 @@ export function SiteSearch() {
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState<SearchIndex | null>(null);
   const [failed, setFailed] = useState(false);
-  const [copy, setCopy] = useState<'idle' | 'copied' | 'refused'>('idle');
-  const [wasOpen, setWasOpen] = useState(false);
   const mac = useSyncExternalStore(subscribeToNothing, usesCommandKey, assumeCommandKey);
   const requested = useRef(false);
-
-  // Each opening starts fresh, and what the copy item said stays put while the search closes.
-  if (open !== wasOpen) {
-    setWasOpen(open);
-
-    if (open) setCopy('idle');
-  }
 
   // The list is a static file, fetched the first time anyone reaches for the search.
   const load = useCallback(() => {
@@ -198,40 +183,12 @@ export function SiteSearch() {
     if (open) load();
   }, [load, open]);
 
-  // The item says it copied, then the search closes. Opening it again first cancels the close.
-  useEffect(() => {
-    if (copy !== 'copied') return;
-
-    const timer = window.setTimeout(() => setOpen(false), COPIED_MS);
-
-    return () => window.clearTimeout(timer);
-  }, [copy]);
-
   const go = (href: string) => {
     setOpen(false);
     router.push(href);
   };
 
-  // If the browser refuses, the search stays open and says so.
-  const copyInstall = async () => {
-    try {
-      await navigator.clipboard.writeText(INSTALL_COMMAND);
-      setCopy('copied');
-    } catch {
-      setCopy('refused');
-    }
-  };
-
   const light = preferences.theme === 'light';
-
-  // Said outside the dialog, which closes a moment after the copy: a region inside it would go
-  // with it before it was read.
-  const announcement =
-    copy === 'copied'
-      ? 'Copied the install command to the clipboard.'
-      : copy === 'refused'
-        ? COPY_REFUSED
-        : '';
 
   const entries = (group: string, list: Entry[]) =>
     list.map((entry) => (
@@ -263,9 +220,6 @@ export function SiteSearch() {
           <GlassKbd>K</GlassKbd>
         </GlassKbdGroup>
       </button>
-      <span className="lg-visually-hidden" role="status">
-        {announcement}
-      </span>
       <GlassCommandDialog onOpenChange={setOpen} open={open} title="Search Glassy UI">
         <GlassCommand filter={score} label="Search Glassy UI">
           <GlassCommandInput placeholder="Search components, guides and pages…" />
@@ -297,15 +251,11 @@ export function SiteSearch() {
                 {light ? 'Switch to dark' : 'Switch to light'}
               </GlassCommandItem>
               <GlassCommandItem
-                keywords={['install', 'shadcn', 'copy', 'command']}
-                onSelect={copyInstall}
-                value="Copy the install command action"
+                keywords={['install', 'shadcn', 'manual', 'command']}
+                onSelect={() => go('/docs#installation')}
+                value="Open installation guidance action"
               >
-                {copy === 'copied'
-                  ? 'Copied to the clipboard'
-                  : copy === 'refused'
-                    ? COPY_REFUSED
-                    : 'Copy the install command'}
+                Installation guide
               </GlassCommandItem>
               <GlassCommandItem
                 keywords={['source', 'repository', 'code']}
