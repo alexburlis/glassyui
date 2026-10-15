@@ -77,10 +77,13 @@ pnpm build
 
 ## Running-server gate
 
-This is the default CI browser/served gate. Native, theme/drop-in and other
-affected behavior owners are mapped in [CONTRIBUTING.md](../CONTRIBUTING.md).
-They are maintainer checks for affected changes. Performance measurement is a
-separate explicit task; no benchmark is part of default CI.
+This is the complete browser/served gate. CI retains the web install and served
+checks on every run, and selects the full visual matrix for relevant PR changes
+or a manual release dispatch. Native and both stock shadcn styles run in their
+own jobs when their inputs change. Other affected behavior owners are mapped in
+[CONTRIBUTING.md](../CONTRIBUTING.md). They are maintainer checks for affected
+changes. Performance measurement is a separate explicit task; no benchmark is
+part of default CI.
 
 Use real Chrome plus Playwright Chromium, Firefox and WebKit:
 

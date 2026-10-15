@@ -899,6 +899,18 @@ async function captureLabel(page, element) {
 
     if (clip.width < 1 || clip.height < 1) return { reason: 'off screen' };
 
+    const regions = await element.evaluate((node, origin) => {
+      const range = document.createRange();
+      range.selectNodeContents(node);
+
+      return [...range.getClientRects()].map((rect) => ({
+        left: rect.left - origin.x,
+        top: rect.top - origin.y,
+        right: rect.right - origin.x,
+        bottom: rect.bottom - origin.y,
+      }));
+    }, clip);
+
     const shown = await page.screenshot({ clip });
     await element.evaluate((node) => {
       node.dataset.contrastHide = 'true';
@@ -912,7 +924,7 @@ async function captureLabel(page, element) {
     const after = await readRect();
 
     if (Math.abs(after.x - before.x) < 0.5 && Math.abs(after.y - before.y) < 0.5) {
-      return { shown, background };
+      return { shown, background, regions, clip };
     }
   }
 
@@ -968,7 +980,7 @@ async function measureLabelContrast(page, selectors, directory) {
 
   for (const target of targets) {
     const element = page.locator(`[data-contrast-target="${target.index}"]`);
-    const { shown, background, reason } = await captureLabel(page, element);
+    const { shown, background, regions, clip, reason } = await captureLabel(page, element);
 
     if (reason) {
       results.push({
@@ -985,7 +997,7 @@ async function measureLabelContrast(page, selectors, directory) {
     // pixel, and the background one pixel around it, is compared with the
     // text colour; rims and fills elsewhere in the label's box do not count.
     const ratio = await page.evaluate(
-      async ({ shownPng, backgroundPng, color }) => {
+      async ({ shownPng, backgroundPng, color, regions, clip }) => {
         const decode = async (source) => {
           const image = new Image();
           image.src = source;
@@ -1024,6 +1036,17 @@ async function measureLabelContrast(page, selectors, directory) {
         const glyph = new Uint8Array(width * height);
 
         for (let pixel = 0; pixel < width * height; pixel += 1) {
+          const x = ((pixel % width) + 0.5) * (clip.width / width);
+          const y = (Math.floor(pixel / width) + 0.5) * (clip.height / height);
+
+          // A separately rasterized rim can change between captures. It is not text.
+          if (
+            !regions.some(
+              (rect) => x >= rect.left && x < rect.right && y >= rect.top && y < rect.bottom,
+            )
+          )
+            continue;
+
           const index = pixel * 4;
 
           if (Math.abs(luminance(withText.data, index) - luminance(behind.data, index)) > 0.03)
@@ -1073,6 +1096,8 @@ async function measureLabelContrast(page, selectors, directory) {
         shownPng: `data:image/png;base64,${shown.toString('base64')}`,
         backgroundPng: `data:image/png;base64,${background.toString('base64')}`,
         color: target.color,
+        regions,
+        clip,
       },
     );
 
@@ -2148,14 +2173,7 @@ const LIBRARY_LENS_MAP = (() => {
 // Lays the components' lens over one element's box, with the theme's frost and
 // saturation, and hides the element: the filter is useLensFilter's, primitive for
 // primitive.
-function placeLibraryLens({
-  selector,
-  frostOnly,
-  rimWidth,
-  dispersion = 0.16,
-  saturate,
-  paddingBox = false,
-}) {
+function placeLibraryLens({ selector, frostOnly, rimWidth, dispersion = 0.16, saturate }) {
   const element = document.querySelector(selector);
   const rect = element.getBoundingClientRect();
   const style = getComputedStyle(element);
@@ -2163,15 +2181,15 @@ function placeLibraryLens({
 
   // A drop-in's engine frosts by its own token; the theme by --glassy-lens-frost.
   const frost = Number.parseFloat(
-    style.getPropertyValue(paddingBox ? '--lg-lens-blur' : '--glassy-lens-frost'),
+    style.getPropertyValue(element.dataset.glassyEngine ? '--lg-lens-blur' : '--glassy-lens-frost'),
   );
 
   const saturation = saturate ?? Number.parseFloat(style.getPropertyValue('--glassy-saturate'));
-  // A drop-in's engine measures the padding box, as useLensFilter does, and its glass fills it.
-  const left = paddingBox ? rect.left + element.clientLeft : rect.left;
-  const top = paddingBox ? rect.top + element.clientTop : rect.top;
-  const width = paddingBox ? element.clientWidth : rect.width;
-  const height = paddingBox ? element.clientHeight : rect.height;
+  // Both the theme's inset pseudo-element and useLensFilter fill the padding box.
+  const left = rect.left + element.clientLeft;
+  const top = rect.top + element.clientTop;
+  const width = element.clientWidth;
+  const height = element.clientHeight;
 
   const radius = Math.min(
     Number.parseFloat(after.borderTopLeftRadius),
@@ -2229,27 +2247,48 @@ function placeLibraryLens({
     result: 'lens',
   });
 
-  const channels = [
-    ['red', '1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0', 1 - dispersion / 2],
-    ['green', '0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0', 1],
-    ['blue', '0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 1 0', 1 + dispersion / 2],
-  ];
-
-  for (const [name, values, factor] of channels) {
-    add(filter, 'feColorMatrix', { in: 'frost', type: 'matrix', values, result: `${name}-only` });
+  // Match refractColours in use-refraction-filter.tsx, including its coverage.
+  // Blending three translucent copies at zero dispersion changes the rim's alpha.
+  if (dispersion <= 0.005) {
     add(filter, 'feDisplacementMap', {
-      in: `${name}-only`,
+      in: 'frost',
       in2: 'lens',
-      scale: Math.round(scale * factor * 100) / 100,
+      scale,
       xChannelSelector: 'R',
       yChannelSelector: 'G',
-      result: `${name}-bent`,
+      result: 'bent',
     });
+  } else {
+    const channels = [
+      ['red', '1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1', 1 - dispersion / 2],
+      ['green', '0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 1', 1],
+      ['blue', '0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 1', 1 + dispersion / 2],
+    ];
+
+    for (const [name, values, factor] of channels) {
+      add(filter, 'feDisplacementMap', {
+        in: 'frost',
+        in2: 'lens',
+        scale: Math.round(scale * factor * 100) / 100,
+        xChannelSelector: 'R',
+        yChannelSelector: 'G',
+        result: `${name}-scene`,
+      });
+      add(filter, 'feColorMatrix', {
+        in: `${name}-scene`,
+        type: 'matrix',
+        values,
+        result: `${name}-bent`,
+      });
+    }
+
+    add(filter, 'feBlend', { in: 'red-bent', in2: 'green-bent', mode: 'screen', result: 'rg' });
+    add(filter, 'feBlend', { in: 'rg', in2: 'blue-bent', mode: 'screen', result: 'rgb' });
+    add(filter, 'feComposite', { in: 'rgb', in2: 'green-scene', operator: 'in', result: 'bent' });
   }
 
-  add(filter, 'feBlend', { in: 'red-bent', in2: 'green-bent', mode: 'screen', result: 'rg' });
-  add(filter, 'feBlend', { in: 'rg', in2: 'blue-bent', mode: 'screen', result: 'bent' });
-  add(filter, 'feColorMatrix', { in: 'bent', type: 'saturate', values: saturation });
+  if (saturation !== 1)
+    add(filter, 'feColorMatrix', { in: 'bent', type: 'saturate', values: saturation });
   document.querySelector('#glassy-library-glass')?.remove();
   const glass = document.createElement('div');
   glass.id = 'glassy-library-glass';
@@ -2407,7 +2446,6 @@ async function libraryParity(page, selector, strip, directory, name, themeRim) {
         rimWidth,
         dispersion: engine.dispersion,
         saturate: engine.saturate,
-        paddingBox: true,
       }
     : { selector, rimWidth };
 
@@ -2426,6 +2464,7 @@ async function libraryParity(page, selector, strip, directory, name, themeRim) {
   return {
     corner: measured.radius,
     bevel: rim.bevel,
+    frostOff: regionDifference(themeFrost, libraryFrost, rim, 2, rim.bevel).change,
     lens: regionDifference(library, libraryFrost, rim, 2, rim.bevel).change,
     off: lensDifference(theme, themeFrost, library, libraryFrost, rim, 2, rim.bevel),
   };
@@ -2436,12 +2475,12 @@ async function libraryParity(page, selector, strip, directory, name, themeRim) {
 const PANE_ALONE = `[data-check='card'] {
   --card: transparent !important; --glassy-lens-frost: 0.5px !important;
 }
-[data-check='card'] > * { visibility: hidden !important; }
+[data-check='card'] > * { opacity: 0 !important; }
 [data-check='card']::before { background: none !important; box-shadow: none !important; }`;
 
 // A drop-in's glass alone: no gloss, bevel, ring, shadow or content.
 const PANE_ALONE_NATIVE = `[data-check='card'] { box-shadow: none !important; }
-[data-check='card'] > * { visibility: hidden !important; }
+[data-check='card'] > * { opacity: 0 !important; }
 [data-check='card']::before { background: none !important; box-shadow: none !important; }
 [data-check='card']::after { display: none !important; }`;
 
@@ -2461,7 +2500,9 @@ const SLAB_ALONE = `[data-check='button-outline'] {
 [data-check='button-outline']::before {
   background: none !important; backdrop-filter: none !important; box-shadow: none !important;
 }
-[data-check='button-outline']::after { box-shadow: none !important; }`;
+[data-check='button-outline']::after {
+  background: none !important; box-shadow: none !important;
+}`;
 
 // The lens in Chrome: glass is as frosted at its rim as in its body, so fine
 // stripes, moved half a period, change nothing under it; over wide bands the rims
@@ -2562,10 +2603,10 @@ async function lensAssertions(browser, base, fixtureDirectory) {
     );
   }
 
-  // Within 30% of what the lens itself changes, over the rim. Measured: 15-24%
-  // across both styles, 1x and 2x and every button height (the theme reads the
-  // slope half a pixel along and splits two colours, not three); a rim 2 px too
-  // wide 24-49%; no lens 100%.
+  // Within 30% of what the lens itself changes, over the rim. A small button
+  // covers few bands, so font metrics can choose an unrepresentative phase.
+  // Average its signal and error over a complete stripe cycle; a pane already
+  // spans many periods. Every phase must retain the same frost baseline.
   const bands = await page.addStyleTag({ content: BANDS });
 
   // A card's rim is 14 px, the corner of shadcn's default card, whatever the
@@ -2575,10 +2616,38 @@ async function lensAssertions(browser, base, fixtureDirectory) {
     ['pane', '[data-check="card"]', dropins ? PANE_ALONE_NATIVE : PANE_ALONE, 14],
     ['slab', '[data-check="button-outline"]', dropins ? SLAB_ALONE_NATIVE : SLAB_ALONE, null],
   ]) {
-    const parity = await libraryParity(page, selector, strip, directory, name, rimWidth);
+    const phases = name === 'slab' ? [0, 12, 24, 36] : [0];
+    const samples = [];
+
+    for (const phase of phases) {
+      const shifted = await page.addStyleTag({
+        // A 45-degree band's horizontal period is sqrt(2) times its stripe period.
+        content: `html body { background-position: ${phase * Math.SQRT2}px 0 !important; }`,
+      });
+
+      try {
+        samples.push(
+          await libraryParity(page, selector, strip, directory, `${name}-${phase}`, rimWidth),
+        );
+      } finally {
+        await shifted.evaluate((node) => node.remove());
+      }
+    }
+
+    const parity = {
+      corner: samples[0].corner,
+      bevel: samples[0].bevel,
+      frostOff: Math.max(...samples.map((sample) => sample.frostOff)),
+      lens: samples.reduce((sum, sample) => sum + sample.lens, 0) / samples.length,
+      off: samples.reduce((sum, sample) => sum + sample.off, 0) / samples.length,
+      phases: samples,
+    };
+
     check(
       `lens: a ${name}'s glass matches Glassy UI's own lens`,
-      parity.lens >= (dropins ? LENS_BEND : 2) && parity.off <= parity.lens * 0.3,
+      parity.frostOff <= 0.5 &&
+        parity.lens >= (dropins ? LENS_BEND : 2) &&
+        parity.off <= parity.lens * 0.3,
       parity,
     );
   }
@@ -2764,20 +2833,54 @@ try {
     const fixtureDirectory = path.join(artifactDirectory, fixture.name);
     fs.rmSync(fixtureDirectory, { recursive: true, force: true });
     fs.mkdirSync(fixtureDirectory, { recursive: true });
-    const temporaryRoot = fs.mkdtempSync(temporaryPrefix);
+    const temporaryContainer = fs.mkdtempSync(temporaryPrefix);
 
-    if (!temporaryRoot.startsWith(temporaryPrefix))
-      throw new Error(`refusing unexpected temporary directory ${temporaryRoot}`);
+    const temporaryRoot = path.join(
+      temporaryContainer,
+      'fixtures',
+      'shadcn-theme-consumer',
+      fixture.app,
+    );
+
+    if (!temporaryContainer.startsWith(temporaryPrefix))
+      throw new Error(`refusing unexpected temporary directory ${temporaryContainer}`);
     console.log(`\n${fixture.name}: ${temporaryRoot}`);
     let app;
 
     try {
-      fs.cpSync(path.join(root, 'fixtures', 'shadcn-theme-consumer', fixture.app), temporaryRoot, {
+      const sourceFixture = path.join(root, 'fixtures', 'shadcn-theme-consumer', fixture.app);
+
+      fs.cpSync(sourceFixture, temporaryRoot, {
         recursive: true,
+        filter: (source) =>
+          !['node_modules', '.next'].includes(
+            path.relative(sourceFixture, source).split(path.sep)[0],
+          ),
       });
+
+      // Keep the fixture's relative reference to the single repository patch.
+      fs.mkdirSync(path.join(temporaryContainer, 'patches'));
+      fs.copyFileSync(
+        path.join(root, 'patches', 'braces@3.0.3.patch'),
+        path.join(temporaryContainer, 'patches', 'braces@3.0.3.patch'),
+      );
 
       if (fixture.palette) applyPalette(temporaryRoot, PALETTES[fixture.palette]);
       run('pnpm', ['install', '--frozen-lockfile', '--prefer-offline'], temporaryRoot);
+
+      if (fixture.app === 'base-nova') {
+        run(
+          process.execPath,
+          [path.join(root, 'scripts', 'test-braces-security.mjs'), '--fixture', temporaryRoot],
+          temporaryRoot,
+        );
+        check(
+          'the installed CLI rejects unsafe glob nesting and cycles',
+          true,
+          '15 security scenarios passed',
+        );
+      }
+
       run('pnpm', ['exec', 'next', 'build'], temporaryRoot);
       app = await startApp(temporaryRoot);
       console.log('  baseline');
@@ -2995,7 +3098,7 @@ try {
       await exportGuideImages(browser, app.url, 'glassy');
     } finally {
       await stopApp(app);
-      fs.rmSync(temporaryRoot, { recursive: true, force: true });
+      fs.rmSync(temporaryContainer, { recursive: true, force: true });
     }
   }
 } finally {
