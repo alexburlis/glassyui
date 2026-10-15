@@ -2247,27 +2247,48 @@ function placeLibraryLens({ selector, frostOnly, rimWidth, dispersion = 0.16, sa
     result: 'lens',
   });
 
-  const channels = [
-    ['red', '1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0', 1 - dispersion / 2],
-    ['green', '0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0', 1],
-    ['blue', '0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 1 0', 1 + dispersion / 2],
-  ];
-
-  for (const [name, values, factor] of channels) {
-    add(filter, 'feColorMatrix', { in: 'frost', type: 'matrix', values, result: `${name}-only` });
+  // Match refractColours in use-refraction-filter.tsx, including its coverage.
+  // Blending three translucent copies at zero dispersion changes the rim's alpha.
+  if (dispersion <= 0.005) {
     add(filter, 'feDisplacementMap', {
-      in: `${name}-only`,
+      in: 'frost',
       in2: 'lens',
-      scale: Math.round(scale * factor * 100) / 100,
+      scale,
       xChannelSelector: 'R',
       yChannelSelector: 'G',
-      result: `${name}-bent`,
+      result: 'bent',
     });
+  } else {
+    const channels = [
+      ['red', '1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1', 1 - dispersion / 2],
+      ['green', '0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 1', 1],
+      ['blue', '0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 1', 1 + dispersion / 2],
+    ];
+
+    for (const [name, values, factor] of channels) {
+      add(filter, 'feDisplacementMap', {
+        in: 'frost',
+        in2: 'lens',
+        scale: Math.round(scale * factor * 100) / 100,
+        xChannelSelector: 'R',
+        yChannelSelector: 'G',
+        result: `${name}-scene`,
+      });
+      add(filter, 'feColorMatrix', {
+        in: `${name}-scene`,
+        type: 'matrix',
+        values,
+        result: `${name}-bent`,
+      });
+    }
+
+    add(filter, 'feBlend', { in: 'red-bent', in2: 'green-bent', mode: 'screen', result: 'rg' });
+    add(filter, 'feBlend', { in: 'rg', in2: 'blue-bent', mode: 'screen', result: 'rgb' });
+    add(filter, 'feComposite', { in: 'rgb', in2: 'green-scene', operator: 'in', result: 'bent' });
   }
 
-  add(filter, 'feBlend', { in: 'red-bent', in2: 'green-bent', mode: 'screen', result: 'rg' });
-  add(filter, 'feBlend', { in: 'rg', in2: 'blue-bent', mode: 'screen', result: 'bent' });
-  add(filter, 'feColorMatrix', { in: 'bent', type: 'saturate', values: saturation });
+  if (saturation !== 1)
+    add(filter, 'feColorMatrix', { in: 'bent', type: 'saturate', values: saturation });
   document.querySelector('#glassy-library-glass')?.remove();
   const glass = document.createElement('div');
   glass.id = 'glassy-library-glass';
