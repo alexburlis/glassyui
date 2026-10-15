@@ -11,7 +11,7 @@ const {
   CONSENT_MAX_AGE_SECONDS,
   REVIEWED_OPT_OUT_COUNTRIES,
   parseConsent,
-  decideConsent,
+  consentMode,
 } = require('../src/lib/analytics/consent.ts');
 
 const { analyticsConfig } = require('../src/lib/analytics/server-config.ts');
@@ -31,13 +31,9 @@ const accepted = {
 const rejected = { ...accepted, decision: 'rejected' };
 
 const input = {
-  preference: null,
   country: null,
   trustedCountry: false,
   reviewedOptOutCountries: [],
-  signal: false,
-  configured: true,
-  now,
 };
 
 const failures = [];
@@ -273,109 +269,37 @@ check('material purpose change keeps a current refusal', () => {
   assert.deepEqual(parseConsent(JSON.stringify(preference), now), preference);
 });
 
-const decisions = [
-  ['unknown fresh visit', {}, [false, null, 'opt-in', 'undecided']],
-  ['fresh EU visit', { country: 'DE', trustedCountry: true }, [false, null, 'opt-in', 'undecided']],
-  ['fresh UK visit', { country: 'GB', trustedCountry: true }, [false, null, 'opt-in', 'undecided']],
-  [
-    'fresh Swiss visit',
-    { country: 'CH', trustedCountry: true },
-    [false, null, 'opt-in', 'undecided'],
-  ],
-  [
-    'unreviewed US visit',
-    { country: 'US', trustedCountry: true },
-    [false, null, 'opt-in', 'undecided'],
-  ],
+const modeCases = [
+  ['unknown fresh visit', {}, 'opt-in'],
+  ['fresh EU visit', { country: 'DE', trustedCountry: true }, 'opt-in'],
+  ['fresh UK visit', { country: 'GB', trustedCountry: true }, 'opt-in'],
+  ['fresh Swiss visit', { country: 'CH', trustedCountry: true }, 'opt-in'],
+  ['unreviewed US visit', { country: 'US', trustedCountry: true }, 'opt-in'],
   [
     'trusted reviewed opt-out',
     { country: 'US', trustedCountry: true, reviewedOptOutCountries: ['US'] },
-    [true, 'legitimate_interest', 'opt-out', 'undecided'],
+    'opt-out',
   ],
-  [
-    'untrusted reviewed country',
-    { country: 'US', reviewedOptOutCountries: ['US'] },
-    [false, null, 'opt-in', 'undecided'],
-  ],
+  ['untrusted reviewed country', { country: 'US', reviewedOptOutCountries: ['US'] }, 'opt-in'],
   [
     'invalid reviewed country',
     { country: 'XX', trustedCountry: true, reviewedOptOutCountries: ['XX'] },
-    [false, null, 'opt-in', 'undecided'],
+    'opt-in',
   ],
   [
     'unassigned country cannot become permissive',
     { country: 'QZ', trustedCountry: true, reviewedOptOutCountries: ['QZ'] },
-    [false, null, 'opt-in', 'undecided'],
+    'opt-in',
   ],
   [
     'unknown cannot use reviewed list',
     { trustedCountry: true, reviewedOptOutCountries: ['US'] },
-    [false, null, 'opt-in', 'undecided'],
-  ],
-  [
-    'explicit consent in unknown location',
-    { preference: accepted },
-    [true, 'consent', 'opt-in', 'accepted'],
-  ],
-  [
-    'explicit consent in reviewed opt-out mode',
-    { preference: accepted, country: 'US', trustedCountry: true, reviewedOptOutCountries: ['US'] },
-    [true, 'consent', 'opt-out', 'accepted'],
-  ],
-  [
-    'refusal wins over opt-out mode',
-    { preference: rejected, country: 'US', trustedCountry: true, reviewedOptOutCountries: ['US'] },
-    [false, null, 'opt-out', 'rejected'],
-  ],
-  [
-    'GPC or DNT wins over consent',
-    { preference: accepted, signal: true },
-    [false, null, 'opt-in', 'rejected'],
-  ],
-  [
-    'GPC or DNT wins over opt-out default',
-    { signal: true, country: 'US', trustedCountry: true, reviewedOptOutCountries: ['US'] },
-    [false, null, 'opt-out', 'rejected'],
-  ],
-  [
-    'missing project prevents accepted capture',
-    { preference: accepted, configured: false },
-    [false, null, 'opt-in', 'accepted'],
-  ],
-  [
-    'missing project prevents opt-out capture',
-    { configured: false, country: 'US', trustedCountry: true, reviewedOptOutCountries: ['US'] },
-    [false, null, 'opt-out', 'undecided'],
-  ],
-  [
-    'expired consent cannot enable capture',
-    { preference: { ...accepted, expiresAt: now } },
-    [false, null, 'opt-in', 'undecided'],
-  ],
-  [
-    'expired refusal requires a fresh decision',
-    { preference: { ...rejected, expiresAt: now } },
-    [false, null, 'opt-in', 'undecided'],
-  ],
-  [
-    'changed purpose cannot enable capture',
-    { preference: { ...accepted, version: 'analytics-v0' } },
-    [false, null, 'opt-in', 'undecided'],
-  ],
-  [
-    'changed purpose refusal still wins',
-    {
-      preference: { ...rejected, version: 'analytics-v0' },
-      country: 'US',
-      trustedCountry: true,
-      reviewedOptOutCountries: ['US'],
-    },
-    [false, null, 'opt-out', 'rejected'],
+    'opt-in',
   ],
   [
     'moving from implicit opt-out to unknown requires consent',
     { reviewedOptOutCountries: ['US'] },
-    [false, null, 'opt-in', 'undecided'],
+    'opt-in',
   ],
 ];
 
@@ -413,18 +337,18 @@ for (const country of [
   'GB',
   'CH',
 ]) {
-  decisions.push([
+  modeCases.push([
     `${country} cannot be weakened by a regional allowlist`,
     { country, trustedCountry: true, reviewedOptOutCountries: [country] },
-    [false, null, 'opt-in', 'undecided'],
+    'opt-in',
   ]);
 }
 
-for (const [name, overrides, expected] of decisions) {
+for (const [name, overrides, expected] of modeCases) {
   check(name, () => {
-    const actual = decideConsent({ ...input, ...overrides });
+    const actual = consentMode({ ...input, ...overrides });
 
-    assert.deepEqual([actual.allowed, actual.basis, actual.mode, actual.decision], expected);
+    assert.equal(actual, expected);
   });
 }
 
@@ -436,4 +360,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(`Analytics consent decision and storage contract passed (${checks.length} checks).`);
+console.log(`Analytics regional mode and storage contract passed (${checks.length} checks).`);

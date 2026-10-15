@@ -1,6 +1,6 @@
 import { BlockList, isIP } from 'node:net';
 import { POSTHOG_HOST, type AnalyticsConfig } from './config';
-import { decideConsent, parseCountry, REVIEWED_OPT_OUT_COUNTRIES } from './consent';
+import { consentMode, parseCountry, REVIEWED_OPT_OUT_COUNTRIES } from './consent';
 
 // Published Cloudflare proxy networks, checked October 5, 2026:
 // https://www.cloudflare.com/ips/ . New/unlisted peers fail closed.
@@ -57,14 +57,10 @@ export function analyticsConfig(headers: Headers): AnalyticsConfig & { country: 
   const signal = headers.get('sec-gpc') === '1' || headers.get('dnt') === '1';
   const country = trustedCountry(headers);
 
-  const decision = decideConsent({
-    preference: null,
+  const mode = consentMode({
     country,
     trustedCountry: country !== null,
     reviewedOptOutCountries: REVIEWED_OPT_OUT_COUNTRIES,
-    signal,
-    configured,
-    now: Date.now(),
   });
 
   // Country is returned only to make the selected region verifiable. The client
@@ -72,7 +68,7 @@ export function analyticsConfig(headers: Headers): AnalyticsConfig & { country: 
   return {
     token: configured ? token : null,
     host: POSTHOG_HOST,
-    mode: decision.mode,
+    mode,
     signal,
     country,
   };

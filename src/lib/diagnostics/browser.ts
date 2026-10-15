@@ -53,8 +53,7 @@ function currentChoice(current: number, choice: string) {
   return current === generation && acceptedChoice() === choice;
 }
 
-/** @public Used by the startup contract through its CommonJS TypeScript loader. */
-export function stopErrorReports() {
+function stopErrorReports() {
   generation += 1;
   starting = undefined;
   activeChoice = undefined;

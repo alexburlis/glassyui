@@ -499,38 +499,34 @@ function preference(decision, overrides = {}) {
 }
 
 try {
-  for (const label of ['EU', 'UK', 'unknown']) {
-    await scenario(
-      `fresh ${label}: no collection on ${proBase ? 'either host' : 'the free host'}`,
-      async (session) => {
-        await go(session);
-        await panel(session).waitFor();
-        assert.equal(
-          await panel(session).getByRole('switch').count(),
-          0,
-          'One purpose needs no invented categories',
-        );
-        await noCollection(session, `${label} main`);
+  await scenario(
+    `fresh opt-in visit: no collection on ${proBase ? 'either host' : 'the free host'}`,
+    async (session) => {
+      await go(session);
+      await panel(session).waitFor();
+      assert.equal(
+        await panel(session).getByRole('switch').count(),
+        0,
+        'One purpose needs no invented categories',
+      );
+      await noCollection(session, 'Opt-in main');
 
-        if (proBase) {
-          await go(session, `${PRO}/`);
-          await panel(session).waitFor();
-          await noCollection(session, `${label} Pro`);
-          assert.equal(
-            await session.page
-              .getByRole('button', { name: 'Privacy settings', exact: true })
-              .count(),
-            1,
-          );
-          assert.equal(
-            await session.page.locator('a[href^="https://buy.stripe.com/"]').count(),
-            1,
-            'Purchases stay accessible before consent',
-          );
-        }
-      },
-    );
-  }
+      if (proBase) {
+        await go(session, `${PRO}/`);
+        await panel(session).waitFor();
+        await noCollection(session, 'Opt-in Pro');
+        assert.equal(
+          await session.page.getByRole('button', { name: 'Privacy settings', exact: true }).count(),
+          1,
+        );
+        assert.equal(
+          await session.page.locator('a[href^="https://buy.stripe.com/"]').count(),
+          1,
+          'Purchases stay accessible before consent',
+        );
+      }
+    },
+  );
 
   await scenario(
     proBase

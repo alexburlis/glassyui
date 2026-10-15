@@ -64,7 +64,7 @@ try {
     'A root render failure during the consented SDK import must survive initialization.',
   );
   assert.ok(!wires[0].includes('PRIVATE_STARTUP_SENTINEL'));
-  owner.stopErrorReports();
+  assert.ok(owner.chooseErrorReports(true));
   const pending = owner.syncErrorReports();
   owner.chooseErrorReports(false);
   await pending;
