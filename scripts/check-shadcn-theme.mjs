@@ -1981,9 +1981,7 @@ async function themedAssertions(browser, base, fixtureDirectory) {
   });
 
   const reducedPage = await reduced.newPage();
-  await reducedPage.goto(await scenarioUrl(base, plainLight, 'dialog'), {
-    waitUntil: 'networkidle',
-  });
+  await load(reducedPage, await scenarioUrl(base, plainLight, 'dialog'));
   await reducedPage.waitForSelector('[data-slot="dialog-content"]');
 
   const motionOnOpen = await reducedPage.evaluate(
@@ -1991,7 +1989,12 @@ async function themedAssertions(browser, base, fixtureDirectory) {
   );
 
   await reducedPage.keyboard.press('Escape');
-  await reducedPage.waitForTimeout(120);
+
+  const motionOnClose = await reducedPage.evaluate(
+    () => document.getAnimations().filter((animation) => animation.playState === 'running').length,
+  );
+
+  await reducedPage.waitForSelector('[data-slot="dialog-content"]', { state: 'detached' });
 
   const dialogGone = await reducedPage.evaluate(
     () => document.querySelector('[data-slot="dialog-content"]') === null,
@@ -2006,8 +2009,8 @@ async function themedAssertions(browser, base, fixtureDirectory) {
   const foldOpen = await reducedPage.getByText('No. This theme is CSS only.').isVisible();
   check(
     'reduced motion: dialogs and accordions jump to their end states',
-    motionOnOpen === 0 && dialogGone && motionOnFold === 0 && foldOpen,
-    { motionOnOpen, dialogGone, motionOnFold, foldOpen },
+    motionOnOpen === 0 && motionOnClose === 0 && dialogGone && motionOnFold === 0 && foldOpen,
+    { motionOnOpen, motionOnClose, dialogGone, motionOnFold, foldOpen },
   );
   await reduced.close();
 

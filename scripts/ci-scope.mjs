@@ -22,13 +22,27 @@ const changedFiles = execFileSync(
   .split('\0')
   .filter(Boolean);
 
-const scope = { visual: false, native: false, theme: false, dropins: false };
+const scope = { site: false, visual: false, native: false, theme: false, dropins: false };
 
 const documentation =
   /^(?:README|CONTRIBUTING|AGENTS|SECURITY|CODE_OF_CONDUCT|THIRD_PARTY_NOTICES)\.md$|^LICENSE$|^docs\/.*\.md$|^\.github\/ISSUE_TEMPLATE\//;
 
 for (const file of changedFiles) {
   if (documentation.test(file)) continue;
+
+  scope.site = true;
+
+  // These paths are covered by the static, served and consent/error base checks.
+  if (
+    /^(?:src\/lib\/(?:analytics|diagnostics)\/|src\/components\/site\/analytics-consent\.tsx$|src\/app\/api\/analytics-config\/route\.ts$)/.test(
+      file,
+    ) ||
+    /^scripts\/(?:check-(?:agent-discovery|analytics-consent|error-reports|generated-registry|registry)|smoke-(?:docs-routes|launch|pro-links|registry-install|registry-routes)|test-(?:analytics-consent|braces-security|build-upload|error-startup|server-error-reports))\.mjs$/.test(
+      file,
+    )
+  ) {
+    continue;
+  }
 
   if (
     /^(?:registry\/glassyui-native\/|public\/r\/native\/|fixtures\/expo-consumer\/)/.test(file) ||
@@ -80,9 +94,11 @@ for (const file of changedFiles) {
   scope.visual = scope.native = scope.theme = scope.dropins = true;
 }
 
-if (event === 'workflow_dispatch') {
-  scope.visual = scope.native = scope.theme = scope.dropins = true;
-} else if (event === 'push') {
+if (event === 'workflow_dispatch' || changedFiles.length === 0) {
+  scope.site = scope.visual = scope.native = scope.theme = scope.dropins = true;
+}
+
+if (event === 'push') {
   // Protected main accepts only a verified PR or exact locally verified candidate.
   // Rerun its cheap final-source checks without repeating pre-merge consumers.
   scope.visual = scope.native = scope.theme = scope.dropins = false;
