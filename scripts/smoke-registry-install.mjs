@@ -486,7 +486,12 @@ async function captureDisplayedExamples() {
 
     if (installOnly) {
       // These are the real served examples, compiled in the clean consumer below.
-      const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(30_000),
+        // Synchronous CLI installs below can outlive the server's idle socket timeout.
+        headers: { Connection: 'close' },
+      });
+
       assert.equal(response.status, 200, `${name} documentation must resolve`);
       const { JSDOM } = await import('jsdom');
       const dom = new JSDOM(await response.text());

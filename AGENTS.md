@@ -175,6 +175,10 @@
 
 - Copy: call the library, its look and its templates "Glassy UI". For the iOS 26
   material write "the system's own glass". Preserve literal API names.
+- Keep competing component-library names, links and comparisons out of owned
+  copy, docs, source comments, examples, registry payloads and commit messages.
+  Preserve package names needed for installation or compatibility and required
+  upstream license notices.
 
 ## Testing guidelines
 

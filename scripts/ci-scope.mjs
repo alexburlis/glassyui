@@ -32,12 +32,17 @@ for (const file of changedFiles) {
 
   scope.site = true;
 
+  if (file === 'scripts/smoke-registry-install.mjs') {
+    scope.visual = true;
+    continue;
+  }
+
   // These paths are covered by the static, served and consent/error base checks.
   if (
     /^(?:src\/lib\/(?:analytics|diagnostics)\/|src\/components\/site\/analytics-consent\.tsx$|src\/app\/api\/analytics-config\/route\.ts$)/.test(
       file,
     ) ||
-    /^scripts\/(?:check-(?:agent-discovery|analytics-consent|error-reports|generated-registry|registry)|smoke-(?:docs-routes|launch|pro-links|registry-install|registry-routes)|test-(?:analytics-consent|braces-security|build-upload|error-startup|server-error-reports))\.mjs$/.test(
+    /^scripts\/(?:check-(?:agent-discovery|analytics-consent|error-reports|generated-registry|registry)|smoke-(?:docs-routes|launch|pro-links|registry-routes)|test-(?:analytics-consent|braces-security|build-upload|error-startup|server-error-reports))\.mjs$/.test(
       file,
     )
   ) {

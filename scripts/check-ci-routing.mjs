@@ -89,7 +89,6 @@ try {
     'scripts/smoke-docs-routes.mjs',
     'scripts/smoke-launch.mjs',
     'scripts/smoke-pro-links.mjs',
-    'scripts/smoke-registry-install.mjs',
     'scripts/smoke-registry-routes.mjs',
   ]) {
     check(`Base-check input: ${file}`, file, {});
@@ -101,6 +100,9 @@ try {
     {},
   );
   check('App route behavior', 'src/app/page.tsx', { visual: true });
+  check('Source-copy install proof changes', 'scripts/smoke-registry-install.mjs', {
+    visual: true,
+  });
   check('Visual proof changes', 'scripts/check-refraction-visuals.mjs', {
     visual: true,
     native: true,
