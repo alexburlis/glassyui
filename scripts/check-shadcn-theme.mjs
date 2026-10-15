@@ -1,7 +1,7 @@
 // Proves the `glassy-theme` registry item on two stock shadcn/ui apps, and on
 // the new-york app in four of shadcn's colour themes.
 //
-//   node scripts/check-shadcn-theme.mjs [artifact-dir] [--baseline-only]
+//   node scripts/check-shadcn-theme.mjs [artifact-dir] [--baseline-only] [--install-only]
 //     [--fixture new-york|base-nova|new-york-blue|…] [--guide-images <dir>]
 //
 // For each fixture in fixtures/shadcn-theme-consumer: copy it to a temporary
@@ -14,7 +14,8 @@
 // which draw no lens, get none of it. Needs Playwright's WebKit and Firefox
 // (`pnpm exec playwright install webkit firefox`). Writes report.json,
 // screenshots and a Playwright trace per fixture (default .artifacts/shadcn-theme)
-// and exits 1 if any assertion fails.
+// and exits 1 if any assertion fails. --install-only retains CLI byte, dependency,
+// API and production-build checks, without browser setup or rendered assertions.
 import fs from 'node:fs';
 import http from 'node:http';
 import net from 'node:net';
@@ -61,9 +62,14 @@ const artifactDirectory = path.resolve(
 
 const baselineOnly = flag('--baseline-only');
 
+const installOnly = flag('--install-only');
+
 const guideImages = option('--guide-images') ? path.resolve(option('--guide-images')) : null;
 
 const onlyFixture = option('--fixture');
+
+if (installOnly && (baselineOnly || guideImages))
+  throw new Error('--install-only cannot be combined with --baseline-only or --guide-images');
 
 // shadcn's own colour themes, applied to the new-york app: blue puts a dark label
 // on its dark-mode buttons and yellow on its light ones; violet and orange keep
@@ -144,7 +150,12 @@ const MENU_LABEL_SELECTORS = [
   '[data-slot="dropdown-menu-shortcut"]',
 ];
 
-const report = { status: 'pass', startedAt: new Date().toISOString(), fixtures: {} };
+const report = {
+  status: 'pass',
+  mode: installOnly ? 'install-only' : 'full',
+  startedAt: new Date().toISOString(),
+  fixtures: {},
+};
 
 let current;
 
@@ -2809,22 +2820,24 @@ const repositoryCli = shadcnBin(path.resolve(path.dirname(require.resolve('shadc
 const readPayload = (name) =>
   JSON.parse(fs.readFileSync(path.join(root, 'public', 'r', `${name}.json`), 'utf8'));
 
-const browser = await chromium.launch({
-  args: ['--disable-updater-scheduler'],
-  channel: 'chrome',
-  headless: true,
-});
+const browser = installOnly
+  ? null
+  : await chromium.launch({
+      args: ['--disable-updater-scheduler'],
+      channel: 'chrome',
+      headless: true,
+    });
 
-report.chrome = browser.version();
+if (browser) report.chrome = browser.version();
 
-const frostEngines = baselineOnly ? [] : [await webkit.launch(), await firefox.launch()];
+const frostEngines =
+  baselineOnly || installOnly ? [] : [await webkit.launch(), await firefox.launch()];
 
-report.engines = {
-  chromium: report.chrome,
-  ...Object.fromEntries(
-    frostEngines.map((engine) => [engine.browserType().name(), engine.version()]),
-  ),
-};
+report.engines = Object.fromEntries(
+  frostEngines.map((engine) => [engine.browserType().name(), engine.version()]),
+);
+
+if (browser) report.engines.chromium = report.chrome;
 
 try {
   for (const fixture of FIXTURES) {
@@ -2884,17 +2897,19 @@ try {
         );
       }
 
-      run('pnpm', ['exec', 'next', 'build'], temporaryRoot);
-      app = await startApp(temporaryRoot);
-      console.log('  baseline');
-      current.baseline = await capture(
-        browser,
-        app.url,
-        'baseline',
-        path.join(fixtureDirectory, 'baseline'),
-      );
-      await baselineAssertions(browser, app.url);
-      await exportGuideImages(browser, app.url, 'stock');
+      if (!installOnly) {
+        run('pnpm', ['exec', 'next', 'build'], temporaryRoot);
+        app = await startApp(temporaryRoot);
+        console.log('  baseline');
+        current.baseline = await capture(
+          browser,
+          app.url,
+          'baseline',
+          path.join(fixtureDirectory, 'baseline'),
+        );
+        await baselineAssertions(browser, app.url);
+        await exportGuideImages(browser, app.url, 'stock');
+      }
 
       // The stock files and page the drop-ins are held to.
       const set = dropins ? dropinSetFor(fixture) : null;
@@ -2914,7 +2929,8 @@ try {
             { exports: stockExports(source), client: hasClientDirective(source) },
           ]),
         );
-        current.stockAttributes = await collectDataAttributes(browser, app.url);
+
+        if (!installOnly) current.stockAttributes = await collectDataAttributes(browser, app.url);
       }
 
       await stopApp(app);
@@ -3065,6 +3081,12 @@ try {
       }
 
       if (set) check('the drop-ins keep the stock API: the parity gate type-checks', true, 'built');
+
+      if (installOnly) {
+        check('the installed app builds and type-checks', true, 'built');
+        continue;
+      }
+
       app = await startApp(temporaryRoot);
       console.log('  themed');
       current.themed = await capture(
@@ -3105,7 +3127,7 @@ try {
     }
   }
 } finally {
-  await browser.close();
+  await browser?.close();
 
   for (const engine of frostEngines) await engine.close();
 

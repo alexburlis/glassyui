@@ -109,14 +109,24 @@ const nextPaint = (page) =>
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
   );
 
-const baseUrl = process.argv[2];
+// --install-only keeps real CLI, dependency, source and production-build contracts;
+// the default also exercises the installed consumer in all three browsers.
+const argv = process.argv.slice(2);
 
-const artifactDirectory = path.resolve(process.argv[3] ?? '.artifacts/prelaunch/registry-install');
+const installOnly = argv.includes('--install-only');
+
+const positional = argv.filter((argument) => argument !== '--install-only');
+
+const baseUrl = positional[0];
+
+const artifactDirectory = path.resolve(positional[1] ?? '.artifacts/prelaunch/registry-install');
 
 fs.mkdirSync(artifactDirectory, { recursive: true });
 
 if (!baseUrl) {
-  console.error('Usage: node scripts/smoke-registry-install.mjs http://127.0.0.1:3100');
+  console.error(
+    'Usage: node scripts/smoke-registry-install.mjs <base-url> [artifact-dir] [--install-only]',
+  );
   process.exit(1);
 }
 
@@ -283,6 +293,7 @@ if (!temporaryRoot.startsWith(expectedPrefix))
 
 const report = {
   baseUrl,
+  mode: installOnly ? 'install-only' : 'full',
   shadcn: shadcnManifest.version,
   status: 'running',
   scratch: {
@@ -455,28 +466,49 @@ async function startConsumer() {
 }
 
 async function captureDisplayedExamples() {
-  browser = await chromium.launch({
-    args: ['--disable-updater-scheduler'],
-    channel: 'chrome',
-    headless: true,
-  });
-  const page = await browser.newPage();
+  let page;
+
+  if (!installOnly) {
+    browser = await chromium.launch({
+      args: ['--disable-updater-scheduler'],
+      channel: 'chrome',
+      headless: true,
+    });
+    page = await browser.newPage();
+  }
+
   const directory = path.join(temporaryRoot, 'components', 'examples');
   fs.mkdirSync(directory, { recursive: true });
 
   for (const name of ['scene', 'lens', 'dock']) {
-    const response = await page.goto(`${baseUrl.replace(/\/$/, '')}/components/glass-${name}`, {
-      waitUntil: 'networkidle',
-    });
+    const url = `${baseUrl.replace(/\/$/, '')}/components/glass-${name}`;
+    let source;
 
-    assert.equal(response.status(), 200, `${name} documentation must resolve`);
-    const source = await page.locator('#usage .docs-code-block pre code').first().innerText();
+    if (installOnly) {
+      // These are the real served examples, compiled in the clean consumer below.
+      const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+      assert.equal(response.status, 200, `${name} documentation must resolve`);
+      const { JSDOM } = await import('jsdom');
+      const dom = new JSDOM(await response.text());
+
+      try {
+        source = dom.window.document.querySelector('#usage .docs-code-block pre code')?.textContent;
+        assert.ok(source, `${name} documentation must contain its usage example`);
+      } finally {
+        dom.window.close();
+      }
+    } else {
+      const response = await page.goto(url, { waitUntil: 'networkidle' });
+      assert.equal(response.status(), 200, `${name} documentation must resolve`);
+      source = await page.locator('#usage .docs-code-block pre code').first().innerText();
+    }
+
     assert.match(source, /@\/components\/glassyui\//, `${name} example needs installed imports`);
     fs.writeFileSync(path.join(directory, `${name}-example.tsx`), source);
     fs.writeFileSync(path.join(artifactDirectory, `${name}-example.tsx`), source);
   }
 
-  await browser.close();
+  await browser?.close();
   browser = undefined;
 }
 
@@ -734,13 +766,18 @@ try {
     `built consumer CSS is missing the installed liquid.css sentinel ${liquidCssSentinel}`,
   );
 
-  const fixtureUrl = await startConsumer();
+  report.build = 'passed';
+  const fixtureUrl = installOnly ? null : await startConsumer();
 
-  for (const [browserName, browserType] of [
-    ['Chromium', chromium],
-    ['Firefox', firefox],
-    ['WebKit', webkit],
-  ]) {
+  const browserTypes = installOnly
+    ? []
+    : [
+        ['Chromium', chromium],
+        ['Firefox', firefox],
+        ['WebKit', webkit],
+      ];
+
+  for (const [browserName, browserType] of browserTypes) {
     browser = await browserType.launch(
       browserName === 'Chromium'
         ? { args: ['--disable-updater-scheduler'], channel: 'chrome', headless: true }
@@ -1101,7 +1138,9 @@ try {
 
   report.status = 'passed';
   console.log(
-    `Registry install smoke passed with verified shadcn CLI ${shadcnManifest.version}, Tailwind output, consumer overrides, preference guards, and rendered dialog and menu-to-sheet flow in Chromium, Firefox, and WebKit (${shadcnBin}).`,
+    installOnly
+      ? `Registry install-only passed with shadcn ${shadcnManifest.version}, exact source/dependency closures, served examples, Tailwind output and production builds.`
+      : `Registry install smoke passed with verified shadcn CLI ${shadcnManifest.version}, Tailwind output, consumer overrides, preference guards, and rendered dialog and menu-to-sheet flow in Chromium, Firefox, and WebKit (${shadcnBin}).`,
   );
 } catch (error) {
   report.status = 'failed';
