@@ -32,20 +32,20 @@ retained `link-previews/` JavaScript uses the same root lint rules and
 formatter.
 
 The production build type-checks the root tsconfig. Native sources, stock
-fixtures and drop-ins use their clean consumer owners below. CI selects them
+fixtures and drop-ins use the clean consumer checks below. CI selects them
 automatically when their source, fixtures, generators or shared inputs change.
-Both stock shadcn styles run; retain the full palette checks for styling
+CI checks both stock shadcn styles; retain the full palette checks for styling
 semantics and release work.
 
-Every CI run checks formatting, generated registries, lint/security/privacy,
-build/types, the clean three-browser web consumer, served routes/agent
-HTTP/launch assets, platform choice, public Pro links, intercepted consent and
-development interactions. Relevant PR changes also run the full release
-UI/accessibility, refraction and material matrix. Documentation-only PRs skip
-that separate matrix. Common toolchain/CI inputs and unclassified files select
-all owners; deleted and renamed paths still select their owners.
-`node scripts/check-ci-routing.mjs` exercises those decisions through real Git
-history and rejects failed gate inputs.
+Every CI run checks formatting, generated registries, lint, security, privacy,
+builds and types. It also checks the clean three-browser web consumer, served
+routes, agent HTTP, launch assets, platform choice, public Pro links,
+intercepted consent and development interactions. Relevant PR changes also run
+the full release UI/accessibility, refraction and material matrix.
+Documentation-only PRs skip that separate matrix. Common toolchain/CI inputs and
+unclassified files select all owners; deleted and renamed paths still select
+their owners. `node scripts/check-ci-routing.mjs` exercises those decisions
+through real Git history and rejects failed gate inputs.
 
 `release-gate` is the single required result: all selected owners must pass.
 Newer commits cancel older runs of the same PR. Manual dispatch runs all owners.
@@ -62,28 +62,29 @@ also covers the docs page's lazy command demo.
 
 ### Development checks
 
-The native/catalog/Expo, theme/lens/generator/fixture and drop-in/engine checks
-run automatically for affected PRs. Run each locally with a separate artifact
-directory and inspect its report when developing the corresponding source.
+CI runs the relevant native registry, Expo, theme, lens, generator, fixture,
+drop-in and engine checks for affected PRs. Run each locally with a separate
+artifact directory and inspect its report when developing the corresponding
+source.
 
 - **shadcn theme:** after changing `registry/glassyui/themes/glassy-theme.css`
   or its lens in `scripts/shadcn-theme-lens.mjs`, the generator
   `scripts/build-shadcn-theme.mjs` or stock fixtures, run `pnpm theme:build`,
   then `pnpm check:shadcn-theme [artifact-directory] --fixture new-york` and
   again with `--fixture base-nova`. Use the full palette set (omit `--fixture`)
-  for styling semantics or generator logic changes. It installs the theme into
-  clean copies of the stock fixtures, checks it in Chrome, including that its
-  lens matches Glassy UI's own, and checks that WebKit and Firefox keep the
-  frost without the bend.
+  for styling semantics or generator logic changes. The check installs the theme
+  into clean copies of the stock fixtures and checks it in Chrome, including
+  that its lens matches Glassy UI's own. It also checks that WebKit and Firefox
+  keep the frost without the bend.
 - **shadcn drop-ins:** after changing `registry/glassyui-shadcn/` (the drop-ins
   and `glassy-ui.css`, which draws Glassy UI's look) or
   `registry/glassyui/glassy-engine.tsx`, run `pnpm theme:build`, then
   `pnpm check:shadcn-dropins [artifact-directory] --fixture new-york` and again
   with `--fixture base-nova`. Use all palettes for styling semantics or
-  generator logic changes. It installs each style's set into the same stock apps
-  and checks that the drop-ins keep shadcn/ui's API and markup, take Glassy UI's
-  look and sizes, keep rendered contrast, and run Glassy UI's measured lens in
-  Chrome.
+  generator logic changes. The check installs each style's set into the same
+  stock apps and checks that the drop-ins keep shadcn/ui's API and markup, use
+  Glassy UI's look and sizes, preserve rendered contrast, and run Glassy UI's
+  measured lens in Chrome.
 - **Platform choice:**
   `pnpm check:platform-switch <base-url> [artifact-directory]` checks the
   platform choice across component pages.

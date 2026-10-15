@@ -12,21 +12,10 @@ export type ConsentPreference = {
   expiresAt: number;
 };
 
-type ConsentDecision = {
-  allowed: boolean;
-  basis: 'consent' | 'legitimate_interest' | null;
-  mode: 'opt-in' | 'opt-out';
-  decision: 'undecided' | 'accepted' | 'rejected';
-};
-
-type ConsentInput = {
-  preference: ConsentPreference | null;
+type ConsentRegion = {
   country: string | null;
   trustedCountry: boolean;
   reviewedOptOutCountries: readonly string[];
-  signal: boolean;
-  configured: boolean;
-  now: number;
 };
 
 const PRIOR_CONSENT_COUNTRIES = new Set(
@@ -84,27 +73,13 @@ export function parseConsent(raw: string | null, now = Date.now()): ConsentPrefe
   }
 }
 
-export function decideConsent(input: ConsentInput): ConsentDecision {
+export function consentMode(input: ConsentRegion): 'opt-in' | 'opt-out' {
   const country = parseCountry(input.country);
 
-  const mode =
-    input.trustedCountry &&
+  return input.trustedCountry &&
     country !== null &&
     !PRIOR_CONSENT_COUNTRIES.has(country) &&
     input.reviewedOptOutCountries.includes(country)
-      ? 'opt-out'
-      : 'opt-in';
-
-  const preference = parseConsent(JSON.stringify(input.preference), input.now);
-  const decision = input.signal ? 'rejected' : (preference?.decision ?? 'undecided');
-
-  const allowed =
-    input.configured && decision !== 'rejected' && (decision === 'accepted' || mode === 'opt-out');
-
-  return {
-    allowed,
-    basis: allowed ? (decision === 'accepted' ? 'consent' : 'legitimate_interest') : null,
-    mode,
-    decision,
-  };
+    ? 'opt-out'
+    : 'opt-in';
 }

@@ -24,8 +24,8 @@ styles and dependencies into your app; there is no Glassy UI runtime package.
 - [Glass Header](https://glassyui.com/components/glass-header): a floating glass
   capsule with navigation and a mobile menu.
 
-The Scene, Lens and Dock pages show the same example source they render. Their
-example install commands include every primitive used by the composition.
+The Scene, Lens and Dock pages show the source for their live examples. Each
+example's install command includes every primitive it uses.
 
 ## Install
 
@@ -156,9 +156,9 @@ pnpm dlx shadcn@4.14.1 add @glassyui/glass-button
 
 ## Direct source-copy alternative
 
-For direct use of the reusable source tree in this repository, start from a
-React 19+ and Tailwind 4 app. The registry path above is recommended because it
-resolves the file closure automatically.
+To copy source directly from this repository, start with a React 19+ and
+Tailwind 4 app. The registry path above is recommended because it resolves all
+required files automatically.
 
 1. Install only the package dependencies required by the components you copy.
    The complete component set uses:
