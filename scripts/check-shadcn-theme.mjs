@@ -899,6 +899,18 @@ async function captureLabel(page, element) {
 
     if (clip.width < 1 || clip.height < 1) return { reason: 'off screen' };
 
+    const regions = await element.evaluate((node, origin) => {
+      const range = document.createRange();
+      range.selectNodeContents(node);
+
+      return [...range.getClientRects()].map((rect) => ({
+        left: rect.left - origin.x,
+        top: rect.top - origin.y,
+        right: rect.right - origin.x,
+        bottom: rect.bottom - origin.y,
+      }));
+    }, clip);
+
     const shown = await page.screenshot({ clip });
     await element.evaluate((node) => {
       node.dataset.contrastHide = 'true';
@@ -912,7 +924,7 @@ async function captureLabel(page, element) {
     const after = await readRect();
 
     if (Math.abs(after.x - before.x) < 0.5 && Math.abs(after.y - before.y) < 0.5) {
-      return { shown, background };
+      return { shown, background, regions, clip };
     }
   }
 
@@ -968,7 +980,7 @@ async function measureLabelContrast(page, selectors, directory) {
 
   for (const target of targets) {
     const element = page.locator(`[data-contrast-target="${target.index}"]`);
-    const { shown, background, reason } = await captureLabel(page, element);
+    const { shown, background, regions, clip, reason } = await captureLabel(page, element);
 
     if (reason) {
       results.push({
@@ -985,7 +997,7 @@ async function measureLabelContrast(page, selectors, directory) {
     // pixel, and the background one pixel around it, is compared with the
     // text colour; rims and fills elsewhere in the label's box do not count.
     const ratio = await page.evaluate(
-      async ({ shownPng, backgroundPng, color }) => {
+      async ({ shownPng, backgroundPng, color, regions, clip }) => {
         const decode = async (source) => {
           const image = new Image();
           image.src = source;
@@ -1024,6 +1036,17 @@ async function measureLabelContrast(page, selectors, directory) {
         const glyph = new Uint8Array(width * height);
 
         for (let pixel = 0; pixel < width * height; pixel += 1) {
+          const x = ((pixel % width) + 0.5) * (clip.width / width);
+          const y = (Math.floor(pixel / width) + 0.5) * (clip.height / height);
+
+          // A separately rasterized rim can change between captures. It is not text.
+          if (
+            !regions.some(
+              (rect) => x >= rect.left && x < rect.right && y >= rect.top && y < rect.bottom,
+            )
+          )
+            continue;
+
           const index = pixel * 4;
 
           if (Math.abs(luminance(withText.data, index) - luminance(behind.data, index)) > 0.03)
@@ -1073,6 +1096,8 @@ async function measureLabelContrast(page, selectors, directory) {
         shownPng: `data:image/png;base64,${shown.toString('base64')}`,
         backgroundPng: `data:image/png;base64,${background.toString('base64')}`,
         color: target.color,
+        regions,
+        clip,
       },
     );
 
