@@ -33,10 +33,19 @@ Start with a React 19+ and Tailwind CSS 4 app and initialize shadcn if it does
 not already have a `components.json`:
 
 ```bash
-pnpm dlx shadcn@4.14.1 init
+npx shadcn@4.14.1 init
 ```
 
-Add the Glassy UI namespace:
+Install only the component you need, directly from its complete item URL:
+
+```bash
+npx shadcn@4.14.1 add https://glassyui.com/r/glass-button.json
+```
+
+Each [component page](https://glassyui.com/components) offers npm, pnpm, modern
+Yarn and bun commands, plus Manual installation with every required file. Direct
+URL commands need no registry mapping. Existing namespace commands still work
+with this optional mapping in `components.json`:
 
 ```json
 {
@@ -46,14 +55,8 @@ Add the Glassy UI namespace:
 }
 ```
 
-Then install only the component you need:
-
-```bash
-pnpm dlx shadcn@4.14.1 add @glassyui/glass-button
-```
-
-Namespaced registry dependencies are resolved transitively. The installed
-provider module imports the shared CSS, so registry consumers do not need a
+Each published item includes its shared files and package dependencies. The
+installed provider module imports the shared CSS, so consumers do not need a
 separate stylesheet copy or a provider wrapper just to render a component. Use
 `GlassProvider` when the app needs synchronized theme, quality, motion, or
 transparency preferences.
@@ -89,30 +92,26 @@ web blur what lies behind with `expo-blur`. Scene, lens, header, tooltip,
 keyboard keys, breadcrumb, pagination, command menu, laptop and phone mockups
 are web-only.
 
-`shadcn init` does not set up Expo apps, so add a `components.json` with the
-namespace (the [Expo guide](https://glassyui.com/guides/expo) has the whole
-file), then add a component and match its packages to your SDK.
+`shadcn init` does not set up Expo apps. Keep an existing `components.json`, or
+add the [Expo guide's configuration](https://glassyui.com/guides/expo), with
+`cssVariables` enabled. Then add a component and match its packages to your SDK.
 
 Keep an existing `@/*` TypeScript path mapping, or map it to `./*` for files at
 the app root (`./src/*` for a `src` app).
 
-```json
-{
-  "registries": {
-    "@glassyui-native": "https://glassyui.com/r/native/{name}.json"
-  }
-}
-```
-
 ```bash
-npx shadcn@4.14.1 add @glassyui-native/glass-button
-npx expo install --fix
+npx shadcn@4.14.1 add https://glassyui.com/r/native/glass-button.json && npx expo install --fix
 ```
 
 Every component page with a React Native version has a React / React Native
 switch for its install command and usage, and
 [glassyui.com/mobile](https://glassyui.com/mobile) shows the same app screen on
 iOS, Android and the web.
+
+For Manual installation, use `npx expo install` for the listed packages and copy
+every file from the complete item. Rebuild a development build after adding
+native packages. The Expo guide also documents optional `@glassyui-native`
+shorthand for existing configurations.
 
 Android blurs only what sits inside a `GlassBackdrop`; put the content behind
 your glass in its `backdrop`. The React Native source lives in

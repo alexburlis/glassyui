@@ -5,7 +5,11 @@ export const expoComponentsJson = `{
   "rsc": false,
   "tsx": true,
   "tailwind": { "config": "", "css": "", "baseColor": "neutral", "cssVariables": true },
-  "aliases": { "components": "@/components", "utils": "@/lib/utils" },
+  "aliases": { "components": "@/components", "utils": "@/lib/utils" }
+}`;
+
+/** Optional shorthand for apps that already use registry namespaces. */
+export const expoRegistryMapping = `{
   "registries": {
     "@glassyui-native": "https://glassyui.com/r/native/{name}.json"
   }

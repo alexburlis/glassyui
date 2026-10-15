@@ -55,11 +55,11 @@ const checks = [
     ['glass-phone-duo', 'Glass Phone Duo'],
   ].map(([id, name]) => ({
     path: `/components/${id}`,
-    markers: [name, 'Installation', 'Usage', 'API', `@glassyui/${id}`],
+    markers: [name, 'Installation', 'Usage', 'API', `/r/${id}.json`],
   })),
   {
     path: '/mobile',
-    markers: ['Glassy UI, in your app.', '@glassyui-native/glass-button', '/guides/expo'],
+    markers: ['Glassy UI, in your app.', '/r/native/glass-button.json', '/guides/expo'],
   },
   {
     path: '/guides/expo',
@@ -80,7 +80,7 @@ const checks = [
     path: `/components/${item.name}`,
     markers: [
       nativeOnlyItems.includes(item.name) ? `${item.title} usage` : 'React Native usage',
-      `@glassyui-native/${item.name}`,
+      `/r/native/${item.name}.json`,
     ],
   })),
 ];

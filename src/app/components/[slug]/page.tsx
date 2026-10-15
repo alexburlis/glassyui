@@ -12,7 +12,6 @@ import {
 } from '@/components/docs/component-docs-data';
 import { DocsShell } from '@/components/docs/docs-shell';
 import { PlatformPane, PlatformSwitch } from '@/components/docs/platform-switch';
-import { CopyChip } from '@/components/site/copy-chip';
 import { JsonLd } from '@/components/site/json-ld';
 import { getLaunchExampleSource } from '@/lib/launch-example-source';
 import { getNativeUsage } from '@/lib/native-usage-source';
@@ -20,6 +19,11 @@ import { MOBILE_CARD, shareCard, shareMetadata } from '@/lib/share';
 import { SITE_URL, sourceUrl } from '@/lib/site-links';
 import { getNativeComponentDoc, nativeComponentDocs } from '@/lib/native-component-docs';
 import { NativeComponentDoc } from '@/components/docs/native-component-doc';
+import {
+  ComponentInstallation,
+  InstallCommandBlock,
+} from '@/components/docs/component-installation';
+import { getComponentInstallation } from '@/lib/component-installation-data';
 
 /** The React version alone, or both versions behind the page's platform switch. */
 function ByPlatform({ native, react }: { native: ReactNode; react: ReactNode }) {
@@ -30,25 +34,6 @@ function ByPlatform({ native, react }: { native: ReactNode; react: ReactNode }) 
       <PlatformPane platform="react">{react}</PlatformPane>
       <PlatformPane platform="react-native">{native}</PlatformPane>
     </>
-  );
-}
-
-function RegistryFactList({ label, values }: { label: string; values: string[] }) {
-  return (
-    <div>
-      <h4>{label}</h4>
-      {values.length ? (
-        <ul>
-          {values.map((value) => (
-            <li key={value}>
-              <code>{value}</code>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>None declared.</p>
-      )}
-    </div>
   );
 }
 
@@ -167,10 +152,6 @@ export default async function ComponentPage({ params }: ComponentPageProps) {
             native={
               native ? (
                 <>
-                  <CopyChip
-                    command={native.install}
-                    label={`Copy the ${component.name} React Native install command`}
-                  />
                   <div className="docs-page-links">
                     <a href={sourceUrl(`registry/glassyui-native/${component.registryItem}.tsx`)}>
                       View source on GitHub
@@ -183,10 +164,6 @@ export default async function ComponentPage({ params }: ComponentPageProps) {
             }
             react={
               <>
-                <CopyChip
-                  command={component.install}
-                  label={`Copy the ${component.name} install command`}
-                />
                 <div className="docs-page-links">
                   <a href={sourceUrl(`registry/glassyui/${component.id}.tsx`)}>
                     View source on GitHub
@@ -213,89 +190,13 @@ export default async function ComponentPage({ params }: ComponentPageProps) {
           ) : null}
         </section>
 
-        <section className="docs-section" id="installation">
-          <h2>Installation</h2>
-          <ByPlatform
-            native={
-              native ? (
-                <>
-                  <p>
-                    First add the <code>@glassyui-native</code> mapping to{' '}
-                    <code>components.json</code> as shown in the{' '}
-                    <Link href="/guides/expo">Expo guide</Link>. Then add the component and match
-                    its packages to your Expo SDK:
-                  </p>
-                  <CopyCodeBlock
-                    code={native.install}
-                    label={`Install ${component.name} for React Native`}
-                    language="shell"
-                  />
-                </>
-              ) : null
-            }
-            react={
-              <>
-                <p>
-                  Use React 19+ and Tailwind CSS 4. Configure the <code>@glassyui</code> mapping and
-                  your glass theme as shown in{' '}
-                  <Link href="/docs#installation">Getting Started</Link>. Then run the pinned item
-                  command:
-                </p>
-                <CopyCodeBlock
-                  code={component.install}
-                  label={`Install ${component.name}`}
-                  language="shell"
-                />
-
-                <details className="docs-files">
-                  <summary>
-                    What this installs
-                    <span>
-                      {component.installedFiles.length}{' '}
-                      {component.installedFiles.length === 1 ? 'file' : 'files'}
-                      {component.installedDependencies.length
-                        ? `, ${component.installedDependencies.length} ${
-                            component.installedDependencies.length === 1 ? 'package' : 'packages'
-                          }`
-                        : ''}
-                    </span>
-                  </summary>
-                  <div className="docs-registry-facts">
-                    <div>
-                      <h3>Direct registry declarations</h3>
-                      <p>
-                        These values belong to <code>@glassyui/{component.registryItem}</code>{' '}
-                        itself in <code>registry.json</code>.
-                      </p>
-                      <RegistryFactList
-                        label="Package dependencies"
-                        values={component.dependencies}
-                      />
-                      <RegistryFactList
-                        label="Registry dependencies"
-                        values={component.registryDependencies}
-                      />
-                      <RegistryFactList label="File targets" values={component.directFiles} />
-                    </div>
-
-                    <div>
-                      <h3>Complete installed closure</h3>
-                      <p>
-                        This follows every namespaced registry dependency recursively and
-                        de-duplicates the packages and target files installed with this item.
-                      </p>
-                      <RegistryFactList
-                        label="Package dependencies"
-                        values={component.installedDependencies}
-                      />
-                      <RegistryFactList label="Installed files" values={component.installedFiles} />
-                    </div>
-                  </div>
-                </details>
-              </>
-            }
-          />
-        </section>
+        <ComponentInstallation
+          key={component.id}
+          react={getComponentInstallation(component.registryItem, 'react')}
+          native={
+            native ? getComponentInstallation(component.registryItem, 'react-native') : undefined
+          }
+        />
 
         <section className="docs-section" id="usage">
           <h2>Usage</h2>
@@ -310,10 +211,10 @@ export default async function ComponentPage({ params }: ComponentPageProps) {
                         This example also uses {native.alsoUses.join(' and ')}. Install everything
                         it uses:
                       </p>
-                      <CopyCodeBlock
-                        code={native.example}
+                      <InstallCommandBlock
+                        items={native.items}
+                        platform="react-native"
                         label="Install example components"
-                        language="shell"
                       />
                     </>
                   ) : null}
@@ -328,11 +229,11 @@ export default async function ComponentPage({ params }: ComponentPageProps) {
                     above, including its artwork.
                   </p>
                   <CopyCodeBlock code={example.source} label="Usage" />
-                  <p>After configuring the registry, install every component this example uses:</p>
-                  <CopyCodeBlock
-                    code={example.install}
+                  <p>Install every component this example uses:</p>
+                  <InstallCommandBlock
+                    items={example.items}
+                    platform="react"
                     label="Install example components"
-                    language="shell"
                   />
                 </>
               ) : (

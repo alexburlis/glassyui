@@ -188,6 +188,75 @@ for (const item of registry.items) {
   }
 }
 
+// Validate complete payload content independently from the publication transform.
+const publishedCatalogue = JSON.parse(
+  fs.readFileSync(path.join(publishedDirectory, 'registry.json'), 'utf8'),
+);
+
+assert.deepEqual(
+  publishedCatalogue.items.map((item) => item.name),
+  registry.items.map((item) => item.name),
+  'native catalogue names differ',
+);
+
+for (const item of registry.items) {
+  const payload = JSON.parse(
+    fs.readFileSync(path.join(publishedDirectory, `${item.name}.json`), 'utf8'),
+  );
+
+  assert.equal(payload.registryDependencies, undefined, `${item.name} still requires a mapping`);
+  const closure = [...closureOf(item.name)].map((name) => items.get(name));
+  const expected = new Map();
+
+  for (const member of closure) {
+    for (const file of member.files) {
+      const entry = { ...file, content: fs.readFileSync(path.join(root, file.path), 'utf8') };
+
+      if (expected.has(file.target))
+        assert.deepEqual(expected.get(file.target), entry, `conflicting ${file.target}`);
+      expected.set(file.target, entry);
+    }
+  }
+
+  assert.deepEqual(
+    [...payload.files].sort((a, b) => a.target.localeCompare(b.target)),
+    [...expected.values()].sort((a, b) => a.target.localeCompare(b.target)),
+    `${item.name} published content differs from its source closure`,
+  );
+  assert.deepEqual(
+    [...(payload.dependencies ?? [])].sort(),
+    [...new Set(closure.flatMap((member) => member.dependencies ?? []))].sort(),
+    `${item.name} published packages differ from its source closure`,
+  );
+  const entry = publishedCatalogue.items.find((member) => member.name === item.name);
+  assert.equal(entry.registryDependencies, undefined, `${item.name} catalogue needs a mapping`);
+  assert.deepEqual(
+    [...entry.files].sort((a, b) => a.target.localeCompare(b.target)),
+    [...expected.values()]
+      .map((source) => {
+        const file = { ...source };
+        delete file.content;
+
+        return file;
+      })
+      .sort((a, b) => a.target.localeCompare(b.target)),
+    `${item.name} native catalogue closure differs`,
+  );
+  assert.deepEqual(
+    [...(entry.dependencies ?? [])].sort(),
+    [...(payload.dependencies ?? [])].sort(),
+    `${item.name} native catalogue packages differ`,
+  );
+
+  for (const field of ['name', 'type', 'title', 'description', 'meta'])
+    assert.deepEqual(payload[field], item[field], `${item.name} changed ${field}`);
+  assert.equal(
+    entry.description,
+    item.description,
+    `${item.name} native catalogue description differs`,
+  );
+}
+
 // The published payloads must equal a fresh build with the pinned CLI.
 const require = createRequire(import.meta.url);
 
@@ -201,14 +270,17 @@ assert.equal(
   `expected pinned shadcn 4.14.1, found ${shadcnManifest.version}`,
 );
 
-const shadcnBin = path.resolve(path.dirname(shadcnPackage), shadcnManifest.bin);
-
 const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'glassyui-native-registry-'));
 
 try {
   const build = spawnSync(
     process.execPath,
-    [shadcnBin, 'build', registryPath, '--output', temporaryDirectory],
+    [
+      path.join(root, 'scripts', 'build-install-registry.mjs'),
+      registryPath,
+      '--output',
+      temporaryDirectory,
+    ],
     {
       cwd: root,
       encoding: 'utf8',

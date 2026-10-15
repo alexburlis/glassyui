@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import nativeRegistry from '../../registry-native.json';
+import { installCommand } from './install-command';
 
 const nativeTitles = new Map(nativeRegistry.items.map((item) => [item.name, item.title]));
 
@@ -9,7 +10,7 @@ const ITEM_OF_MODULE = new Map([['glass-backdrop', 'glass-surface']]);
 
 /** Install native items, then match their packages to the consumer's Expo SDK. */
 export function nativeInstallCommand(items: readonly string[]) {
-  return `npx shadcn@4.14.1 add ${items.map((item) => `@glassyui-native/${item}`).join(' ')} && npx expo install --fix`;
+  return installCommand(items, 'react-native');
 }
 
 /**
@@ -32,6 +33,7 @@ export function getNativeUsage(item: string) {
   const items = [...new Set([item, ...imported])];
 
   return {
+    items,
     /** Titles of the other items the example imports. */
     alsoUses: items.slice(1).map((name) => nativeTitles.get(name) ?? name),
     example: nativeInstallCommand(items),

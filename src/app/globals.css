@@ -467,6 +467,29 @@ main :focus {
   margin-top: 0;
 }
 
+/* One outline star leads the secondary action. Its points sit back from the rim, so the star's
+   side takes 4 px less padding than the label's. */
+.home-actions .github-star-button {
+  padding-inline-start: 20px;
+}
+
+.github-star-button-glyph {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+/* Stacked on a phone, the two actions share the wider one's width. */
+@media (max-width: 440px) {
+  .home-hero .home-actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: fit-content;
+    max-width: 100%;
+    margin-inline: auto;
+  }
+}
+
 /* The command to run, one click from the clipboard. */
 .copy-chip {
   position: relative;
@@ -2406,6 +2429,19 @@ main :focus {
   background: var(--site-bg);
 }
 
+.home-discovery-steps {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.home-discovery-steps .home-step {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+@media (max-width: 700px) {
+  .home-discovery-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 767px) {
   .home-step {
     grid-template-columns: minmax(0, 1fr);
@@ -2680,7 +2716,7 @@ main :focus {
   font-weight: 600;
 }
 
-.docs-code-header span {
+.docs-code-header > span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2732,6 +2768,268 @@ main :focus {
 
 .docs-code-block code {
   font: inherit;
+}
+
+.docs-copy-status[data-failed] {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  margin: 0;
+  padding: 12px 16px 0;
+  clip: auto;
+  clip-path: none;
+  color: var(--site-text-2);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+.docs-installation {
+  min-width: 0;
+}
+
+.docs-installation .docs-install-platform {
+  margin-top: 10px;
+  font-size: 15px;
+}
+
+.docs-install-method {
+  width: min(100%, 220px);
+  margin-top: 16px;
+}
+
+.docs-install-panel {
+  min-width: 0;
+  margin-top: 20px;
+}
+
+.docs-install-panel > p,
+.docs-install-step > p {
+  margin: 12px 0 0;
+  color: var(--site-text-2);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.docs-install-panel :is(p, h3) code {
+  font-size: 0.9em;
+  overflow-wrap: anywhere;
+}
+
+.docs-install-panel a,
+.docs-file-error button {
+  color: var(--site-link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.docs-install-panel > .docs-code-block:first-child {
+  margin-top: 0;
+}
+
+.docs-package-managers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.docs-package-managers label {
+  position: relative;
+  cursor: pointer;
+}
+
+.docs-package-managers input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.docs-package-managers span {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 30px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-weight: 400;
+}
+
+.docs-package-managers input:checked + span {
+  background: var(--site-fill-strong);
+  color: var(--site-text);
+  font-weight: 600;
+}
+
+.docs-package-managers input:focus-visible + span {
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: 2px;
+}
+
+.docs-command-block .docs-code-header {
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 6px 8px;
+}
+
+.docs-command-block .docs-copy-button {
+  margin-left: auto;
+}
+
+.docs-command-block pre {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  overflow: visible;
+}
+
+.docs-command-block pre code {
+  min-width: 0;
+  overflow-wrap: normal;
+  white-space: pre-wrap;
+}
+
+.docs-command-word {
+  white-space: nowrap;
+}
+
+.docs-command-prompt {
+  color: var(--site-text-3);
+  user-select: none;
+}
+
+.docs-install-step + .docs-install-step {
+  margin-top: 28px;
+}
+
+.docs-install-step h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.docs-file-group {
+  min-width: 0;
+  margin-top: 24px;
+}
+
+.docs-file-group h4 {
+  margin: 0;
+  color: var(--site-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.docs-file-group > p {
+  margin: 4px 0 10px;
+  color: var(--site-text-2);
+  font-size: 12px;
+}
+
+.docs-install-file {
+  margin-top: 8px;
+  border-radius: 12px;
+}
+
+.docs-install-file .docs-code-header {
+  min-height: 44px;
+  padding-left: 0;
+  border-bottom: 0;
+}
+
+.docs-code-header .docs-file-toggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 44px;
+  height: auto;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: transparent;
+  text-align: left;
+}
+
+.docs-file-path {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--site-font-mono);
+  font-weight: 400;
+}
+
+.docs-file-chevron {
+  flex: none;
+  font-size: 18px;
+  transition: transform 150ms var(--lg-ease-out);
+}
+
+.docs-file-toggle[aria-expanded='true'] .docs-file-chevron {
+  transform: rotate(90deg);
+}
+
+.docs-file-note {
+  margin-left: auto;
+  color: var(--site-text-2);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.docs-install-file pre {
+  max-height: 360px;
+  overflow: auto;
+  border-top: 1px solid var(--site-hairline);
+  background: var(--site-bg);
+}
+
+.docs-file-state {
+  margin: 0;
+  padding: 16px;
+  border-top: 1px solid var(--site-hairline);
+  color: var(--site-text-2);
+  font-size: 13px;
+}
+
+.docs-file-error button {
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+@media (max-width: 639px) {
+  .docs-code-header .docs-file-toggle {
+    flex-wrap: wrap;
+  }
+
+  .docs-file-path {
+    flex: 1;
+  }
+
+  .docs-file-note {
+    flex-basis: 100%;
+    margin-left: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .docs-file-chevron {
+    transition: none;
+  }
+}
+
+:root[data-lg-reduce-motion='1'] .docs-file-chevron {
+  transition: none;
+}
+
+@media (forced-colors: active) {
+  .docs-package-managers input:checked + span {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
 }
 
 .tok-keyword {

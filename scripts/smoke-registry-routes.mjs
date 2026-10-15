@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 
 const baseUrl = process.argv[2] ?? 'http://localhost:3000';
 
@@ -60,17 +61,11 @@ async function request(path, expectedStatus = 200) {
 }
 
 function checkRegistryDependencies(item) {
-  for (const dependency of item.registryDependencies ?? []) {
-    assert.match(
-      dependency,
-      /^@glassyui\/[a-z0-9-]+$/,
-      `${item.name} exposes non-namespaced registry dependency ${dependency}`,
-    );
-
-    if (!expectedItems.includes(dependency.slice('@glassyui/'.length))) {
-      throw new Error(`${item.name} references unknown registry dependency ${dependency}`);
-    }
-  }
+  assert.equal(
+    item.registryDependencies,
+    undefined,
+    `${item.name} must install by URL without a registry mapping`,
+  );
 }
 
 function checkCssPayload(item) {
@@ -205,6 +200,48 @@ for (const name of expectedItems) {
     );
   }
 }
+
+const nativeSource = JSON.parse(fs.readFileSync('registry-native.json', 'utf8'));
+
+const nativeResponse = await request('/r/native/registry.json');
+
+assert.equal(
+  nativeResponse.headers.get('cache-control'),
+  expectedCacheControl,
+  'native catalogue cache contract',
+);
+
+const nativeCatalogue = await nativeResponse.json();
+
+assert.deepEqual(
+  nativeCatalogue.items.map((item) => item.name),
+  nativeSource.items.map((item) => item.name),
+  'native served catalogue differs',
+);
+
+for (const entry of nativeCatalogue.items) {
+  checkRegistryDependencies(entry);
+  const response = await request(`/r/native/${entry.name}.json`);
+  assert.equal(
+    response.headers.get('cache-control'),
+    expectedCacheControl,
+    `${entry.name} native cache contract`,
+  );
+  const item = await response.json();
+  assert.equal(item.name, entry.name, 'native item identity');
+  assert.equal(
+    item.$schema,
+    'https://ui.shadcn.com/schema/registry-item.json',
+    'native item schema',
+  );
+  checkRegistryDependencies(item);
+  assert.ok(item.files.length > 0, `${entry.name} has no native source`);
+
+  for (const file of item.files)
+    assert.match(file.content, /\S/, `${entry.name} omitted ${file.target} source`);
+}
+
+await request('/r/native/not-a-glassyui-item.json', 404);
 
 await request('/r/not-a-glassyui-item.json', 404);
 

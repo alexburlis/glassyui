@@ -200,8 +200,8 @@ For a new or changed Expo component:
 1. Edit the source under `registry/glassyui-native` and its item in
    `registry-native.json`, declaring every package it imports.
 2. Rebuild the payloads with
-   `pnpm exec shadcn build registry-native.json --output public/r/native` and
-   run `pnpm check:native-registry`.
+   `node scripts/build-install-registry.mjs registry-native.json --output public/r/native`
+   and run `pnpm check:native-registry`.
 3. Copy the source into `fixtures/expo-consumer/components/glassyui`, show the
    component in `fixtures/expo-consumer/showcase`, write its usage example in
    `fixtures/expo-consumer/usage/<name>.tsx` (its component page shows that

@@ -12,9 +12,14 @@ import {
 } from '@/components/docs/component-docs-data';
 import { CopyCodeBlock } from '@/components/docs/copy-code-block';
 import { DocsShell } from '@/components/docs/docs-shell';
-import { expoComponentsJson, expoTsconfigPaths } from '@/components/docs/expo-setup';
+import {
+  expoComponentsJson,
+  expoRegistryMapping,
+  expoTsconfigPaths,
+} from '@/components/docs/expo-setup';
 import { getGuide, guides } from '@/components/docs/guide-data';
 import { nativeInstallCommand } from '@/lib/native-usage-source';
+import { installCommand } from '@/lib/install-command';
 import nativeRegistry from '../../../../registry-native.json';
 
 export function generateStaticParams() {
@@ -62,19 +67,18 @@ function InstallationGuide() {
           initialize shadcn first:
         </p>
         <CopyCodeBlock code={initializeShadcn} label="Initialize shadcn" language="shell" />
-        <p>
-          Merge this registry entry into <code>components.json</code>. Keep your existing aliases,
-          style and other registries; this is an addition to that file, not a replacement.
-        </p>
-        <CopyCodeBlock code={publicRegistryMapping} label="Registry mapping" language="json" />
       </section>
       <section className="docs-section">
         <h2>Install one component</h2>
         <CopyCodeBlock
-          code="pnpm dlx shadcn@4.14.1 add @glassyui/glass-button"
+          code={installCommand(['glass-button'], 'react')}
           label="Install Glass Button"
           language="shell"
         />
+        <p>
+          The full URL needs no registry mapping. Each component page also offers pnpm, yarn and bun
+          commands, plus a Manual tab with the packages and complete source files.
+        </p>
         <p>
           Set <code>data-lg-theme="light"</code> on a light app&rsquo;s root element, or{' '}
           <code>data-lg-theme="dark"</code> on a dark app&rsquo;s. Keep this attribute in sync with
@@ -121,11 +125,23 @@ function InstallationGuide() {
           quieter than the same panel over a detailed image.
         </p>
         <p>
-          If the CLI cannot resolve <code>@glassyui</code>, check the mapping before changing
-          component code. If an import cannot resolve, check the installed target path against your
-          app aliases. The <Link href="/docs">installation reference</Link> explains the shared
-          files and optional provider.
+          If an import cannot resolve, check the installed target path against your app aliases. The{' '}
+          <Link href="/docs">installation reference</Link> explains the shared files and optional
+          provider.
         </p>
+        <details>
+          <summary>Optional registry shorthand</summary>
+          <p>
+            To keep using names such as <code>@glassyui/glass-button</code>, merge this mapping into
+            your existing <code>components.json</code>. Keep its aliases, style and other
+            registries.
+          </p>
+          <CopyCodeBlock
+            code={publicRegistryMapping}
+            label="Optional registry mapping"
+            language="json"
+          />
+        </details>
       </section>
     </>
   );
@@ -484,9 +500,9 @@ function LaptopMockupGuide() {
       <section className="docs-section">
         <h2>Install it</h2>
         <p>
-          Add the <code>@glassyui</code> registry to <code>components.json</code> as the{' '}
-          <Link href="/guides/shadcn">installation guide</Link> shows, then add the component. It
-          brings its own stylesheet and needs only <code>clsx</code>.
+          Run this command in a Tailwind CSS 4 app initialized for shadcn. It brings its own
+          stylesheet and needs only <code>clsx</code>. The{' '}
+          <Link href="/guides/shadcn">installation guide</Link> covers the app setup.
         </p>
         <CopyCodeBlock code={laptop.install} label="Install Glass Laptop" language="shell" />
       </section>
@@ -625,11 +641,11 @@ function ExpoGuide() {
         </p>
       </section>
       <section className="docs-section">
-        <h2>Set up the registry</h2>
+        <h2>Set up the CLI</h2>
         <p>
           <code>shadcn init</code> does not set up Expo apps, so add a <code>components.json</code>{' '}
-          at the root of your app. If you already have one, from NativeWind or React Native
-          Reusables, keep it and add the <code>registries</code> entry.
+          at the root of your app. If you already have one, keep its aliases and settings. Direct
+          URL commands need no registry mapping.
         </p>
         <CopyCodeBlock code={expoComponentsJson} label="components.json" language="json" />
         <p>
@@ -643,6 +659,18 @@ function ExpoGuide() {
           it installs as if it were a list of Tailwind classes, which breaks colour values such as{' '}
           <code>rgba(255, 255, 255, 0.12)</code>.
         </p>
+        <details>
+          <summary>Optional registry shorthand</summary>
+          <p>
+            Existing commands such as <code>@glassyui-native/glass-button</code> still work with
+            this mapping merged into <code>components.json</code>.
+          </p>
+          <CopyCodeBlock
+            code={expoRegistryMapping}
+            label="Optional Expo registry mapping"
+            language="json"
+          />
+        </details>
       </section>
       <section className="docs-section">
         <h2>Install the screen&rsquo;s components</h2>

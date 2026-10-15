@@ -107,7 +107,7 @@
 - `pnpm check:native-registry` — verify the Expo catalogue: every import inside
   an item's install closure, declared packages, and `public/r/native` equal to a
   fresh build. Rebuild only the Expo payloads with
-  `pnpm exec shadcn build registry-native.json --output public/r/native`.
+  `node scripts/build-install-registry.mjs registry-native.json --output public/r/native`.
 - `pnpm theme:build` — rebuild the `glassy-theme` item and the two drop-in sets
   from their sources, then the registry payloads. `node scripts/build-shadcn-theme.mjs --check`
   fails when `registry.json` is stale; `pnpm check:registry` runs the same

@@ -1,0 +1,2852 @@
+<!doctype html>
+<html lang="en" data-theme="dark" data-width="desktop" data-notes="on">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Component installation · Glassy UI design artifact</title>
+    <style>
+      /* ------------------------------------------------------------ tokens */
+      /* Site tokens copied from src/app/globals.css and src/styles/liquid.css. */
+      :root {
+        --site-font:
+          -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', Roboto,
+          Inter, system-ui, sans-serif;
+        --site-font-display:
+          -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', Roboto,
+          Inter, system-ui, sans-serif;
+        --site-font-mono:
+          ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+        --lg-prominent-fill: #0067d9;
+        --lg-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+        --lg-ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+        --vermilion: #f04a28;
+        --apricot: #ff9a5c;
+      }
+
+      html[data-theme='dark'] {
+        color-scheme: dark;
+        --site-bg: #1c1c1e;
+        --site-tile: #2c2c2e;
+        --site-text: #f5f5f7;
+        --site-logo: #fff;
+        --site-text-2: #b8b8be;
+        --site-text-3: #a8a8af;
+        --site-link: #78b7ff;
+        --site-hairline: rgb(255 255 255 / 0.12);
+        --site-fill: rgb(255 255 255 / 0.08);
+        --site-fill-strong: rgb(255 255 255 / 0.14);
+        --lg-focus-ring: #b8b8be;
+        --site-syntax-plain: #f5f5f7;
+        --site-syntax-keyword: #ff9a76;
+        --site-syntax-string: #ff8170;
+        --site-syntax-comment: #aaaab0;
+        --site-syntax-number: #d9c97c;
+        --site-syntax-tag: #5dd8ff;
+        --site-syntax-attr: #ffc3a4;
+        --done: #30d158;
+
+        /* Stand-ins for glass: a translucent body with a lit rim. Not the production material. */
+        --glass-track: rgb(255 255 255 / 0.07);
+        --glass-pill: rgb(255 255 255 / 0.15);
+        --glass-rim:
+          inset 0 1px 0 rgb(255 255 255 / 0.22), inset 0 0 0 0.5px rgb(255 255 255 / 0.1);
+        --glass-opaque-track: #2c2c2e;
+        --glass-opaque-pill: #48484a;
+        --stage-canvas: linear-gradient(160deg, #3a3a3e, #1f1f22 70%);
+
+        --art-bg: #121214;
+        --art-panel: #1b1b1d;
+        --art-line: rgb(255 255 255 / 0.14);
+      }
+
+      html[data-theme='light'] {
+        color-scheme: light;
+        --site-bg: #faf9f7;
+        --site-tile: #fff;
+        --site-text: #222224;
+        --site-logo: #000;
+        --site-text-2: #66666a;
+        --site-text-3: #66666a;
+        --site-link: #005ec6;
+        --site-hairline: rgb(0 0 0 / 0.1);
+        --site-fill: rgb(0 0 0 / 0.05);
+        --site-fill-strong: rgb(0 0 0 / 0.08);
+        --lg-focus-ring: #66666a;
+        --site-syntax-plain: #222224;
+        --site-syntax-keyword: #a5361f;
+        --site-syntax-string: #c41a16;
+        --site-syntax-comment: #707074;
+        --site-syntax-number: #8d5300;
+        --site-syntax-tag: #0b4f79;
+        --site-syntax-attr: #a44122;
+        --done: #248a3d;
+
+        --glass-track: rgb(0 0 0 / 0.05);
+        --glass-pill: rgb(255 255 255 / 0.92);
+        --glass-rim: 0 1px 3px rgb(0 0 0 / 0.12), inset 0 0 0 0.5px rgb(0 0 0 / 0.08);
+        --glass-opaque-track: #ececee;
+        --glass-opaque-pill: #fff;
+        --stage-canvas: linear-gradient(160deg, #fbfbfc, #e2e4e8 75%);
+
+        --art-bg: #ebeae7;
+        --art-panel: #f4f3f1;
+        --art-line: rgb(0 0 0 / 0.12);
+      }
+
+      /* ------------------------------------------------------------- base */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      body {
+        margin: 0;
+        background: var(--art-bg);
+        color: var(--site-text);
+        font-family: var(--site-font);
+        font-size: 17px;
+        line-height: 1.47059;
+        letter-spacing: -0.01em;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4,
+      p,
+      ul,
+      ol,
+      pre,
+      figure {
+        margin: 0;
+      }
+
+      ul,
+      ol {
+        padding: 0;
+        list-style: none;
+      }
+
+      button,
+      input {
+        font: inherit;
+        color: inherit;
+      }
+
+      button {
+        border: 0;
+        background: none;
+        cursor: pointer;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      code,
+      pre {
+        font-family: var(--site-font-mono);
+        letter-spacing: 0;
+      }
+
+      .vh {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        margin: -1px;
+        padding: 0;
+        border: 0;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      :focus-visible {
+        outline: 2px solid var(--lg-focus-ring);
+        outline-offset: 2px;
+      }
+
+      /* ------------------------------------------------- artifact chrome */
+      /* Everything prefixed art- belongs to this design artifact, not to the product. */
+      .art-skip {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 30;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: var(--lg-prominent-fill);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+        translate: 0 -200%;
+      }
+
+      .art-skip:focus {
+        translate: none;
+      }
+
+      .art-bar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 20px;
+        padding: 10px 20px;
+        border-bottom: 1px solid var(--art-line);
+        background: color-mix(in srgb, var(--art-panel) 94%, transparent);
+        font-size: 13px;
+      }
+
+      .art-bar-title {
+        margin-right: auto;
+        color: var(--site-text-2);
+      }
+
+      .art-bar-title strong {
+        color: var(--site-text);
+        font-weight: 600;
+      }
+
+      .art-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 14px;
+      }
+
+      .art-choice {
+        display: inline-flex;
+        gap: 2px;
+        margin: 0;
+        padding: 2px;
+        border: 1px solid var(--art-line);
+        border-radius: 8px;
+        min-width: 0;
+      }
+
+      .art-choice legend {
+        float: left;
+        padding: 0 6px 0 4px;
+        color: var(--site-text-2);
+        line-height: 26px;
+      }
+
+      .art-choice label,
+      .art-check {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 26px;
+        padding: 0 8px;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      .art-choice input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .art-choice label:has(input:checked) {
+        background: var(--site-fill-strong);
+        font-weight: 600;
+      }
+
+      .art-choice label:has(input:focus-visible),
+      .art-check:has(input:focus-visible) {
+        outline: 2px solid var(--lg-focus-ring);
+        outline-offset: 1px;
+      }
+
+      .art-check input {
+        margin: 0;
+        accent-color: var(--lg-prominent-fill);
+      }
+
+      .art-main {
+        display: grid;
+        gap: 56px;
+        max-width: 1344px;
+        margin: 0 auto;
+        padding: 40px 32px 72px;
+      }
+
+      .art-intro {
+        display: grid;
+        gap: 10px;
+        max-width: 760px;
+      }
+
+      .art-intro h1 {
+        font-family: var(--site-font-display);
+        font-size: 34px;
+        font-weight: 600;
+        line-height: 1.08;
+        letter-spacing: -0.015em;
+      }
+
+      .art-intro p,
+      .art-sources p,
+      .art-sources li {
+        color: var(--site-text-2);
+        font-size: 15px;
+        line-height: 1.55;
+      }
+
+      .art-intro code,
+      .art-sources code {
+        font-size: 0.88em;
+      }
+
+      .art-screen {
+        display: grid;
+        gap: 14px;
+      }
+
+      .art-screen > h2,
+      .art-sources > h2 {
+        color: var(--site-text-2);
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0;
+      }
+
+      .art-frame {
+        width: 100%;
+        max-width: 1280px;
+        margin: 0 auto;
+        overflow: hidden;
+        border: 1px solid var(--art-line);
+        border-radius: 20px;
+        background: var(--site-bg);
+        box-shadow: 0 30px 80px -40px rgb(0 0 0 / 0.5);
+        transition: max-width 320ms var(--lg-ease-out);
+      }
+
+      html[data-width='mobile'] .art-frame {
+        max-width: 392px;
+      }
+
+      .art-sources {
+        display: grid;
+        gap: 12px;
+        max-width: 900px;
+      }
+
+      .art-sources ul {
+        display: grid;
+        gap: 6px;
+        padding-left: 1.1em;
+        list-style: disc;
+      }
+
+      .art-toast {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        z-index: 40;
+        max-width: min(92vw, 520px);
+        padding: 10px 16px;
+        border: 1px dashed var(--site-text-3);
+        border-radius: 12px;
+        background: var(--art-panel);
+        color: var(--site-text);
+        font-size: 14px;
+        line-height: 1.4;
+        translate: -50% 0;
+        box-shadow: 0 12px 30px -12px rgb(0 0 0 / 0.5);
+      }
+
+      .art-toast:empty {
+        display: none;
+      }
+
+      /* A design note sits beside the part it explains. Notes are not product UI. */
+      .note {
+        margin-top: 16px;
+        padding: 10px 14px;
+        border: 1px dashed var(--site-text-3);
+        border-radius: 12px;
+        color: var(--site-text-2);
+        font-size: 13px;
+        line-height: 1.5;
+        letter-spacing: 0;
+        text-align: start;
+      }
+
+      .note b {
+        color: var(--site-text);
+        font-weight: 600;
+      }
+
+      html[data-notes='off'] .note,
+      html[data-notes='off'] .stand-in-tag,
+      html[data-notes='off'] .file-foot {
+        display: none;
+      }
+
+      .stand-in-tag {
+        position: absolute;
+        right: 14px;
+        bottom: 12px;
+        z-index: 2;
+        padding: 3px 8px;
+        border: 1px dashed currentColor;
+        border-radius: 8px;
+        color: var(--site-text-2);
+        font-size: 11px;
+        line-height: 1.3;
+        letter-spacing: 0;
+        background: color-mix(in srgb, var(--site-bg) 70%, transparent);
+      }
+
+      /* ------------------------------------------------------- mock site */
+      .site {
+        container: site / inline-size;
+        color: var(--site-text);
+      }
+
+      .m-header {
+        display: flex;
+        align-items: center;
+        height: 56px;
+        padding: 0 24px;
+        border-bottom: 1px solid var(--site-hairline);
+      }
+
+      .m-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--site-font-display);
+        font-size: 19px;
+        font-weight: 600;
+        letter-spacing: 0.012em;
+      }
+
+      .m-brand svg {
+        width: 24px;
+        height: 24px;
+        color: var(--site-logo);
+      }
+
+      /* Hero, from .home-hero and friends. */
+      .m-hero {
+        position: relative;
+        padding: clamp(88px, 12vh, 124px) 24px clamp(40px, 5vh, 56px);
+        text-align: center;
+      }
+
+      .m-announce {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        height: 32px;
+        margin-bottom: 28px;
+        padding: 0 14px 0 4px;
+        border-radius: 999px;
+        background: var(--site-fill);
+        box-shadow: inset 0 0 0 1px var(--site-hairline);
+        color: var(--site-text-2);
+        font-size: 13px;
+        letter-spacing: -0.006em;
+        transition:
+          background-color 180ms ease,
+          color 180ms ease;
+      }
+
+      html[data-theme='light'] .m-announce {
+        color: #515154;
+      }
+
+      .m-announce:hover {
+        background: var(--site-fill-strong);
+        color: var(--site-text);
+      }
+
+      .m-announce-tag {
+        display: inline-flex;
+        align-items: center;
+        height: 24px;
+        padding: 0 10px;
+        border-radius: 999px;
+        background: rgb(0 103 217 / 0.24);
+        color: #b2d6ff;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+      }
+
+      html[data-theme='light'] .m-announce-tag {
+        background: rgb(0 103 217 / 0.12);
+        color: #0054b3;
+      }
+
+      .m-announce-short {
+        display: none;
+      }
+
+      .m-hero-title {
+        font-family: var(--site-font-display);
+        font-size: clamp(3rem, 7.2cqi, 5rem);
+        font-weight: 600;
+        line-height: 1.05;
+        letter-spacing: -0.015em;
+        text-wrap: balance;
+      }
+
+      .m-hero-lead {
+        max-width: 600px;
+        margin: 24px auto 0;
+        color: var(--site-text-2);
+        font-size: clamp(1.1875rem, 1.6cqi, 1.3125rem);
+        line-height: 1.381;
+        letter-spacing: 0.011em;
+        text-wrap: pretty;
+      }
+
+      .m-hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 16px 32px;
+        margin-top: 32px;
+      }
+
+      /* A stand-in for GlassButton variant="primary" size="lg", led by one outline star. The
+         star's side takes 4 px less padding than the label's. */
+      .m-secondary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 49px;
+        padding: 12px 24px 12px 20px;
+        border: 1px solid var(--site-text-3);
+        border-radius: 999px;
+        color: var(--site-text);
+        text-decoration: none;
+      }
+
+      /* A stand-in for GlassButton variant="prominent" size="lg". */
+      .m-prominent {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 49px;
+        padding: 12px 24px;
+        border-radius: 999px;
+        background:
+          linear-gradient(rgb(255 255 255 / 0.16), rgb(255 255 255 / 0) 55%),
+          var(--lg-prominent-fill);
+        box-shadow:
+          inset 0 1px 0 rgb(255 255 255 / 0.4),
+          inset 0 -1px 0 rgb(0 0 0 / 0.18),
+          0 1px 2px rgb(0 0 0 / 0.22),
+          0 10px 24px -12px rgb(0 103 217 / 0.7);
+        color: #fff;
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: -0.022em;
+        transition:
+          translate 260ms var(--lg-spring),
+          box-shadow 260ms ease;
+      }
+
+      .m-prominent:hover {
+        translate: 0 1px;
+      }
+
+      .m-prominent:active {
+        translate: 0 2px;
+        box-shadow:
+          inset 0 1px 0 rgb(255 255 255 / 0.3),
+          inset 0 -1px 0 rgb(0 0 0 / 0.18),
+          0 0 1px rgb(0 0 0 / 0.3);
+      }
+
+      .m-prominent:focus-visible {
+        outline-offset: 3px;
+      }
+
+      /* Replay intro keeps its place in the hero's bottom padding, under the last line. */
+      .m-replay {
+        position: absolute;
+        top: calc(100% - clamp(40px, 5vh, 56px) / 2 - 12px);
+        left: 50%;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 24px;
+        padding: 2px 10px;
+        border-radius: 999px;
+        color: var(--site-text-3);
+        font-size: 13px;
+        line-height: 20px;
+        translate: -50% 0;
+        transition:
+          color 160ms ease,
+          background-color 160ms ease;
+      }
+
+      .m-replay:hover {
+        background: var(--site-fill);
+        color: var(--site-text);
+      }
+
+      /* The keynote never starts under reduced motion, so its replay control is not shown. */
+      html[data-reduce-motion='on'] .m-replay {
+        display: none;
+      }
+
+      .m-desk {
+        position: relative;
+        display: grid;
+        place-items: center;
+        height: 300px;
+        margin: 0 24px 40px;
+        overflow: hidden;
+        border-radius: 28px;
+        background: var(--stage-canvas);
+      }
+
+      .m-desk > span:not(.stand-in-tag) {
+        position: relative;
+        z-index: 1;
+        padding: 6px 12px;
+        border: 1px dashed var(--site-text-3);
+        border-radius: 10px;
+        color: var(--site-text-2);
+        font-size: 13px;
+        background: color-mix(in srgb, var(--site-bg) 75%, transparent);
+      }
+
+      /* Ribbon artwork: a broad Vermilion band and an apricot one, both pure CSS. */
+      .ribbon::before,
+      .ribbon::after {
+        content: '';
+        position: absolute;
+        border-radius: 999px;
+        pointer-events: none;
+      }
+
+      .ribbon::before {
+        top: 22%;
+        left: -10%;
+        width: 74%;
+        height: 15%;
+        background: linear-gradient(100deg, #c4351c, var(--vermilion) 45%, #ff7a52);
+        rotate: -14deg;
+        opacity: 0.88;
+      }
+
+      .ribbon::after {
+        right: -14%;
+        bottom: 10%;
+        width: 66%;
+        height: 9%;
+        background: linear-gradient(90deg, var(--apricot), #ffc39a);
+        rotate: 9deg;
+        opacity: 0.8;
+      }
+
+      html[data-theme='light'] .ribbon::before {
+        opacity: 0.62;
+      }
+
+      html[data-theme='light'] .ribbon::after {
+        opacity: 0.55;
+      }
+
+      /* Docs layout, from .docs-layout. */
+      .m-mobile-nav {
+        display: none;
+      }
+
+      .m-docs {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr) 200px;
+        gap: 56px;
+        padding: 40px 32px 80px;
+      }
+
+      .m-sidebar {
+        display: grid;
+        align-content: start;
+        gap: 24px;
+      }
+
+      .m-nav-group {
+        display: grid;
+        gap: 2px;
+      }
+
+      .m-nav-group > p,
+      .m-toc > p {
+        margin-bottom: 6px;
+        padding: 0 10px;
+        color: var(--site-text-3);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0;
+      }
+
+      .m-sidebar a {
+        display: block;
+        padding: 6px 10px;
+        border-radius: 8px;
+        color: var(--site-text-2);
+        font-size: 14px;
+        line-height: 1.3;
+      }
+
+      .m-sidebar a:hover,
+      .m-sidebar a[aria-current='page'] {
+        background: var(--site-fill);
+        color: var(--site-text);
+      }
+
+      .m-sidebar a[aria-current='page'] {
+        font-weight: 600;
+      }
+
+      .m-main {
+        min-width: 0;
+      }
+
+      .m-toc {
+        position: sticky;
+        top: 56px;
+        display: grid;
+        align-self: start;
+        gap: 8px;
+        font-size: 13px;
+      }
+
+      .m-toc > p {
+        padding: 0;
+      }
+
+      .m-toc a {
+        color: var(--site-text-2);
+      }
+
+      .m-toc a:hover {
+        color: var(--site-text);
+      }
+
+      .m-page-header {
+        display: grid;
+        gap: 12px;
+      }
+
+      .m-eyebrow {
+        color: var(--site-link);
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .m-page-header h1 {
+        font-family: var(--site-font-display);
+        font-size: clamp(2.25rem, 4cqi, 3rem);
+        font-weight: 600;
+        line-height: 1.08;
+        letter-spacing: -0.003em;
+      }
+
+      .m-page-lead {
+        max-width: 680px;
+        color: var(--site-text-2);
+        font-size: 19px;
+        line-height: 1.42;
+        text-wrap: pretty;
+      }
+
+      .m-page-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 20px;
+        margin-top: 4px;
+        font-size: 14px;
+      }
+
+      .m-page-links a {
+        color: var(--site-link);
+      }
+
+      .m-page-links a:hover {
+        text-decoration: underline;
+      }
+
+      .m-section {
+        margin-top: 56px;
+        scroll-margin-top: 24px;
+      }
+
+      .m-section > h2 {
+        font-family: var(--site-font-display);
+        font-size: 28px;
+        font-weight: 600;
+        line-height: 1.14;
+        letter-spacing: 0.007em;
+      }
+
+      .m-section h3 {
+        margin-top: 28px;
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .m-section p.m-text,
+      .m-pane > p.m-text {
+        max-width: 700px;
+        margin-top: 12px;
+        color: var(--site-text-2);
+        line-height: 1.6;
+        text-wrap: pretty;
+      }
+
+      .m-text a {
+        color: var(--site-link);
+        text-decoration: underline;
+        text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+        text-decoration-thickness: 1px;
+        text-underline-offset: 0.2em;
+      }
+
+      .m-text code,
+      .m-summary code,
+      .m-step-text code {
+        padding: 0.12em 0.4em;
+        border-radius: 6px;
+        background: var(--site-fill);
+        color: var(--site-text);
+        font-size: 0.86em;
+      }
+
+      .m-placeholder p {
+        margin-top: 12px;
+        padding: 14px 16px;
+        border: 1px dashed var(--site-hairline);
+        border-radius: 16px;
+        color: var(--site-text-2);
+        font-size: 14px;
+      }
+
+      /* Preview stage, from .docs-preview, with CSS artwork in place of the wallpaper. */
+      .m-preview {
+        position: relative;
+        display: grid;
+        place-items: center;
+        min-height: 360px;
+        margin-top: 20px;
+        padding: 48px 24px;
+        overflow: hidden;
+        border-radius: 28px;
+        background: var(--stage-canvas);
+        isolation: isolate;
+      }
+
+      .m-preview-row {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      .m-glass-button {
+        min-height: 40px;
+        padding: 9px 18px;
+        border-radius: 999px;
+        background: rgb(255 255 255 / 0.22);
+        box-shadow:
+          inset 0 1px 0 rgb(255 255 255 / 0.5),
+          inset 0 0 0 0.5px rgb(255 255 255 / 0.35),
+          0 1px 2px rgb(0 0 0 / 0.18),
+          0 8px 18px -10px rgb(0 0 0 / 0.45);
+        color: var(--site-text);
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        transition:
+          translate 260ms var(--lg-spring),
+          box-shadow 260ms ease;
+      }
+
+      .m-glass-button:hover {
+        translate: 0 1px;
+      }
+
+      .m-glass-button:active {
+        translate: 0 2px;
+      }
+
+      .m-glass-button.is-prominent {
+        background:
+          linear-gradient(rgb(255 255 255 / 0.16), rgb(255 255 255 / 0) 55%),
+          var(--lg-prominent-fill);
+        color: #fff;
+      }
+
+      /* Segmented controls: the platform switch and the method tabs share one capsule. */
+      .m-seg,
+      .m-tabs {
+        --count: 2;
+        --index: 0;
+        --pad: 3px;
+
+        position: relative;
+        display: grid;
+        grid-auto-columns: minmax(0, 1fr);
+        grid-auto-flow: column;
+        margin: 0;
+        padding: var(--pad);
+        border: 0;
+        border-radius: 999px;
+        background: var(--glass-track);
+        box-shadow: inset 0 0 0 1px var(--site-hairline);
+        min-width: 0;
+        font-size: 14px;
+        line-height: 20px;
+      }
+
+      .m-seg::before,
+      .m-tabs::before {
+        content: '';
+        position: absolute;
+        top: var(--pad);
+        bottom: var(--pad);
+        left: var(--pad);
+        width: calc((100% - 2 * var(--pad)) / var(--count));
+        border-radius: 999px;
+        background: var(--glass-pill);
+        box-shadow: var(--glass-rim);
+        translate: calc(var(--index) * 100%) 0;
+        transition: translate 420ms var(--lg-spring);
+      }
+
+      .m-seg:has(label:nth-of-type(2) input:checked) {
+        --index: 1;
+      }
+
+      .m-platform {
+        width: min(100%, 320px);
+        margin-top: 4px;
+      }
+
+      .m-seg label,
+      .m-tab {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 34px;
+        padding: 0 14px;
+        border-radius: 999px;
+        color: var(--site-text-2);
+        font-weight: 500;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: color 160ms ease;
+      }
+
+      .m-seg input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .m-seg label:hover,
+      .m-seg label:has(input:checked),
+      .m-tab:hover,
+      .m-tab[aria-selected='true'] {
+        color: var(--site-text);
+      }
+
+      .m-seg label:has(input:checked),
+      .m-tab[aria-selected='true'] {
+        font-weight: 600;
+      }
+
+      .m-seg label:has(input:focus-visible) {
+        outline: 2px solid var(--lg-focus-ring);
+        outline-offset: -2px;
+      }
+
+      .m-tab:focus-visible {
+        outline-offset: -2px;
+      }
+
+      .m-tabs {
+        --pad: 4px;
+
+        width: min(100%, 220px);
+        margin-top: 16px;
+      }
+
+      .m-tab {
+        min-height: 36px;
+      }
+
+      /* Installation */
+      .m-install-for {
+        margin-top: 10px;
+        color: var(--site-text-2);
+        font-size: 15px;
+      }
+
+      .m-panel {
+        margin-top: 20px;
+        border-radius: 4px;
+      }
+
+      .m-panel:focus-visible {
+        outline-offset: 6px;
+      }
+
+      .m-summary {
+        max-width: 700px;
+        margin-top: 12px;
+        color: var(--site-text-2);
+        font-size: 14px;
+        line-height: 1.55;
+        text-wrap: pretty;
+      }
+
+      .m-step {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .m-step:first-child {
+        margin-top: 0;
+      }
+
+      .m-step-number {
+        display: inline-grid;
+        flex: none;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 999px;
+        background: var(--site-fill-strong);
+        color: var(--site-text);
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0;
+      }
+
+      .m-step-text {
+        margin-top: 8px;
+        max-width: 700px;
+        color: var(--site-text-2);
+        font-size: 15px;
+        line-height: 1.55;
+        text-wrap: pretty;
+      }
+
+      /* Code blocks, from .docs-code-block, with package managers in the header. */
+      .cmd,
+      .code {
+        margin-top: 16px;
+        overflow: hidden;
+        border: 1px solid var(--site-hairline);
+        border-radius: 16px;
+        background: var(--site-tile);
+      }
+
+      .cmd-head,
+      .code-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 44px;
+        padding: 0 8px;
+        border-bottom: 1px solid var(--site-hairline);
+      }
+
+      .code-head > span,
+      .cmd-label {
+        overflow: hidden;
+        padding-left: 8px;
+        color: var(--site-text-3);
+        font-size: 12px;
+        font-weight: 600;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .pm {
+        display: flex;
+        gap: 2px;
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+        border: 0;
+      }
+
+      .pm label {
+        position: relative;
+        display: inline-grid;
+        place-items: center;
+        min-width: 44px;
+        height: 30px;
+        padding: 0 10px;
+        border-radius: 999px;
+        color: var(--site-text-2);
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0;
+        cursor: pointer;
+        transition:
+          background-color 150ms ease,
+          color 150ms ease;
+      }
+
+      .pm input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .pm label:hover {
+        color: var(--site-text);
+      }
+
+      .pm label:has(input:checked) {
+        background: var(--site-fill-strong);
+        color: var(--site-text);
+      }
+
+      .pm label:has(input:focus-visible) {
+        outline: 2px solid var(--lg-focus-ring);
+        outline-offset: 1px;
+      }
+
+      .copy {
+        flex: none;
+        min-width: 58px;
+        height: 30px;
+        padding: 0 12px;
+        border-radius: 999px;
+        background: var(--site-fill);
+        color: var(--site-text);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0;
+        transition: background-color 150ms ease;
+      }
+
+      .copy:hover {
+        background: var(--site-fill-strong);
+      }
+
+      .copy:disabled {
+        cursor: progress;
+      }
+
+      .copy[data-state='copied'] {
+        color: var(--done);
+        animation: copy-pop 360ms var(--lg-spring);
+      }
+
+      @keyframes copy-pop {
+        from {
+          scale: 0.9;
+        }
+      }
+
+      .copy-error {
+        padding: 8px 16px;
+        border-bottom: 1px solid var(--site-hairline);
+        color: var(--site-text);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .cmd-body {
+        padding: 16px 18px 18px calc(18px + 2ch);
+        color: var(--site-syntax-plain);
+        font-size: 13px;
+        line-height: 1.65;
+        text-indent: -2ch;
+        white-space: pre-wrap;
+        overflow-wrap: break-word;
+      }
+
+      .cmd-body .word {
+        white-space: nowrap;
+      }
+
+      .cmd-body code {
+        font: inherit;
+      }
+
+      .prompt {
+        color: var(--site-text-3);
+        user-select: none;
+      }
+
+      .code pre,
+      .file-code pre {
+        overflow: auto;
+        padding: 16px 18px 18px;
+        color: var(--site-syntax-plain);
+        font-size: 13px;
+        line-height: 1.65;
+        tab-size: 2;
+      }
+
+      .code pre:focus-visible,
+      .file-code pre:focus-visible {
+        outline-offset: -2px;
+      }
+
+      .tok-keyword {
+        color: var(--site-syntax-keyword);
+      }
+
+      .tok-string {
+        color: var(--site-syntax-string);
+      }
+
+      .tok-comment {
+        color: var(--site-syntax-comment);
+        font-style: italic;
+      }
+
+      .tok-number {
+        color: var(--site-syntax-number);
+      }
+
+      .tok-tag {
+        color: var(--site-syntax-tag);
+      }
+
+      .tok-attr {
+        color: var(--site-syntax-attr);
+      }
+
+      /* Manual: the files grouped by the item that ships them. */
+      .files {
+        margin-top: 16px;
+        overflow: hidden;
+        border: 1px solid var(--site-hairline);
+        border-radius: 16px;
+        background: var(--site-tile);
+      }
+
+      .files-group + .files-group {
+        border-top: 1px solid var(--site-hairline);
+      }
+
+      .files-group-title {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 2px 8px;
+        padding: 14px 16px 6px;
+        color: var(--site-text);
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: -0.005em;
+      }
+
+      .files-group-title span {
+        color: var(--site-text-3);
+        font-size: 12px;
+        font-weight: 400;
+      }
+
+      .files-list {
+        padding: 0 0 6px;
+      }
+
+      .file-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 8px;
+      }
+
+      .file-toggle {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        min-height: 36px;
+        padding: 0 8px;
+        border-radius: 10px;
+        text-align: start;
+      }
+
+      .file-toggle:hover {
+        background: var(--site-fill);
+      }
+
+      .file-toggle code {
+        overflow-wrap: anywhere;
+        color: var(--site-text);
+        font-size: 13px;
+      }
+
+      .file-note {
+        color: var(--site-text-3);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .chevron {
+        flex: none;
+        width: 7px;
+        height: 7px;
+        border-right: 1.6px solid var(--site-text-3);
+        border-bottom: 1.6px solid var(--site-text-3);
+        rotate: -45deg;
+        transition: rotate 220ms var(--lg-ease-out);
+      }
+
+      .file-toggle[aria-expanded='true'] .chevron {
+        rotate: 45deg;
+      }
+
+      .file .copy-error {
+        border-top: 1px solid var(--site-hairline);
+      }
+
+      .file-code {
+        margin: 0 8px 8px;
+        overflow: hidden;
+        border: 1px solid var(--site-hairline);
+        border-radius: 12px;
+        background: var(--site-bg);
+      }
+
+      .file-code pre {
+        max-height: 360px;
+        font-size: 12.5px;
+        white-space: pre;
+      }
+
+      .file-foot {
+        padding: 8px 14px;
+        border-top: 1px dashed var(--site-hairline);
+        color: var(--site-text-2);
+        font-size: 12px;
+      }
+
+      /* API, from .docs-api-list. */
+      .m-api {
+        margin-top: 16px;
+        overflow: hidden;
+        border-radius: 18px;
+        background: var(--site-tile);
+      }
+
+      .m-api > div {
+        display: grid;
+        grid-template-columns: minmax(140px, 220px) minmax(0, 1fr);
+        gap: 16px;
+        padding: 14px 20px;
+      }
+
+      .m-api > div + div {
+        border-top: 1px solid var(--site-hairline);
+      }
+
+      .m-api code {
+        font-size: 13px;
+        overflow-wrap: anywhere;
+      }
+
+      .m-api p {
+        color: var(--site-text-2);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      /* -------------------------------------------------- responsive */
+      @container site (max-width: 1023px) {
+        .m-docs {
+          grid-template-columns: 200px minmax(0, 1fr);
+          gap: 40px;
+        }
+
+        .m-toc {
+          display: none;
+        }
+      }
+
+      @container site (max-width: 859px) {
+        .m-mobile-nav {
+          display: block;
+          margin: 16px 16px 0;
+          border-radius: 16px;
+          background: var(--site-tile);
+        }
+
+        .m-mobile-nav summary {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          min-height: 48px;
+          padding: 0 16px;
+          border-radius: 16px;
+          font-size: 15px;
+          font-weight: 600;
+          list-style: none;
+          cursor: pointer;
+        }
+
+        .m-mobile-nav summary::-webkit-details-marker {
+          display: none;
+        }
+
+        .m-mobile-nav summary span {
+          margin-left: auto;
+          color: var(--site-text-2);
+          font-weight: 400;
+        }
+
+        .m-mobile-nav nav {
+          display: grid;
+          gap: 16px;
+          padding: 4px 16px 16px;
+        }
+
+        .m-mobile-nav nav a {
+          display: block;
+          padding: 6px 0;
+          color: var(--site-text-2);
+          font-size: 15px;
+        }
+
+        .m-mobile-nav nav a[aria-current='page'] {
+          color: var(--site-text);
+          font-weight: 600;
+        }
+
+        .m-mobile-nav nav p {
+          margin-bottom: 4px;
+          color: var(--site-text-3);
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .m-sidebar {
+          display: none;
+        }
+
+        .m-docs {
+          grid-template-columns: minmax(0, 1fr);
+          padding: 28px 16px 64px;
+        }
+
+        .m-header {
+          padding: 0 16px;
+        }
+
+        .m-desk {
+          height: 200px;
+          margin: 0 16px 32px;
+        }
+      }
+
+      @container site (max-width: 639px) {
+        .m-api > div {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 4px;
+        }
+      }
+
+      @container site (max-width: 560px) {
+        .m-announce {
+          max-width: 100%;
+          font-size: 12.5px;
+        }
+
+        .m-announce-long {
+          display: none;
+        }
+
+        .m-announce-short {
+          display: inline;
+        }
+
+        .m-hero {
+          padding-inline: 20px;
+        }
+
+        .m-preview {
+          min-height: 260px;
+        }
+      }
+
+      /* Stacked on a phone, the two actions share the wider one's width. */
+      @container site (max-width: 440px) {
+        .m-hero-actions {
+          flex-direction: column;
+          align-items: stretch;
+          width: fit-content;
+          max-width: 100%;
+          margin-inline: auto;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .art-bar {
+          position: static;
+        }
+
+        .art-main {
+          padding: 28px 12px 64px;
+        }
+      }
+
+      /* -------------------------------------------------- preferences */
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+
+      html[data-reduce-motion='on'] *,
+      html[data-reduce-motion='on'] *::before,
+      html[data-reduce-motion='on'] *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+
+      @media (prefers-reduced-transparency: reduce) {
+        :root {
+          --glass-track: var(--glass-opaque-track);
+          --glass-pill: var(--glass-opaque-pill);
+        }
+
+        .m-glass-button:not(.is-prominent) {
+          background: var(--site-tile) !important;
+        }
+
+        .m-prominent,
+        .m-glass-button.is-prominent {
+          background: var(--lg-prominent-fill) !important;
+        }
+      }
+
+      html[data-reduce-transparency='on'] {
+        --glass-track: var(--glass-opaque-track);
+        --glass-pill: var(--glass-opaque-pill);
+      }
+
+      html[data-reduce-transparency='on'] .m-glass-button:not(.is-prominent) {
+        background: var(--site-tile);
+      }
+
+      html[data-reduce-transparency='on'] :is(.m-prominent, .m-glass-button.is-prominent) {
+        background: var(--lg-prominent-fill);
+      }
+
+      @media (forced-colors: active) {
+        .m-seg::before,
+        .m-tabs::before {
+          display: none;
+        }
+
+        .m-seg label:has(input:checked),
+        .m-tab[aria-selected='true'],
+        .pm label:has(input:checked) {
+          outline: 2px solid Highlight;
+          outline-offset: -2px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="art-skip" href="#component-screen">Skip to the component page mock</a>
+
+    <header class="art-bar">
+      <p class="art-bar-title"><strong>Component installation</strong> · design artifact</p>
+      <div class="art-controls">
+        <fieldset class="art-choice" data-art="width">
+          <legend>Width</legend>
+          <label><input type="radio" name="art-width" value="desktop" checked />Desktop</label>
+          <label><input type="radio" name="art-width" value="mobile" />390 px</label>
+        </fieldset>
+        <fieldset class="art-choice" data-art="theme">
+          <legend>Theme</legend>
+          <label><input type="radio" name="art-theme" value="dark" checked />Dark</label>
+          <label><input type="radio" name="art-theme" value="light" />Light</label>
+        </fieldset>
+        <label class="art-check"><input type="checkbox" data-art="notes" checked />Notes</label>
+        <label class="art-check"
+          ><input type="checkbox" data-art="reduce-motion" />Reduce motion</label
+        >
+        <label class="art-check"
+          ><input type="checkbox" data-art="reduce-transparency" />Reduce transparency</label
+        >
+        <label class="art-check"
+          ><input type="checkbox" data-art="clipboard" />Refuse clipboard</label
+        >
+      </div>
+    </header>
+
+    <main class="art-main">
+      <section class="art-intro" aria-labelledby="art-title">
+        <h1 id="art-title">Install from each component.</h1>
+        <p>
+          One recommended direction for the home hero and the Installation section of every
+          component page, drawn with Glass Button's real data from the repository. Switch width,
+          theme and preferences in the bar above; every control in the mock works.
+        </p>
+        <p>
+          CSS stands in for glass here, so this shows layout and states, not the production
+          material. The commands use the proposed full-URL install, which works once the
+          self-contained payloads ship at the same <code>/r</code> and
+          <code>/r/native</code> addresses.
+        </p>
+      </section>
+
+      <section class="art-screen" id="home-screen" aria-labelledby="home-screen-title">
+        <h2 id="home-screen-title">1 · Home hero</h2>
+        <div class="art-frame">
+          <div class="site">
+            <div class="m-header">
+              <span class="m-brand"
+                ><svg aria-hidden="true" focusable="false" viewBox="0 0 64 64">
+                  <g fill="currentColor">
+                    <path
+                      d="M13.21 13.21C13.21 13.19 13.21 13.16 13.22 13.08C13.23 13 13.24 12.87 13.27 12.7C13.3 12.53 13.34 12.31 13.41 12.06C13.48 11.8 13.56 11.5 13.69 11.17C13.83 10.84 14 10.46 14.23 10.07C14.46 9.68 14.74 9.25 15.09 8.84C15.44 8.43 15.85 8 16.32 7.62C16.78 7.24 17.31 6.86 17.86 6.55C18.42 6.23 19.03 5.95 19.64 5.72C20.25 5.5 20.9 5.33 21.54 5.19C22.18 5.06 22.84 4.99 23.49 4.92C24.14 4.86 24.79 4.85 25.44 4.83C26.09 4.81 26.73 4.81 27.38 4.81C28.03 4.8 28.68 4.8 29.33 4.8C29.99 4.8 30.65 4.8 31.32 4.8C32 4.8 32.68 4.8 33.38 4.8C34.09 4.8 34.8 4.8 35.55 4.8C36.3 4.8 37.07 4.8 37.89 4.81C38.71 4.83 39.56 4.83 40.49 4.87C41.41 4.91 42.38 4.94 43.44 5.06C44.5 5.18 45.64 5.28 46.86 5.58C48.07 5.89 49.44 6.23 50.71 6.89C51.97 7.54 53.4 8.46 54.47 9.53C55.54 10.6 56.46 12.03 57.11 13.29C57.77 14.56 58.11 15.93 58.42 17.14C58.72 18.36 58.82 19.5 58.94 20.56C59.06 21.62 59.09 22.59 59.13 23.51C59.17 24.44 59.17 25.29 59.19 26.11C59.2 26.93 59.2 27.7 59.2 28.45C59.2 29.2 59.2 29.91 59.2 30.62C59.2 31.32 59.2 32 59.2 32.68C59.2 33.35 59.2 34.01 59.2 34.67C59.2 35.32 59.2 35.97 59.19 36.62C59.19 37.27 59.19 37.91 59.17 38.56C59.15 39.21 59.14 39.86 59.08 40.51C59.01 41.16 58.94 41.82 58.81 42.46C58.67 43.1 58.5 43.75 58.28 44.36C58.05 44.97 57.77 45.58 57.45 46.14C57.14 46.69 56.76 47.22 56.38 47.68C56 48.15 55.57 48.56 55.16 48.91C54.75 49.26 54.32 49.54 53.93 49.77C53.54 50 53.16 50.17 52.83 50.31C52.5 50.44 52.2 50.52 51.94 50.59C51.69 50.66 51.47 50.7 51.3 50.73C51.13 50.76 51 50.77 50.92 50.78C50.84 50.79 50.81 50.79 50.79 50.79L50.79 50.79C50.8 50.68 50.85 50.55 50.82 50.14C50.79 49.73 50.78 49.04 50.61 48.33C50.45 47.62 50.1 46.76 49.83 45.86C49.57 44.96 49.19 44.02 49.02 42.92C48.84 41.82 48.81 40.59 48.78 39.28C48.74 37.97 48.8 36.52 48.8 35.05C48.8 33.57 48.8 32.03 48.8 30.41C48.8 28.78 48.84 27.03 48.77 25.3C48.7 23.57 48.66 21.42 48.38 20.01C48.11 18.61 47.85 17.62 47.12 16.88C46.38 16.15 45.39 15.89 43.99 15.62C42.58 15.34 40.43 15.3 38.7 15.23C36.97 15.16 35.22 15.2 33.59 15.2C31.97 15.2 30.43 15.2 28.95 15.2C27.48 15.2 26.03 15.26 24.72 15.22C23.41 15.19 22.18 15.16 21.08 14.98C19.98 14.81 19.04 14.43 18.14 14.17C17.24 13.9 16.38 13.55 15.67 13.39C14.96 13.22 14.27 13.21 13.86 13.18C13.45 13.15 13.32 13.2 13.21 13.21Z"
+                      transform="rotate(180 32 32)"
+                    />
+                    <path
+                      d="M13.21 13.21C13.21 13.19 13.21 13.16 13.22 13.08C13.23 13 13.24 12.87 13.27 12.7C13.3 12.53 13.34 12.31 13.41 12.06C13.48 11.8 13.56 11.5 13.69 11.17C13.83 10.84 14 10.46 14.23 10.07C14.46 9.68 14.74 9.25 15.09 8.84C15.44 8.43 15.85 8 16.32 7.62C16.78 7.24 17.31 6.86 17.86 6.55C18.42 6.23 19.03 5.95 19.64 5.72C20.25 5.5 20.9 5.33 21.54 5.19C22.18 5.06 22.84 4.99 23.49 4.92C24.14 4.86 24.79 4.85 25.44 4.83C26.09 4.81 26.73 4.81 27.38 4.81C28.03 4.8 28.68 4.8 29.33 4.8C29.99 4.8 30.65 4.8 31.32 4.8C32 4.8 32.68 4.8 33.38 4.8C34.09 4.8 34.8 4.8 35.55 4.8C36.3 4.8 37.07 4.8 37.89 4.81C38.71 4.83 39.56 4.83 40.49 4.87C41.41 4.91 42.38 4.94 43.44 5.06C44.5 5.18 45.64 5.28 46.86 5.58C48.07 5.89 49.44 6.23 50.71 6.89C51.97 7.54 53.4 8.46 54.47 9.53C55.54 10.6 56.46 12.03 57.11 13.29C57.77 14.56 58.11 15.93 58.42 17.14C58.72 18.36 58.82 19.5 58.94 20.56C59.06 21.62 59.09 22.59 59.13 23.51C59.17 24.44 59.17 25.29 59.19 26.11C59.2 26.93 59.2 27.7 59.2 28.45C59.2 29.2 59.2 29.91 59.2 30.62C59.2 31.32 59.2 32 59.2 32.68C59.2 33.35 59.2 34.01 59.2 34.67C59.2 35.32 59.2 35.97 59.19 36.62C59.19 37.27 59.19 37.91 59.17 38.56C59.15 39.21 59.14 39.86 59.08 40.51C59.01 41.16 58.94 41.82 58.81 42.46C58.67 43.1 58.5 43.75 58.28 44.36C58.05 44.97 57.77 45.58 57.45 46.14C57.14 46.69 56.76 47.22 56.38 47.68C56 48.15 55.57 48.56 55.16 48.91C54.75 49.26 54.32 49.54 53.93 49.77C53.54 50 53.16 50.17 52.83 50.31C52.5 50.44 52.2 50.52 51.94 50.59C51.69 50.66 51.47 50.7 51.3 50.73C51.13 50.76 51 50.77 50.92 50.78C50.84 50.79 50.81 50.79 50.79 50.79L50.79 50.79C50.8 50.68 50.85 50.55 50.82 50.14C50.79 49.73 50.78 49.04 50.61 48.33C50.45 47.62 50.1 46.76 49.83 45.86C49.57 44.96 49.19 44.02 49.02 42.92C48.84 41.82 48.81 40.59 48.78 39.28C48.74 37.97 48.8 36.52 48.8 35.05C48.8 33.57 48.8 32.03 48.8 30.41C48.8 28.78 48.84 27.03 48.77 25.3C48.7 23.57 48.66 21.42 48.38 20.01C48.11 18.61 47.85 17.62 47.12 16.88C46.38 16.15 45.39 15.89 43.99 15.62C42.58 15.34 40.43 15.3 38.7 15.23C36.97 15.16 35.22 15.2 33.59 15.2C31.97 15.2 30.43 15.2 28.95 15.2C27.48 15.2 26.03 15.26 24.72 15.22C23.41 15.19 22.18 15.16 21.08 14.98C19.98 14.81 19.04 14.43 18.14 14.17C17.24 13.9 16.38 13.55 15.67 13.39C14.96 13.22 14.27 13.21 13.86 13.18C13.45 13.15 13.32 13.2 13.21 13.21Z"
+                    />
+                    <path
+                      fill="#f04a28"
+                      d="M13.21 13.21C13.22 13.12 13.19 13.02 13.27 12.68C13.36 12.33 13.41 11.77 13.71 11.14C14 10.51 14.42 9.63 15.04 8.91C15.66 8.19 16.55 7.38 17.43 6.81C18.31 6.24 19.38 5.81 20.31 5.5C21.25 5.19 22.2 5.08 23.03 4.97C23.86 4.86 24.63 4.86 25.28 4.83C25.93 4.8 26.49 4.81 26.94 4.81C27.39 4.8 27.74 4.8 27.97 4.8C28.2 4.8 28.26 4.8 28.32 4.8L28.34 15.2C28.25 15.2 28.15 15.2 27.81 15.2C27.47 15.21 26.93 15.21 26.3 15.21C25.66 15.22 24.84 15.25 24 15.22C23.17 15.19 22.21 15.17 21.31 15.02C20.41 14.87 19.49 14.59 18.61 14.33C17.74 14.08 16.84 13.68 16.07 13.48C15.3 13.29 14.48 13.22 14.01 13.18C13.53 13.13 13.34 13.2 13.21 13.21Z"
+                      transform="rotate(180 32 32)"
+                    />
+                  </g></svg
+                >Glassy UI</span
+              >
+            </div>
+            <section class="m-hero" aria-labelledby="m-home-title">
+              <a class="m-announce" href="#" data-mock-href="/mobile">
+                <span class="m-announce-tag">New</span>
+                <span>
+                  <span class="m-announce-long">Glassy UI for React Native apps</span>
+                  <span class="m-announce-short">Now for React Native</span>
+                </span>
+                <span aria-hidden="true"> ›</span>
+              </a>
+              <h1 class="m-hero-title" id="m-home-title">Glass without&nbsp;effort.</h1>
+              <p class="m-hero-lead">
+                Glassy UI brings <span data-fill="componentCount"></span> free React glass
+                components to your app, with React Native versions for iOS and Android. Install with
+                shadcn. Own the code.
+              </p>
+              <div class="m-hero-actions">
+                <a
+                  class="m-prominent"
+                  href="#component-screen"
+                  data-mock-href="/components"
+                  data-mock-jump
+                  >Browse components</a
+                >
+                <a class="m-secondary" href="https://github.com/alexburlis/glassyui"
+                  ><svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+                    <path
+                      d="M12 3.15L14.59 9.37L21.3 9.91L16.19 14.29L17.75 20.84L12 17.33L6.25 20.84L7.81 14.29L2.7 9.91L9.41 9.37Z"
+                      stroke="currentColor"
+                      stroke-linejoin="round"
+                      stroke-width="1.9"
+                    /></svg
+                  >Star on GitHub</a
+                >
+              </div>
+              <button class="m-replay" type="button" data-mock-action="replay">
+                <svg aria-hidden="true" fill="none" height="14" viewBox="0 0 16 16" width="14">
+                  <path
+                    d="M2.75 8a5.25 5.25 0 1 0 1.6-3.78M2.75 2.5v3.25H6"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.6"
+                  />
+                </svg>
+                Replay intro
+              </button>
+            </section>
+            <div class="m-desk ribbon">
+              <span>The desk and the keynote turn stay as they are</span>
+              <span class="stand-in-tag">CSS stand-in</span>
+            </div>
+          </div>
+        </div>
+        <p class="note">
+          <b>One primary action.</b> The hero keeps the announcement, title, lead and Replay intro.
+          The install command and Get started leave it, with Star on GitHub as the secondary button
+          on the right. Replay intro stays centred in the hero's bottom padding and still hides when
+          the keynote cannot run (try Reduce motion).
+        </p>
+      </section>
+
+      <section class="art-screen" id="component-screen" aria-labelledby="component-screen-title">
+        <h2 id="component-screen-title">2 · Component page: Glass Button</h2>
+        <div class="art-frame">
+          <div class="site" id="docs-mock" data-platform="react">
+            <div class="m-header">
+              <span class="m-brand"
+                ><svg aria-hidden="true" focusable="false" viewBox="0 0 64 64">
+                  <g fill="currentColor">
+                    <path
+                      d="M13.21 13.21C13.21 13.19 13.21 13.16 13.22 13.08C13.23 13 13.24 12.87 13.27 12.7C13.3 12.53 13.34 12.31 13.41 12.06C13.48 11.8 13.56 11.5 13.69 11.17C13.83 10.84 14 10.46 14.23 10.07C14.46 9.68 14.74 9.25 15.09 8.84C15.44 8.43 15.85 8 16.32 7.62C16.78 7.24 17.31 6.86 17.86 6.55C18.42 6.23 19.03 5.95 19.64 5.72C20.25 5.5 20.9 5.33 21.54 5.19C22.18 5.06 22.84 4.99 23.49 4.92C24.14 4.86 24.79 4.85 25.44 4.83C26.09 4.81 26.73 4.81 27.38 4.81C28.03 4.8 28.68 4.8 29.33 4.8C29.99 4.8 30.65 4.8 31.32 4.8C32 4.8 32.68 4.8 33.38 4.8C34.09 4.8 34.8 4.8 35.55 4.8C36.3 4.8 37.07 4.8 37.89 4.81C38.71 4.83 39.56 4.83 40.49 4.87C41.41 4.91 42.38 4.94 43.44 5.06C44.5 5.18 45.64 5.28 46.86 5.58C48.07 5.89 49.44 6.23 50.71 6.89C51.97 7.54 53.4 8.46 54.47 9.53C55.54 10.6 56.46 12.03 57.11 13.29C57.77 14.56 58.11 15.93 58.42 17.14C58.72 18.36 58.82 19.5 58.94 20.56C59.06 21.62 59.09 22.59 59.13 23.51C59.17 24.44 59.17 25.29 59.19 26.11C59.2 26.93 59.2 27.7 59.2 28.45C59.2 29.2 59.2 29.91 59.2 30.62C59.2 31.32 59.2 32 59.2 32.68C59.2 33.35 59.2 34.01 59.2 34.67C59.2 35.32 59.2 35.97 59.19 36.62C59.19 37.27 59.19 37.91 59.17 38.56C59.15 39.21 59.14 39.86 59.08 40.51C59.01 41.16 58.94 41.82 58.81 42.46C58.67 43.1 58.5 43.75 58.28 44.36C58.05 44.97 57.77 45.58 57.45 46.14C57.14 46.69 56.76 47.22 56.38 47.68C56 48.15 55.57 48.56 55.16 48.91C54.75 49.26 54.32 49.54 53.93 49.77C53.54 50 53.16 50.17 52.83 50.31C52.5 50.44 52.2 50.52 51.94 50.59C51.69 50.66 51.47 50.7 51.3 50.73C51.13 50.76 51 50.77 50.92 50.78C50.84 50.79 50.81 50.79 50.79 50.79L50.79 50.79C50.8 50.68 50.85 50.55 50.82 50.14C50.79 49.73 50.78 49.04 50.61 48.33C50.45 47.62 50.1 46.76 49.83 45.86C49.57 44.96 49.19 44.02 49.02 42.92C48.84 41.82 48.81 40.59 48.78 39.28C48.74 37.97 48.8 36.52 48.8 35.05C48.8 33.57 48.8 32.03 48.8 30.41C48.8 28.78 48.84 27.03 48.77 25.3C48.7 23.57 48.66 21.42 48.38 20.01C48.11 18.61 47.85 17.62 47.12 16.88C46.38 16.15 45.39 15.89 43.99 15.62C42.58 15.34 40.43 15.3 38.7 15.23C36.97 15.16 35.22 15.2 33.59 15.2C31.97 15.2 30.43 15.2 28.95 15.2C27.48 15.2 26.03 15.26 24.72 15.22C23.41 15.19 22.18 15.16 21.08 14.98C19.98 14.81 19.04 14.43 18.14 14.17C17.24 13.9 16.38 13.55 15.67 13.39C14.96 13.22 14.27 13.21 13.86 13.18C13.45 13.15 13.32 13.2 13.21 13.21Z"
+                      transform="rotate(180 32 32)"
+                    />
+                    <path
+                      d="M13.21 13.21C13.21 13.19 13.21 13.16 13.22 13.08C13.23 13 13.24 12.87 13.27 12.7C13.3 12.53 13.34 12.31 13.41 12.06C13.48 11.8 13.56 11.5 13.69 11.17C13.83 10.84 14 10.46 14.23 10.07C14.46 9.68 14.74 9.25 15.09 8.84C15.44 8.43 15.85 8 16.32 7.62C16.78 7.24 17.31 6.86 17.86 6.55C18.42 6.23 19.03 5.95 19.64 5.72C20.25 5.5 20.9 5.33 21.54 5.19C22.18 5.06 22.84 4.99 23.49 4.92C24.14 4.86 24.79 4.85 25.44 4.83C26.09 4.81 26.73 4.81 27.38 4.81C28.03 4.8 28.68 4.8 29.33 4.8C29.99 4.8 30.65 4.8 31.32 4.8C32 4.8 32.68 4.8 33.38 4.8C34.09 4.8 34.8 4.8 35.55 4.8C36.3 4.8 37.07 4.8 37.89 4.81C38.71 4.83 39.56 4.83 40.49 4.87C41.41 4.91 42.38 4.94 43.44 5.06C44.5 5.18 45.64 5.28 46.86 5.58C48.07 5.89 49.44 6.23 50.71 6.89C51.97 7.54 53.4 8.46 54.47 9.53C55.54 10.6 56.46 12.03 57.11 13.29C57.77 14.56 58.11 15.93 58.42 17.14C58.72 18.36 58.82 19.5 58.94 20.56C59.06 21.62 59.09 22.59 59.13 23.51C59.17 24.44 59.17 25.29 59.19 26.11C59.2 26.93 59.2 27.7 59.2 28.45C59.2 29.2 59.2 29.91 59.2 30.62C59.2 31.32 59.2 32 59.2 32.68C59.2 33.35 59.2 34.01 59.2 34.67C59.2 35.32 59.2 35.97 59.19 36.62C59.19 37.27 59.19 37.91 59.17 38.56C59.15 39.21 59.14 39.86 59.08 40.51C59.01 41.16 58.94 41.82 58.81 42.46C58.67 43.1 58.5 43.75 58.28 44.36C58.05 44.97 57.77 45.58 57.45 46.14C57.14 46.69 56.76 47.22 56.38 47.68C56 48.15 55.57 48.56 55.16 48.91C54.75 49.26 54.32 49.54 53.93 49.77C53.54 50 53.16 50.17 52.83 50.31C52.5 50.44 52.2 50.52 51.94 50.59C51.69 50.66 51.47 50.7 51.3 50.73C51.13 50.76 51 50.77 50.92 50.78C50.84 50.79 50.81 50.79 50.79 50.79L50.79 50.79C50.8 50.68 50.85 50.55 50.82 50.14C50.79 49.73 50.78 49.04 50.61 48.33C50.45 47.62 50.1 46.76 49.83 45.86C49.57 44.96 49.19 44.02 49.02 42.92C48.84 41.82 48.81 40.59 48.78 39.28C48.74 37.97 48.8 36.52 48.8 35.05C48.8 33.57 48.8 32.03 48.8 30.41C48.8 28.78 48.84 27.03 48.77 25.3C48.7 23.57 48.66 21.42 48.38 20.01C48.11 18.61 47.85 17.62 47.12 16.88C46.38 16.15 45.39 15.89 43.99 15.62C42.58 15.34 40.43 15.3 38.7 15.23C36.97 15.16 35.22 15.2 33.59 15.2C31.97 15.2 30.43 15.2 28.95 15.2C27.48 15.2 26.03 15.26 24.72 15.22C23.41 15.19 22.18 15.16 21.08 14.98C19.98 14.81 19.04 14.43 18.14 14.17C17.24 13.9 16.38 13.55 15.67 13.39C14.96 13.22 14.27 13.21 13.86 13.18C13.45 13.15 13.32 13.2 13.21 13.21Z"
+                    />
+                    <path
+                      fill="#f04a28"
+                      d="M13.21 13.21C13.22 13.12 13.19 13.02 13.27 12.68C13.36 12.33 13.41 11.77 13.71 11.14C14 10.51 14.42 9.63 15.04 8.91C15.66 8.19 16.55 7.38 17.43 6.81C18.31 6.24 19.38 5.81 20.31 5.5C21.25 5.19 22.2 5.08 23.03 4.97C23.86 4.86 24.63 4.86 25.28 4.83C25.93 4.8 26.49 4.81 26.94 4.81C27.39 4.8 27.74 4.8 27.97 4.8C28.2 4.8 28.26 4.8 28.32 4.8L28.34 15.2C28.25 15.2 28.15 15.2 27.81 15.2C27.47 15.21 26.93 15.21 26.3 15.21C25.66 15.22 24.84 15.25 24 15.22C23.17 15.19 22.21 15.17 21.31 15.02C20.41 14.87 19.49 14.59 18.61 14.33C17.74 14.08 16.84 13.68 16.07 13.48C15.3 13.29 14.48 13.22 14.01 13.18C13.53 13.13 13.34 13.2 13.21 13.21Z"
+                      transform="rotate(180 32 32)"
+                    />
+                  </g></svg
+                >Glassy UI</span
+              >
+            </div>
+            <details class="m-mobile-nav">
+              <summary>Browse docs<span>Button</span></summary>
+              <nav aria-label="Mobile documentation navigation" data-fill="mobileNav"></nav>
+            </details>
+            <div class="m-docs">
+              <nav class="m-sidebar" aria-label="Documentation" data-fill="sidebar"></nav>
+
+              <article class="m-main">
+                <header class="m-page-header">
+                  <p class="m-eyebrow" data-fill="category"></p>
+                  <h1 data-fill="name"></h1>
+                  <p class="m-page-lead" data-fill="description"></p>
+                  <fieldset class="m-seg m-platform">
+                    <legend class="vh">Platform</legend>
+                    <label
+                      ><input type="radio" name="m-platform" value="react" checked />React</label
+                    >
+                    <label
+                      ><input type="radio" name="m-platform" value="react-native" />React
+                      Native</label
+                    >
+                  </fieldset>
+                  <div class="m-page-links" data-pane="react">
+                    <a href="#" data-mock-href="registry/glassyui/glass-button.tsx on GitHub"
+                      >View source on GitHub</a
+                    >
+                    <a href="#" data-mock-href="/r/glass-button.json">Registry JSON</a>
+                  </div>
+                  <div class="m-page-links" data-pane="react-native" hidden>
+                    <a href="#" data-mock-href="registry/glassyui-native/glass-button.tsx on GitHub"
+                      >View source on GitHub</a
+                    >
+                    <a href="#" data-mock-href="/r/native/glass-button.json">Registry JSON</a>
+                    <a href="#" data-mock-href="/guides/expo">Read the Expo guide</a>
+                  </div>
+                  <p class="note">
+                    <b>Nothing to install above the preview.</b> The header loses its install chip.
+                    The platform switch stays here and sets Preview, Installation, Usage and API.
+                  </p>
+                </header>
+
+                <section class="m-section" id="m-preview" aria-labelledby="m-preview-title">
+                  <h2 id="m-preview-title">Preview</h2>
+                  <div class="m-preview ribbon">
+                    <div class="m-preview-row">
+                      <button class="m-glass-button" type="button" data-mock-action="preview">
+                        Not now
+                      </button>
+                      <button
+                        class="m-glass-button is-prominent"
+                        type="button"
+                        data-mock-action="preview"
+                      >
+                        Continue
+                      </button>
+                    </div>
+                    <span class="stand-in-tag">CSS stand-in, not the production glass</span>
+                  </div>
+                  <p class="m-text" data-pane="react-native" hidden>
+                    This preview runs the React version. In an app, iOS 26 and later draw the React
+                    Native version with the system’s own glass.
+                    <a href="#" data-mock-href="/mobile">See it on a phone</a>.
+                  </p>
+                </section>
+
+                <section
+                  class="m-section"
+                  id="m-installation"
+                  aria-labelledby="m-installation-title"
+                >
+                  <h2 id="m-installation-title">Installation</h2>
+                  <p class="m-install-for" data-pane="react">For React apps with Tailwind CSS 4.</p>
+                  <p class="m-install-for" data-pane="react-native" hidden>
+                    For Expo SDK 55 or later.
+                  </p>
+
+                  <div class="m-tabs" role="tablist" aria-label="Installation method">
+                    <button
+                      class="m-tab"
+                      role="tab"
+                      id="m-tab-cli"
+                      aria-controls="m-panel-cli"
+                      aria-selected="true"
+                      type="button"
+                    >
+                      CLI
+                    </button>
+                    <button
+                      class="m-tab"
+                      role="tab"
+                      id="m-tab-manual"
+                      aria-controls="m-panel-manual"
+                      aria-selected="false"
+                      tabindex="-1"
+                      type="button"
+                    >
+                      Manual
+                    </button>
+                  </div>
+
+                  <div
+                    class="m-panel"
+                    role="tabpanel"
+                    id="m-panel-cli"
+                    aria-labelledby="m-tab-cli"
+                    tabindex="0"
+                  >
+                    <div class="m-pane" data-pane="react">
+                      <div data-command="cli-react"></div>
+                      <p class="m-summary" data-fill="cliSummaryReact"></p>
+                    </div>
+                    <div class="m-pane" data-pane="react-native" hidden>
+                      <p class="m-text">
+                        Add a <code>components.json</code> to your app first, as the
+                        <a href="#" data-mock-href="/guides/expo">Expo guide</a> shows.
+                      </p>
+                      <div data-command="cli-native"></div>
+                      <p class="m-summary" data-fill="cliSummaryNative"></p>
+                    </div>
+                    <p class="note">
+                      <b>Proposed command.</b> The full payload URL needs no
+                      <code>registries</code> mapping. It works once each item at
+                      <code>/r</code> and <code>/r/native</code> is published self-contained, with
+                      its whole file closure and packages. Today's payloads still name
+                      <code>@glassyui/…</code> dependencies, which fail without a mapping.
+                      <b>Package manager:</b> one choice for every command, npm by default,
+                      remembered in this browser.
+                    </p>
+                  </div>
+
+                  <div
+                    class="m-panel"
+                    role="tabpanel"
+                    id="m-panel-manual"
+                    aria-labelledby="m-tab-manual"
+                    tabindex="0"
+                    hidden
+                  >
+                    <div class="m-pane" data-pane="react">
+                      <h3 class="m-step">
+                        <span class="m-step-number">1</span>Install the packages
+                      </h3>
+                      <div data-command="packages-react"></div>
+                      <h3 class="m-step">
+                        <span class="m-step-number">2</span>Add the files to components/glassyui
+                      </h3>
+                      <p class="m-step-text">
+                        Keep the lib and styles folders, since the files import each other by
+                        relative path. If your <code>@/</code> alias points at src, use
+                        src/components/glassyui.
+                      </p>
+                      <div data-files="web"></div>
+                    </div>
+                    <div class="m-pane" data-pane="react-native" hidden>
+                      <h3 class="m-step">
+                        <span class="m-step-number">1</span>Install the packages
+                      </h3>
+                      <div data-command="packages-native"></div>
+                      <h3 class="m-step">
+                        <span class="m-step-number">2</span>Add the files to components/glassyui
+                      </h3>
+                      <p class="m-step-text">
+                        Keep the lib folder, since the files import each other by relative path. If
+                        your <code>@/</code> alias points at src, use src/components/glassyui.
+                      </p>
+                      <div data-files="native"></div>
+                      <p class="m-summary">Then rebuild your development build.</p>
+                    </div>
+                    <p class="note">
+                      <b>Manual shows the same closure the CLI installs,</b> grouped by the item
+                      that ships each file. The page loads the item's own published payload when
+                      Manual opens, using the source supplied to the CLI. This mock embeds the first
+                      lines of each file instead.
+                    </p>
+                  </div>
+                </section>
+
+                <section class="m-section" id="m-usage" aria-labelledby="m-usage-title">
+                  <h2 id="m-usage-title">Usage</h2>
+                  <div data-pane="react" data-usage="web"></div>
+                  <div data-pane="react-native" data-usage="native" hidden></div>
+                </section>
+
+                <section
+                  class="m-section m-placeholder"
+                  id="m-examples"
+                  aria-labelledby="m-examples-title"
+                >
+                  <h2 id="m-examples-title">Examples</h2>
+                  <p>Variants and As a link keep their place. Not drawn in this mock.</p>
+                </section>
+
+                <section class="m-section" id="m-api" aria-labelledby="m-api-title">
+                  <h2 id="m-api-title">API</h2>
+                  <p class="m-text" data-pane="react-native" hidden>
+                    The React Native version takes the same props under React Native’s names:
+                    <code>onPress</code> for <code>onClick</code> and <code>style</code> for
+                    <code>className</code>.
+                  </p>
+                  <div class="m-api" data-fill="api"></div>
+                </section>
+
+                <section
+                  class="m-section m-placeholder"
+                  id="m-notes"
+                  aria-labelledby="m-notes-title"
+                >
+                  <h2 id="m-notes-title">Notes</h2>
+                  <p>Motion, Glass Scene, Accessibility and Performance keep their place.</p>
+                </section>
+              </article>
+
+              <aside class="m-toc" aria-label="On this page">
+                <p>On this page</p>
+                <a href="#m-preview">Preview</a>
+                <a href="#m-installation">Installation</a>
+                <a href="#m-usage">Usage</a>
+                <a href="#m-examples">Examples</a>
+                <a href="#m-api">API</a>
+                <a href="#m-notes">Notes</a>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="art-sources" aria-labelledby="art-sources-title">
+        <h2 id="art-sources-title">Where the mock's data comes from</h2>
+        <ul>
+          <li>
+            Name, category, description, usage and API: the Glass Button entry in
+            <code>src/components/docs/component-docs-data.ts</code>; the component count is that
+            file's 36 entries.
+          </li>
+          <li>
+            React files and packages: the closure of <code>glass-button</code> in
+            <code>registry.json</code> (Glass Button and Glass Provider), with file text from
+            <code>public/r/glass-button.json</code> and <code>public/r/glass-provider.json</code>.
+          </li>
+          <li>
+            React Native files and packages: the closure of <code>glass-button</code> in
+            <code>registry-native.json</code> (Glass Button, Glass Provider, Glass Surface), with
+            file text from <code>public/r/native/</code>.
+          </li>
+          <li>
+            React Native usage: <code>fixtures/expo-consumer/usage/glass-button.tsx</code>. Runners:
+            the existing Getting Started copy (npx, pnpm dlx, yarn dlx, bunx --bun).
+          </li>
+          <li>
+            Expo SDK and development-build lines: the Expo guide. Hero copy:
+            <code>src/app/page.tsx</code>. Mark:
+            <code>public/brand/glassyui-logo-compact.svg</code>.
+          </li>
+        </ul>
+        <p>
+          The full design, states and acceptance criteria are in
+          <code>docs/design/component-installation.md</code>.
+        </p>
+      </section>
+    </main>
+
+    <p class="art-toast" id="art-toast" role="status" aria-live="polite"></p>
+    <noscript
+      ><p class="note">This artifact needs JavaScript to draw its commands and files.</p></noscript
+    >
+
+    <script type="application/json" id="mock-data">
+      {
+        "componentCount": 36,
+        "component": {
+          "id": "glass-button",
+          "name": "Glass Button",
+          "category": "Controls",
+          "description": "A slab of glass resting just above the page that sets down when pressed and lights up where you press."
+        },
+        "web": {
+          "groups": [
+            {
+              "item": "glass-button",
+              "title": "Glass Button",
+              "files": [
+                {
+                  "target": "components/glassyui/glass-button.tsx",
+                  "path": "glass-button.tsx",
+                  "lines": 284,
+                  "full": false,
+                  "excerpt": "'use client';\n\nimport { Slot, Slottable } from '@radix-ui/react-slot';\nimport clsx from 'clsx';\nimport {\n  cloneElement,\n  forwardRef,\n  isValidElement,\n  use,\n  useCallback,\n  useEffect,\n  useMemo,\n  useRef,\n} from 'react';\nimport type { CSSProperties, ReactNode } from 'react';\nimport { mergeRefs } from './lib/merge-refs';\nimport { useGlassScenePane } from './lib/scene-context';\nimport { useLensFilter } from './lib/use-refraction-filter';\nimport { useOptionalPreferences } from './glass-provider';\n\nexport type ButtonVariant = 'primary' | 'prominent' | 'ghost' | 'soft';\n\nexport type ButtonSize = 'sm' | 'md' | 'lg';\n",
+                  "language": "tsx"
+                },
+                {
+                  "target": "components/glassyui/lib/merge-refs.ts",
+                  "path": "lib/merge-refs.ts",
+                  "lines": 19,
+                  "full": true,
+                  "excerpt": "import type { Ref } from 'react';\n\nexport function mergeRefs\u003cT>(...refs: Array\u003cRef\u003cT> | undefined>) {\n  return (node: T) => {\n    for (const ref of refs) {\n      if (!ref) continue;\n\n      if ('current' in ref) {\n        try {\n          ref.current = node;\n        } catch {\n          // Read-only refs cannot be assigned.\n        }\n      } else {\n        ref(node);\n      }\n    }\n  };\n}",
+                  "language": "tsx"
+                },
+                {
+                  "target": "components/glassyui/lib/refraction-map.ts",
+                  "path": "lib/refraction-map.ts",
+                  "lines": 681,
+                  "full": false,
+                  "excerpt": "import { SLAB_AIR_GAP, SLAB_MAX_SLOPE, SLAB_MIN_RISE, SLAB_RISE_SPAN } from './slab-optics';\n\nexport type GeneratedRefractionStrength = 'soft' | 'strong';\n\ntype RefractionPreset = {\n  centerNeutralRatio: number;\n  defaultDisplacement: number;\n  edgeBandRatio: number;\n  edgeWidth: number;\n  /** Rim pull at the default displacement, as a share of the edge band. */\n  rimPull: number;\n};\n\nexport type RefractionMapOptions = {\n  devicePixelRatio?: number;\n  displacement?: number;\n  height: number;\n  radius: number;\n  strength: GeneratedRefractionStrength;\n  thickness?: number;\n  width: number;\n};\n\nexport type RefractionMapMetrics = {",
+                  "language": "tsx"
+                },
+                {
+                  "target": "components/glassyui/lib/slab-optics.ts",
+                  "path": "lib/slab-optics.ts",
+                  "lines": 9,
+                  "full": true,
+                  "excerpt": "// The glass floats this far above its backdrop, in CSS pixels.\nexport const SLAB_AIR_GAP = 8;\n\n// Fractions of full slab thickness at the rim and added across its curved top.\nexport const SLAB_MIN_RISE = 0.3;\n\nexport const SLAB_RISE_SPAN = 0.7;\n\nexport const SLAB_MAX_SLOPE = 12;",
+                  "language": "tsx"
+                },
+                {
+                  "target": "components/glassyui/lib/use-refraction-filter.tsx",
+                  "path": "lib/use-refraction-filter.tsx",
+                  "lines": 947,
+                  "full": false,
+                  "excerpt": "'use client';\n\nimport { useCallback, useEffect, useId, useMemo, useRef, useState, type RefObject } from 'react';\nimport {\n  buildLensMapDataUrl,\n  buildMagnifierMapDataUrl,\n  buildRefractionMapDataUrl,\n  clamp,\n  computeMagnifierMapMetrics,\n  MAX_LENS_SURFACE_AREA,\n  type GeneratedRefractionStrength,\n  type LensMapMetrics,\n  type LensRadii,\n  type MagnifierMapBuildResult,\n  type RefractionMapMetrics,\n} from './refraction-map';\n\ntype RefractionFilterOptions = {\n  displacement?: number;\n  enabled: boolean;\n  reduceTransparency?: boolean;\n  strength: GeneratedRefractionStrength;\n  thickness?: number;\n  viewportAligned?: boolean;",
+                  "language": "tsx"
+                },
+                {
+                  "target": "components/glassyui/lib/scene-context.ts",
+                  "path": "lib/scene-context.ts",
+                  "lines": 57,
+                  "full": false,
+                  "excerpt": "'use client';\n\nimport { createContext, useContext, useLayoutEffect } from 'react';\nimport type { RefObject } from 'react';\n\nexport type GlassSceneRegistry = {\n  elements: ReadonlySet\u003cHTMLElement>;\n  register: (element: HTMLElement) => () => void;\n  subscribe: (listener: () => void) => () => void;\n};\n\n// The registry exists before any effect runs, because children register in\n// their effects and those run before the scene's own effect.\nexport function createGlassSceneRegistry(): GlassSceneRegistry {\n  const elements = new Set\u003cHTMLElement>();\n  const listeners = new Set\u003c() => void>();\n  const notify = () => listeners.forEach((listener) => listener());\n\n  return {\n    elements,\n    register(element) {\n      elements.add(element);\n      notify();\n",
+                  "language": "tsx"
+                }
+              ]
+            },
+            {
+              "item": "glass-provider",
+              "title": "Glass Provider",
+              "files": [
+                {
+                  "target": "components/glassyui/glass-provider.tsx",
+                  "path": "glass-provider.tsx",
+                  "lines": 255,
+                  "full": false,
+                  "excerpt": "'use client';\n\nimport './styles/liquid.css';\n\nimport {\n  createContext,\n  useCallback,\n  useContext,\n  useEffect,\n  useMemo,\n  useState,\n  useSyncExternalStore,\n  type ReactNode,\n} from 'react';\nimport {\n  applyPreferences,\n  computeAutomaticSafeguards,\n  GLASS_THICKNESS,\n  loadPreferences,\n  persistPreferences,\n  type GlassyUiPreferences,\n  type GlassyUiTheme,\n} from './lib/preferences';\n",
+                  "language": "tsx"
+                },
+                {
+                  "target": "components/glassyui/liquid-filters.tsx",
+                  "path": "liquid-filters.tsx",
+                  "lines": 196,
+                  "full": false,
+                  "excerpt": "export function LiquidFilters() {\n  return (\n    \u003csvg\n      aria-hidden=\"true\"\n      focusable=\"false\"\n      className=\"lg-svg-filters\"\n      style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}\n    >\n      \u003cdefs>\n        {/*\n          Simplified high-performance refraction filter.\n          Uses userSpaceOnUse for pixel-accurate displacement.\n          Chromatic aberration via RGB channel separation + offset.\n        */}\n        \u003cfilter\n          id=\"lg-liquid-refraction\"\n          x=\"-10%\"\n          y=\"-10%\"\n          width=\"120%\"\n          height=\"120%\"\n          filterUnits=\"objectBoundingBox\"\n          primitiveUnits=\"userSpaceOnUse\"\n          colorInterpolationFilters=\"sRGB\"\n        >",
+                  "language": "tsx"
+                },
+                {
+                  "target": "components/glassyui/lib/preferences.ts",
+                  "path": "lib/preferences.ts",
+                  "lines": 192,
+                  "full": false,
+                  "excerpt": "export type GlassyUiMode = 'clear' | 'tinted';\n\nexport type GlassyUiQuality = 'low' | 'medium' | 'high';\n\nexport type GlassyUiTheme = 'light' | 'dark';\n\nexport interface GlassyUiPreferences {\n  theme?: GlassyUiTheme;\n  mode?: GlassyUiMode;\n  reduceTransparency?: boolean;\n  reduceMotion?: boolean;\n  quality?: GlassyUiQuality;\n  /**\n   * How thick the glass is, as a multiple of regular: its rim widens, bends the\n   * backdrop further and splits more colour. Kept between 0.25 and 2.\n   */\n  thickness?: number;\n}\n\n/** The range of the thickness preference. 1 is regular glass. */\nexport const GLASS_THICKNESS = { min: 0.25, max: 2, regular: 1 } as const;\n\nconst THICKNESS_PROPERTY = '--lg-glass-thickness';\n",
+                  "language": "tsx"
+                },
+                {
+                  "target": "components/glassyui/styles/liquid.css",
+                  "path": "styles/liquid.css",
+                  "lines": 5053,
+                  "full": false,
+                  "excerpt": "/* Glassy UI styles live in the components layer, below Tailwind utilities, so\n   a className such as rounded-xl or p-8 overrides the library default. These\n   statements repeat Tailwind 4's own layer order, so it holds even when this\n   file loads before Tailwind. */\n@layer properties;\n@layer theme, base, components, utilities;\n\n@property --lg-fresnel {\n  syntax: '\u003cnumber>';\n  initial-value: 0;\n  inherits: true;\n}\n\n@property --lg-specular {\n  syntax: '\u003cnumber>';\n  initial-value: 0;\n  inherits: true;\n}\n\n@property --lg-refraction-scale {\n  syntax: '\u003cnumber>';\n  initial-value: 0;\n  inherits: true;\n}",
+                  "language": "css"
+                }
+              ]
+            }
+          ],
+          "packages": ["@radix-ui/react-slot", "clsx"],
+          "fileCount": 10,
+          "usage": "import { GlassButton } from \"@/components/glassyui/glass-button\";\n\nexport function ButtonDemo() {\n  return \u003cGlassButton>Save changes\u003c/GlassButton>;\n}"
+        },
+        "native": {
+          "groups": [
+            {
+              "item": "glass-button",
+              "title": "Glass Button",
+              "files": [
+                {
+                  "target": "components/glassyui/glass-button.tsx",
+                  "path": "glass-button.tsx",
+                  "lines": 234,
+                  "full": false,
+                  "excerpt": "import { Children, forwardRef, isValidElement, useCallback, useState, type ReactNode } from 'react';\nimport {\n  Animated,\n  Easing,\n  Pressable,\n  StyleSheet,\n  Text,\n  View,\n  type GestureResponderEvent,\n  type LayoutChangeEvent,\n  type PressableProps,\n  type StyleProp,\n  type ViewStyle,\n} from 'react-native';\nimport { useGlassTheme } from './glass-provider';\nimport { GlassSurface } from './glass-surface';\nimport { GLASS_MOTION, GLASS_RADIUS } from './lib/tokens';\n\nexport type ButtonVariant = 'primary' | 'prominent' | 'ghost' | 'soft';\n\nexport type ButtonSize = 'sm' | 'md' | 'lg';\n\nexport type GlassButtonProps = Omit\u003cPressableProps, 'children' | 'style'> & {\n  children?: ReactNode;",
+                  "language": "tsx"
+                }
+              ]
+            },
+            {
+              "item": "glass-provider",
+              "title": "Glass Provider",
+              "files": [
+                {
+                  "target": "components/glassyui/glass-provider.tsx",
+                  "path": "glass-provider.tsx",
+                  "lines": 109,
+                  "full": false,
+                  "excerpt": "import {\n  createContext,\n  useCallback,\n  useContext,\n  useMemo,\n  useState,\n  useSyncExternalStore,\n  type ReactNode,\n} from 'react';\nimport { useColorScheme } from 'react-native';\nimport {\n  readSystemAccessibility,\n  subscribeToSystemAccessibility,\n  type GlassyUiPreferences,\n  type GlassyUiTheme,\n} from './lib/preferences';\nimport { GLASS_COLORS } from './lib/tokens';\n\ntype PreferenceState = Required\u003cGlassyUiPreferences>;\n\ntype PreferenceContextValue = {\n  preferences: PreferenceState;\n  setPreferences: (prefs: Partial\u003cGlassyUiPreferences>) => void;\n};",
+                  "language": "tsx"
+                },
+                {
+                  "target": "components/glassyui/lib/preferences.ts",
+                  "path": "lib/preferences.ts",
+                  "lines": 98,
+                  "full": false,
+                  "excerpt": "import { AccessibilityInfo, Platform } from 'react-native';\n\nexport type GlassyUiMode = 'clear' | 'tinted';\n\nexport type GlassyUiTheme = 'light' | 'dark';\n\nexport interface GlassyUiPreferences {\n  theme?: GlassyUiTheme;\n  /** Clear glass shows more of what lies behind it; tinted glass holds a denser frost. */\n  mode?: GlassyUiMode;\n  reduceTransparency?: boolean;\n  reduceMotion?: boolean;\n}\n\nexport type SystemAccessibility = {\n  reduceMotion: boolean;\n  reduceTransparency: boolean;\n};\n\ntype Subscription = { remove: () => void };\n\n// The system's accessibility settings, read once and shared by every glass component.\nlet snapshot: SystemAccessibility = { reduceMotion: false, reduceTransparency: false };\n",
+                  "language": "tsx"
+                },
+                {
+                  "target": "components/glassyui/lib/tokens.ts",
+                  "path": "lib/tokens.ts",
+                  "lines": 102,
+                  "full": false,
+                  "excerpt": "import { Platform } from 'react-native';\nimport type { GlassyUiTheme } from './preferences';\n\nexport type GlassTone = 'neutral' | 'blue' | 'green' | 'orange' | 'red' | 'purple';\n\nexport type GlassColors = {\n  /** Selection, active controls and the prominent button. */\n  accent: string;\n  accentForeground: string;\n  border: string;\n  /** The resting fill of fields and unselected controls. */\n  controlSurface: string;\n  focusRing: string;\n  foreground: string;\n  /** Extra frost over blurred glass, for clear and tinted glass. */\n  glassFill: Record\u003c'clear' | 'tinted', string>;\n  invalid: string;\n  knob: string;\n  mutedForeground: string;\n  /** Where glass cannot be drawn: Reduce Transparency. */\n  opaqueSurface: string;\n  /** Floating layers that must hold 4.5:1 text over any backdrop. */\n  overlaySurface: string;\n  /** The hairline round a glass edge, and the light it catches along the top. */",
+                  "language": "tsx"
+                },
+                {
+                  "target": "components/glassyui/lib/use-controllable-state.ts",
+                  "path": "lib/use-controllable-state.ts",
+                  "lines": 26,
+                  "full": true,
+                  "excerpt": "import { useCallback, useState } from 'react';\n\n/**\n * State a component owns until its parent passes `value`; then the parent owns it. Either way\n * `onChange` hears every change the component makes.\n */\nexport function useControllableState\u003cT>(\n  value: T | undefined,\n  defaultValue: T,\n  onChange?: (next: T) => void,\n) {\n  const [uncontrolled, setUncontrolled] = useState(defaultValue);\n  const controlled = value !== undefined;\n  const current = controlled ? value : uncontrolled;\n\n  const setValue = useCallback(\n    (next: T) => {\n      if (!controlled) setUncontrolled(next);\n\n      onChange?.(next);\n    },\n    [controlled, onChange],\n  );\n\n  return [current, setValue] as const;\n}",
+                  "language": "tsx"
+                }
+              ]
+            },
+            {
+              "item": "glass-surface",
+              "title": "Glass Surface",
+              "files": [
+                {
+                  "target": "components/glassyui/glass-surface.tsx",
+                  "path": "glass-surface.tsx",
+                  "lines": 162,
+                  "full": false,
+                  "excerpt": "import { BlurView } from 'expo-blur';\nimport { GlassView } from 'expo-glass-effect';\nimport { Children, forwardRef } from 'react';\nimport { Platform, StyleSheet, Text, View, type ViewProps } from 'react-native';\nimport { useGlassBackdrop } from './glass-backdrop';\nimport { useGlassTheme } from './glass-provider';\nimport { resolveGlassMaterial } from './lib/material';\nimport { GLASS_RADIUS } from './lib/tokens';\n\nexport type SurfacePreset = 'subtle' | 'standard' | 'prominent' | 'control' | 'overlay';\n\nexport type SurfaceElevation = 'none' | 'base' | 'raised';\n\nexport type GlassSurfaceProps = ViewProps & {\n  /** Floating glass casts a shadow; glass set into a layout does not. Defaults to base. */\n  elevation?: SurfaceElevation;\n  /**\n   * How much frost: subtle shows the most of what lies behind, prominent the least. Overlay is\n   * for floating layers such as dialogs and menus: its denser tint keeps text at 4.5:1 over any\n   * backdrop.\n   */\n  preset?: SurfacePreset;\n  /**\n   * Colours the glass, as the prominent button's blue does. Use an opaque colour. Where the glass",
+                  "language": "tsx"
+                },
+                {
+                  "target": "components/glassyui/glass-backdrop.tsx",
+                  "path": "glass-backdrop.tsx",
+                  "lines": 56,
+                  "full": false,
+                  "excerpt": "import { BlurTargetView } from 'expo-blur';\nimport {\n  createContext,\n  useContext,\n  useEffect,\n  useMemo,\n  useRef,\n  useState,\n  type ReactNode,\n  type RefObject,\n} from 'react';\nimport { StyleSheet, View, type ViewProps } from 'react-native';\n\ntype BackdropTarget = {\n  /** The view Android blurs, once it has mounted. */\n  target: RefObject\u003cView | null> | null;\n};\n\nconst BackdropContext = createContext\u003cBackdropTarget | null>(null);\n\n/** The nearest GlassBackdrop, or null when glass sits outside one. */\nexport function useGlassBackdrop() {\n  return useContext(BackdropContext);\n}",
+                  "language": "tsx"
+                },
+                {
+                  "target": "components/glassyui/lib/material.ts",
+                  "path": "lib/material.ts",
+                  "lines": 16,
+                  "full": true,
+                  "excerpt": "import { isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'expo-glass-effect';\n\n/**\n * How glass is drawn: the system's own glass on iOS 26 and later, a blur of what lies\n * behind on earlier iOS, Android and the web, or an opaque fill under Reduce Transparency.\n */\nexport type GlassMaterial = 'liquid' | 'blur' | 'solid';\n\n// Both checks return false off iOS. The second guards early iOS 26 builds that lack the API.\nconst systemGlass = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();\n\nexport function resolveGlassMaterial(reduceTransparency: boolean): GlassMaterial {\n  if (reduceTransparency) return 'solid';\n\n  return systemGlass ? 'liquid' : 'blur';\n}",
+                  "language": "tsx"
+                }
+              ]
+            }
+          ],
+          "packages": ["expo-blur", "expo-glass-effect"],
+          "fileCount": 8,
+          "usage": "import { useState } from 'react';\nimport { View } from 'react-native';\nimport { GlassButton } from '@/components/glassyui/glass-button';\n\nexport default function ButtonExample() {\n  const [saved, setSaved] = useState(false);\n\n  return (\n    \u003cView style={{ flexDirection: 'row', gap: 12 }}>\n      \u003cGlassButton variant=\"prominent\" onPress={() => setSaved(true)}>\n        {saved ? 'Saved' : 'Save'}\n      \u003c/GlassButton>\n      \u003cGlassButton disabled={!saved} onPress={() => setSaved(false)}>\n        Undo\n      \u003c/GlassButton>\n    \u003c/View>\n  );\n}"
+        },
+        "api": [
+          {
+            "name": "GlassButton",
+            "description": "Forward-ref native button with owned glass interaction state."
+          },
+          {
+            "name": "GlassButtonProps",
+            "description": "Native button props plus Glassy UI material options."
+          },
+          {
+            "name": "ButtonVariant",
+            "description": "Exported primary, prominent, soft, or ghost visual-intent type."
+          },
+          { "name": "ButtonSize", "description": "Exported sm, md, or lg size type." },
+          {
+            "name": "variant",
+            "description": "Visual intent: primary (clear glass, the default), prominent (blue glass for the main action: it tints whatever lies behind it and keeps white text at 4.5:1), soft, or ghost."
+          },
+          {
+            "name": "asChild",
+            "description": "Renders the single child element, such as a link, with the button material. Links cannot be disabled."
+          },
+          { "name": "size", "description": "Control size: sm, md, or lg." },
+          { "name": "preset", "description": "Material preset applied to the button surface." },
+          {
+            "name": "lens",
+            "description": "Chromium lens: the rim bends and splits the page behind it. On by default for every variant except ghost."
+          }
+        ]
+      }
+    </script>
+    <script>
+      (() => {
+        'use strict';
+
+        const data = JSON.parse(document.getElementById('mock-data').textContent);
+        const root = document.documentElement;
+        const docs = document.getElementById('docs-mock');
+        const toast = document.getElementById('art-toast');
+
+        const SITE = 'https://glassyui.com';
+        const CLI = 'shadcn@4.14.1';
+        const MANAGERS = ['npm', 'pnpm', 'yarn', 'bun'];
+        // The runners the Getting Started page already documents.
+        const RUNNERS = { npm: 'npx', pnpm: 'pnpm dlx', yarn: 'yarn dlx', bun: 'bunx --bun' };
+        const ADDERS = { npm: 'npm install', pnpm: 'pnpm add', yarn: 'yarn add', bun: 'bun add' };
+        const EXCERPT_LINES = 24;
+        const item = data.component.id;
+
+        const state = { manager: 'npm', platform: 'react' };
+
+        const COMMANDS = {
+          'cli-react': {
+            describe: (pm) => `the ${pm} install command`,
+            managers: true,
+            text: (pm) => `${RUNNERS[pm]} ${CLI} add ${SITE}/r/${item}.json`,
+          },
+          'cli-native': {
+            describe: (pm) => `the ${pm} install command`,
+            managers: true,
+            text: (pm) =>
+              `${RUNNERS[pm]} ${CLI} add ${SITE}/r/native/${item}.json && npx expo install --fix`,
+          },
+          'packages-react': {
+            describe: (pm) => `the ${pm} package command`,
+            managers: true,
+            text: (pm) => `${ADDERS[pm]} ${data.web.packages.join(' ')}`,
+          },
+          'packages-native': {
+            describe: () => 'the Expo package command',
+            label: 'Expo picks the versions for your SDK',
+            managers: false,
+            text: () => `npx expo install ${data.native.packages.join(' ')}`,
+          },
+        };
+
+        // ------------------------------------------------------------ helpers
+        function el(tag, attributes = {}, ...children) {
+          const node = document.createElement(tag);
+
+          for (const [name, value] of Object.entries(attributes)) {
+            if (value === false || value == null) continue;
+            node.setAttribute(name, value === true ? '' : value);
+          }
+
+          for (const child of children.flat()) {
+            if (child == null || child === false) continue;
+            node.append(child);
+          }
+
+          return node;
+        }
+
+        function list(values) {
+          if (values.length < 2) return values.join('');
+
+          return `${values.slice(0, -1).join(', ')} and ${values.at(-1)}`;
+        }
+
+        // The grammar the site's copy-code-block.tsx uses, so the mock colours code the same way.
+        const GRAMMARS = {
+          shell: [
+            ['keyword', /^[\w.-]+/],
+            ['attr', /(?<=\s)--?[\w-]+/],
+            ['string', /@[\w-]+\/[\w.-]+|"(?:[^"\\\n]|\\.)*"|'[^'\n]*'/],
+          ],
+          tsx: [
+            ['comment', /\/\/[^\n]*|\/\*[\s\S]*?\*\//],
+            ['string', /"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`/],
+            ['tag', /(?<=<\/?)[A-Za-z][\w.]*/],
+            ['attr', /\b[A-Za-z_][\w-]*(?==[{"'])/],
+            [
+              'keyword',
+              /\b(?:as|async|await|const|default|else|export|extends|false|from|function|if|import|interface|let|new|null|return|true|type|undefined)\b/,
+            ],
+            ['number', /\b\d+(?:\.\d+)?\b/],
+          ],
+        };
+
+        function highlight(code, language) {
+          const fragment = document.createDocumentFragment();
+          const grammar = GRAMMARS[language];
+
+          if (!grammar) {
+            fragment.append(code);
+
+            return fragment;
+          }
+
+          const pattern = new RegExp(grammar.map(([, rule]) => `(${rule.source})`).join('|'), 'gm');
+          let cursor = 0;
+
+          for (const match of code.matchAll(pattern)) {
+            const rule = grammar[match.slice(1).findIndex((group) => group !== undefined)];
+
+            if (match.index > cursor) fragment.append(code.slice(cursor, match.index));
+            fragment.append(el('span', { class: `tok-${rule[0]}` }, match[0]));
+            cursor = match.index + match[0].length;
+          }
+
+          if (cursor < code.length) fragment.append(code.slice(cursor));
+
+          return fragment;
+        }
+
+        // Shell commands wrap at spaces and after a URL's slashes, so a flag such as --fix or a
+        // path segment never splits across lines. Colours follow the shell grammar above.
+        function renderCommand(command) {
+          const fragment = document.createDocumentFragment();
+
+          command.split(' ').forEach((word, index) => {
+            if (index > 0) fragment.append(' ');
+
+            if (word.startsWith('https://')) {
+              word.split(/(?<=\/)/).forEach((part, partIndex) => {
+                if (partIndex > 0) fragment.append(el('wbr'));
+                fragment.append(el('span', { class: 'word' }, part));
+              });
+
+              return;
+            }
+
+            const kind =
+              index === 0
+                ? 'keyword'
+                : /^--?[\w-]+$/.test(word)
+                  ? 'attr'
+                  : /^@[\w-]+\/[\w.-]+$/.test(word)
+                    ? 'string'
+                    : '';
+
+            fragment.append(el('span', { class: kind ? `word tok-${kind}` : 'word' }, word));
+          });
+
+          return fragment;
+        }
+
+        function select(node) {
+          const range = document.createRange();
+          const selection = window.getSelection();
+
+          range.selectNodeContents(node);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+
+        let toastTimer = 0;
+
+        function say(message) {
+          toast.textContent = '';
+          window.clearTimeout(toastTimer);
+          window.setTimeout(() => {
+            toast.textContent = message;
+          }, 30);
+          toastTimer = window.setTimeout(() => {
+            toast.textContent = '';
+          }, 4200);
+        }
+
+        // ------------------------------------------------------------ copying
+        const COPY_LABELS = {
+          copied: 'Copy again',
+          copying: 'Copying…',
+          failed: 'Try again',
+          idle: 'Copy',
+        };
+
+        function setCopyState(target, next) {
+          const { button, error } = target;
+
+          button.dataset.state = next;
+          button.textContent = COPY_LABELS[next];
+          button.disabled = next === 'copying';
+          if (error) error.hidden = next !== 'failed';
+        }
+
+        function announce(status, message) {
+          status.textContent = '';
+          window.setTimeout(() => {
+            status.textContent = message;
+          }, 30);
+        }
+
+        // Copies exactly what the block shows. A refusal is said out loud, and the text is
+        // selected so it can be copied by hand; nothing pretends to have worked.
+        async function copy(target, text, describe, selectNode) {
+          setCopyState(target, 'copying');
+
+          try {
+            if (root.dataset.clipboard === 'refuse') throw new Error('Refused for this demo.');
+            await navigator.clipboard.writeText(text);
+            setCopyState(target, 'copied');
+            announce(target.status, `Copied ${describe} to the clipboard.`);
+          } catch {
+            setCopyState(target, 'failed');
+            select(selectNode);
+            announce(
+              target.status,
+              `Could not copy ${describe}. It is selected, so you can copy it yourself.`,
+            );
+          }
+        }
+
+        // ------------------------------------------------------------ commands
+        const blocks = [];
+
+        function buildCommand(host) {
+          const id = host.dataset.command;
+          const spec = COMMANDS[id];
+          const head = el('div', { class: 'cmd-head' });
+          const describedBy = `${id}-describe`;
+
+          if (spec.managers) {
+            const set = el(
+              'fieldset',
+              { class: 'pm' },
+              el('legend', { class: 'vh' }, 'Package manager'),
+            );
+
+            for (const manager of MANAGERS) {
+              const input = el('input', { name: `pm-${id}`, type: 'radio', value: manager });
+
+              input.checked = manager === state.manager;
+              set.append(el('label', {}, input, manager));
+            }
+
+            head.append(set);
+          } else {
+            head.append(el('span', { class: 'cmd-label' }, spec.label));
+          }
+
+          const describe = el('span', { class: 'vh', id: describedBy });
+          const button = el(
+            'button',
+            { 'aria-describedby': describedBy, class: 'copy', type: 'button' },
+            'Copy',
+          );
+          const error = el(
+            'p',
+            { class: 'copy-error', hidden: true },
+            'Couldn’t copy. The command is selected, so you can copy it yourself.',
+          );
+          const text = el('span', { class: 'cmd-text' });
+          const status = el('span', { class: 'vh', role: 'status' });
+          const block = el('div', { class: 'cmd' });
+
+          head.append(describe, button);
+          block.append(
+            head,
+            error,
+            el(
+              'pre',
+              { class: 'cmd-body' },
+              el('code', {}, el('span', { 'aria-hidden': 'true', class: 'prompt' }, '$ '), text),
+            ),
+            status,
+          );
+          host.replaceWith(block);
+
+          const entry = { block, button, describe, error, id, spec, status, text, value: '' };
+
+          button.addEventListener('click', () => {
+            copy(entry, entry.value, spec.describe(state.manager), text);
+          });
+          blocks.push(entry);
+        }
+
+        function updateCommands() {
+          for (const entry of blocks) {
+            const next = entry.spec.text(state.manager);
+
+            for (const input of entry.block.querySelectorAll('.pm input')) {
+              input.checked = input.value === state.manager;
+            }
+
+            if (next === entry.value) continue;
+
+            entry.value = next;
+            entry.text.replaceChildren(renderCommand(next));
+            entry.describe.textContent = `${entry.spec.describe(state.manager)} for Glass Button`;
+            // What the button copied is no longer what the block shows, so it starts again.
+            setCopyState(entry, 'idle');
+          }
+        }
+
+        // ------------------------------------------------------------ manual files
+        const NOTES = { 'styles/liquid.css': 'Imported by glass-provider.tsx' };
+
+        function buildFiles(host) {
+          const platform = host.dataset.files;
+          const source = data[platform];
+          const files = el('div', { class: 'files' });
+          let first = true;
+
+          source.groups.forEach((group, groupIndex) => {
+            const titleId = `${platform}-group-${groupIndex}`;
+            const shared = group.item !== item;
+            const items = el('ul', { class: 'files-list' });
+
+            group.files.forEach((file, fileIndex) => {
+              const codeId = `${platform}-file-${groupIndex}-${fileIndex}`;
+              const nameId = `${codeId}-name`;
+              const expanded = first;
+              const toggle = el(
+                'button',
+                {
+                  'aria-controls': codeId,
+                  'aria-expanded': String(expanded),
+                  class: 'file-toggle',
+                  type: 'button',
+                },
+                el('span', { 'aria-hidden': 'true', class: 'chevron' }),
+                el('code', { id: nameId }, file.path),
+                NOTES[file.path] ? el('span', { class: 'file-note' }, NOTES[file.path]) : null,
+              );
+              const button = el(
+                'button',
+                { 'aria-describedby': nameId, class: 'copy', type: 'button' },
+                'Copy',
+              );
+              const error = el(
+                'p',
+                { class: 'copy-error', hidden: true },
+                'Couldn’t copy. The file is selected, so you can copy it yourself.',
+              );
+              const code = el('code', {}, highlight(file.excerpt, file.language));
+              const region = el(
+                'div',
+                {
+                  'aria-label': `${file.path} source`,
+                  class: 'file-code',
+                  hidden: !expanded,
+                  id: codeId,
+                  role: 'region',
+                },
+                el('pre', { tabindex: '0' }, code),
+                file.full
+                  ? null
+                  : el(
+                      'p',
+                      { class: 'file-foot' },
+                      `Mock excerpt: lines 1–${EXCERPT_LINES} of ${file.lines}. The page shows and copies the whole file.`,
+                    ),
+              );
+              const status = el('span', { class: 'vh', role: 'status' });
+              const target = { button, error, status };
+              const describe = file.full
+                ? file.path
+                : `the first ${EXCERPT_LINES} lines of ${file.path} shown in this mock`;
+
+              toggle.addEventListener('click', () => {
+                const open = toggle.getAttribute('aria-expanded') !== 'true';
+
+                toggle.setAttribute('aria-expanded', String(open));
+                region.hidden = !open;
+              });
+              button.addEventListener('click', () => {
+                // The selection needs the code on screen, so a refused copy opens the file first.
+                toggle.setAttribute('aria-expanded', 'true');
+                region.hidden = false;
+                copy(target, file.excerpt, describe, code);
+              });
+
+              items.append(
+                el(
+                  'li',
+                  { class: 'file' },
+                  el('div', { class: 'file-row' }, toggle, button),
+                  error,
+                  region,
+                  status,
+                ),
+              );
+              first = false;
+            });
+
+            files.append(
+              el(
+                'div',
+                { 'aria-labelledby': titleId, class: 'files-group', role: 'group' },
+                el(
+                  'p',
+                  { class: 'files-group-title', id: titleId },
+                  group.title,
+                  shared ? el('span', {}, 'Shared with other components') : null,
+                ),
+                items,
+              ),
+            );
+          });
+
+          host.replaceWith(files);
+        }
+
+        // ------------------------------------------------------------ usage and API
+        function buildUsage(host) {
+          const native = host.dataset.usage === 'native';
+          const label = native ? 'React Native usage' : 'Usage';
+          const source = native ? data.native.usage : data.web.usage;
+          const code = el('code', {}, highlight(source, 'tsx'));
+          const button = el('button', { class: 'copy', type: 'button' }, 'Copy');
+          const status = el('span', { class: 'vh', role: 'status' });
+          const target = { button, status };
+
+          button.addEventListener('click', () =>
+            copy(target, source, `the ${label.toLowerCase()} example`, code),
+          );
+          host.append(
+            el(
+              'div',
+              { class: 'code' },
+              el('div', { class: 'code-head' }, el('span', {}, label), button),
+              el('pre', { tabindex: '0' }, code),
+              status,
+            ),
+          );
+        }
+
+        function fill() {
+          const component = data.component;
+          const web = data.web;
+          const native = data.native;
+          const values = {
+            category: component.category,
+            cliSummaryNative: `Adds ${native.fileCount} files to components/glassyui, then matches ${list(native.packages)} to your Expo SDK. Rebuild your development build after adding native packages.`,
+            cliSummaryReact: `Adds ${web.fileCount} files to components/glassyui and installs ${list(web.packages)}.`,
+            componentCount: String(data.componentCount),
+            description: component.description,
+            name: component.name,
+          };
+
+          for (const node of document.querySelectorAll('[data-fill]')) {
+            const key = node.dataset.fill;
+
+            if (key in values) node.textContent = values[key];
+          }
+
+          document
+            .querySelector('[data-fill="api"]')
+            .append(
+              ...data.api.map((entry) =>
+                el('div', {}, el('code', {}, entry.name), el('p', {}, entry.description)),
+              ),
+            );
+
+          const navigation = [
+            {
+              label: 'Documentation',
+              links: [
+                'Getting Started',
+                'Components',
+                'React Native',
+                'Templates',
+                'Guides',
+                'GitHub',
+                'Registry JSON',
+              ],
+            },
+            {
+              label: 'Controls',
+              links: [
+                'Button',
+                'Input',
+                'Checkbox',
+                'Radio Group',
+                'Textarea',
+                'Select',
+                'Switch',
+                'Slider',
+                'Segmented Control',
+              ],
+            },
+          ];
+
+          for (const host of document.querySelectorAll(
+            '[data-fill="sidebar"], [data-fill="mobileNav"]',
+          )) {
+            for (const group of navigation) {
+              host.append(
+                el(
+                  'div',
+                  { class: 'm-nav-group' },
+                  el('p', {}, group.label),
+                  group.links.map((name) =>
+                    name === 'Button'
+                      ? el('a', { 'aria-current': 'page', href: '#m-preview' }, name)
+                      : el('a', { 'data-mock-href': `the ${name} page`, href: '#' }, name),
+                  ),
+                ),
+              );
+            }
+          }
+        }
+
+        // ------------------------------------------------------------ platform and method
+        function setPlatform(platform) {
+          state.platform = platform;
+          docs.dataset.platform = platform;
+
+          // The other platform leaves the page entirely: hidden from sight, from assistive
+          // technology and from find-and-copy.
+          for (const pane of docs.querySelectorAll('[data-pane]')) {
+            pane.hidden = pane.dataset.pane !== platform;
+          }
+        }
+
+        const tablist = document.querySelector('.m-tabs');
+        const tabs = [...tablist.querySelectorAll('[role="tab"]')];
+
+        function selectTab(tab, focus) {
+          for (const each of tabs) {
+            const on = each === tab;
+
+            each.setAttribute('aria-selected', String(on));
+            each.tabIndex = on ? 0 : -1;
+            document.getElementById(each.getAttribute('aria-controls')).hidden = !on;
+          }
+
+          tablist.style.setProperty('--index', String(tabs.indexOf(tab)));
+          if (focus) tab.focus();
+        }
+
+        tablist.addEventListener('click', (event) => {
+          const tab = event.target.closest('[role="tab"]');
+
+          if (tab) selectTab(tab, false);
+        });
+
+        tablist.addEventListener('keydown', (event) => {
+          const index = tabs.indexOf(document.activeElement);
+          const moves = {
+            ArrowLeft: index - 1,
+            ArrowRight: index + 1,
+            End: tabs.length - 1,
+            Home: 0,
+          };
+
+          if (!(event.key in moves) || index < 0) return;
+
+          event.preventDefault();
+          selectTab(tabs[(moves[event.key] + tabs.length) % tabs.length], true);
+        });
+
+        document.addEventListener('change', (event) => {
+          const input = event.target;
+
+          if (input.name === 'm-platform') setPlatform(input.value);
+
+          if (input.closest('.pm')) {
+            state.manager = input.value;
+            updateCommands();
+          }
+
+          if (input.name === 'art-width') root.dataset.width = input.value;
+          if (input.name === 'art-theme') root.dataset.theme = input.value;
+
+          const option = input.dataset.art;
+
+          if (option === 'notes') root.dataset.notes = input.checked ? 'on' : 'off';
+          if (option === 'reduce-motion') root.dataset.reduceMotion = input.checked ? 'on' : 'off';
+          if (option === 'reduce-transparency')
+            root.dataset.reduceTransparency = input.checked ? 'on' : 'off';
+          if (option === 'clipboard') root.dataset.clipboard = input.checked ? 'refuse' : 'allow';
+        });
+
+        // Links and actions that leave this artifact say where they go instead.
+        document.addEventListener('click', (event) => {
+          const link = event.target.closest('[data-mock-href]');
+
+          if (link) {
+            if (!link.hasAttribute('data-mock-jump')) event.preventDefault();
+            say(`Mock link. On the site this opens ${link.dataset.mockHref}.`);
+
+            return;
+          }
+
+          const action = event.target.closest('[data-mock-action]');
+
+          if (action?.dataset.mockAction === 'replay') {
+            say(
+              'On the site, Replay intro plays the keynote again from its first frame. This mock has no keynote.',
+            );
+          }
+
+          if (action?.dataset.mockAction === 'preview') {
+            say('The page runs the live Glass Button here. These are CSS stand-ins.');
+          }
+        });
+
+        // ------------------------------------------------------------ start
+        const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        root.dataset.theme = dark ? 'dark' : 'light';
+        document.querySelector(`input[name="art-theme"][value="${root.dataset.theme}"]`).checked =
+          true;
+
+        fill();
+        document.querySelectorAll('[data-command]').forEach(buildCommand);
+        document.querySelectorAll('[data-files]').forEach(buildFiles);
+        document.querySelectorAll('[data-usage]').forEach(buildUsage);
+        updateCommands();
+        setPlatform('react');
+        selectTab(tabs[0], false);
+      })();
+    </script>
+  </body>
+</html>

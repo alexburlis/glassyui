@@ -3,9 +3,8 @@ import Link from 'next/link';
 import { CopyCodeBlock } from '@/components/docs/copy-code-block';
 import { expoComponentsJson } from '@/components/docs/expo-setup';
 import { GlassButton } from '@/components/liquid';
-import { CopyChip } from '@/components/site/copy-chip';
 import { GithubMark } from '@/components/site/github-mark';
-import { INSTALL_COMMAND } from '@/components/site/install-command';
+import { installCommand } from '@/lib/install-command';
 import { MobilePhones } from '@/components/site/mobile-phones';
 import { SiteFooter } from '@/components/site/site-footer';
 import { SiteNav } from '@/components/site/site-nav';
@@ -15,6 +14,8 @@ import { GITHUB } from '@/lib/site-links';
 import nativeRegistry from '../../../registry-native.json';
 
 const NATIVE_INSTALL_COMMAND = nativeInstallCommand(['glass-button']);
+
+const REACT_INSTALL_COMMAND = installCommand(['glass-button'], 'react');
 
 const title = 'Glassy UI for React Native';
 
@@ -56,10 +57,6 @@ export default function MobilePage() {
               Browse components<span aria-hidden> ›</span>
             </Link>
           </div>
-          <CopyChip
-            command={NATIVE_INSTALL_COMMAND}
-            label="Copy the React Native install command"
-          />
         </section>
 
         <section aria-label="One screen on iOS, Android and the web" className="home-section">
@@ -83,7 +80,11 @@ export default function MobilePage() {
                 For React 19+ apps such as Next.js and Vite, with Tailwind CSS 4. The glass is drawn
                 with CSS, SVG and WebGL.
               </p>
-              <CopyCodeBlock code={INSTALL_COMMAND} label="Install for React" language="shell" />
+              <CopyCodeBlock
+                code={REACT_INSTALL_COMMAND}
+                label="Install for React"
+                language="shell"
+              />
               <CopyCodeBlock code={reactSnippet} label="React" />
             </article>
             <article className="mobile-platform">

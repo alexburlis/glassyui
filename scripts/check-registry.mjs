@@ -217,6 +217,9 @@ if (registry) {
 
     if (!generated) continue;
 
+    if (generated.registryDependencies !== undefined)
+      failures.push(`${item.name} published payload requires a registry mapping`);
+
     if (!Array.isArray(generated.files) || generated.files.length === 0) {
       failures.push(`${item.name} generated payload has no files`);
       continue;

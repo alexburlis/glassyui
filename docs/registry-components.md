@@ -1,16 +1,16 @@
 # Registry components
 
-The local registry exposes 36 source-copy component items. Install any item
-after configuring the local `@glassyui` namespace:
+The registry exposes 36 source-copy component items. Install an item by URL
+without a Glassy UI namespace mapping:
 
 ```bash
-pnpm dlx shadcn@4.14.1 add @glassyui/<item-name>
+npx shadcn@4.14.1 add https://glassyui.com/r/<item-name>.json
 ```
 
-The file lists below are each item's direct files from `registry.json`.
-Namespaced registry dependencies are installed transitively. `liquid-filters`
-and the shared CSS ship through `glass-provider`; neither is a standalone
-component item.
+The file lists below are each item's direct files from `registry.json`. The
+authoring graph keeps namespaced dependencies; published payloads include their
+full source and package closure. `liquid-filters` and the shared CSS ship
+through `glass-provider`; neither is a standalone component item.
 
 ## Foundation
 

@@ -5,50 +5,14 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 
-const expectedFiles = [
-  'glass-accordion.json',
-  'glass-alert.json',
-  'glass-avatar.json',
-  'glass-badge.json',
-  'glass-breadcrumb.json',
-  'glass-button.json',
-  'glass-checkbox.json',
-  'glass-command.json',
-  'glass-dialog.json',
-  'glass-dock.json',
-  'glass-header.json',
-  'glass-input.json',
-  'glass-kbd.json',
-  'glass-laptop.json',
-  'glass-lens.json',
-  'glass-menu.json',
-  'glass-pagination.json',
-  'glass-panel.json',
-  'glass-phone-duo.json',
-  'glass-popover.json',
-  'glass-progress.json',
-  'glass-provider.json',
-  'glass-radio-group.json',
-  'glass-scene.json',
-  'glass-segmented-control.json',
-  'glass-select.json',
-  'glass-sheet.json',
-  'glass-skeleton.json',
-  'glass-slider.json',
-  'glass-spinner.json',
-  'glass-surface.json',
-  'glass-switch.json',
-  'glass-tabs.json',
-  'glass-textarea.json',
-  'glass-toast.json',
-  'glass-tooltip.json',
-  'glassy-theme.json',
-  'glassy-ui-base-nova.json',
-  'glassy-ui-new-york.json',
-  'registry.json',
-];
-
 const root = process.cwd();
+
+const registry = JSON.parse(fs.readFileSync(path.join(root, 'registry.json'), 'utf8'));
+
+const expectedFiles = [
+  ...registry.items.map((item) => `${item.name}.json`),
+  'registry.json',
+].sort();
 
 const publicRegistryDirectory = path.join(root, 'public', 'r');
 
@@ -108,20 +72,134 @@ function assertExactFileSet(label, actual) {
   assert.deepEqual([...actual].sort(), expectedFiles, `${label} filename set differs`);
 }
 
+// This derives the install contract from editable declarations and source bytes, independently
+// of the publication transform. Missing transitive files or packages break a URL-first install.
+function checkCompleteItems() {
+  const sourceItems = new Map(registry.items.map((item) => [item.name, item]));
+
+  const catalogue = JSON.parse(
+    fs.readFileSync(path.join(publicRegistryDirectory, 'registry.json'), 'utf8'),
+  );
+
+  assert.deepEqual(
+    catalogue.items.map((item) => item.name),
+    registry.items.map((item) => item.name),
+    'published catalogue names differ',
+  );
+
+  for (const source of registry.items) {
+    const members = new Set();
+
+    const visit = (name, visiting = new Set()) => {
+      assert.ok(!visiting.has(name), `source cycle at ${name}`);
+
+      if (members.has(name)) return;
+      const item = sourceItems.get(name);
+      assert.ok(item, `unknown source item ${name}`);
+      visiting.add(name);
+
+      for (const dependency of item.registryDependencies ?? []) {
+        assert.ok(dependency.startsWith('@glassyui/'), `unknown dependency ${dependency}`);
+        visit(dependency.slice('@glassyui/'.length), visiting);
+      }
+
+      visiting.delete(name);
+      members.add(name);
+    };
+
+    visit(source.name);
+
+    const payload = JSON.parse(
+      fs.readFileSync(path.join(publicRegistryDirectory, `${source.name}.json`), 'utf8'),
+    );
+
+    assert.equal(payload.registryDependencies, undefined, `${source.name} needs a mapping`);
+    const files = new Map();
+    const packages = new Set();
+
+    for (const name of members) {
+      const member = sourceItems.get(name);
+
+      for (const dependency of member.dependencies ?? []) packages.add(dependency);
+
+      for (const file of member.files ?? []) {
+        const expected = { ...file, content: fs.readFileSync(path.join(root, file.path), 'utf8') };
+
+        if (files.has(file.target))
+          assert.deepEqual(files.get(file.target), expected, `conflicting target ${file.target}`);
+        files.set(file.target, expected);
+      }
+    }
+
+    assert.deepEqual(
+      [...(payload.dependencies ?? [])].sort(),
+      [...packages].sort(),
+      `${source.name} package closure differs`,
+    );
+    assert.deepEqual(
+      [...(payload.files ?? [])].sort((a, b) => a.target.localeCompare(b.target)),
+      [...files.values()].sort((a, b) => a.target.localeCompare(b.target)),
+      `${source.name} file content or declaration differs from its source closure`,
+    );
+
+    for (const field of ['name', 'type', 'title', 'description', 'meta', 'css', 'cssVars'])
+      assert.deepEqual(payload[field], source[field], `${source.name} changed ${field}`);
+    const entry = catalogue.items.find((item) => item.name === source.name);
+    assert.equal(entry.registryDependencies, undefined, `${source.name} catalogue needs a mapping`);
+    assert.deepEqual(
+      [...(entry.dependencies ?? [])].sort(),
+      [...packages].sort(),
+      `${source.name} catalogue packages differ`,
+    );
+    assert.deepEqual(
+      [...(entry.files ?? [])].sort((a, b) => a.target.localeCompare(b.target)),
+      [...files.values()]
+        .map((source) => {
+          const file = { ...source };
+          delete file.content;
+
+          return file;
+        })
+        .sort((a, b) => a.target.localeCompare(b.target)),
+      `${source.name} catalogue closure differs`,
+    );
+    assert.equal(
+      entry.description,
+      source.description,
+      `${source.name} catalogue description differs`,
+    );
+  }
+}
+
 try {
+  const nativeRegistry = JSON.parse(
+    fs.readFileSync(path.join(root, 'registry-native.json'), 'utf8'),
+  );
+
+  assert.deepEqual(
+    JSON.parse(fs.readFileSync(path.join(root, 'src/lib/install-items.json'), 'utf8')),
+    {
+      react: registry.items.map((item) => item.name),
+      'react-native': nativeRegistry.items.map((item) => item.name),
+    },
+    'client install catalogue is stale; run pnpm registry:build',
+  );
+  checkCompleteItems();
+
   const result = spawnSync(
     process.execPath,
-    [shadcnBin, 'build', path.join(root, 'registry.json'), '--output', temporaryDirectory],
-    {
-      cwd: root,
-      encoding: 'utf8',
-      stdio: 'pipe',
-    },
+    [
+      path.join(root, 'scripts', 'build-install-registry.mjs'),
+      'registry.json',
+      '--output',
+      temporaryDirectory,
+    ],
+    { cwd: root, encoding: 'utf8', stdio: 'pipe' },
   );
 
   if (result.status !== 0) {
     throw new Error(
-      `official registry build failed (${result.status})\n${result.stdout}\n${result.stderr}`,
+      `registry publication build failed (${result.status})\n${result.stdout}\n${result.stderr}`,
     );
   }
 
@@ -140,7 +218,7 @@ try {
     const published = fs.readFileSync(path.join(publicRegistryDirectory, relativePath));
     assert.ok(
       generated.equals(published),
-      `public/r/${relativePath} differs from a fresh official build`,
+      `public/r/${relativePath} differs from a fresh publication build`,
     );
   }
 

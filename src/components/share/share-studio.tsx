@@ -5,7 +5,7 @@ import { ComponentDemo, ReleaseFeedbackProvider } from '@/components/docs/compon
 import { BrandMark } from '@/components/site/app-icons';
 import { CopyChip } from '@/components/site/copy-chip';
 import { HomePhone } from '@/components/site/home-phone';
-import { INSTALL_COMMAND } from '@/components/site/install-command';
+import { installCommand } from '@/lib/install-command';
 
 /** A live demo in a card, magnified by `zoom`. */
 type StageSpec = { id: string; zoom: number };
@@ -113,7 +113,7 @@ export function ShareStage({ id }: { id: string }) {
   return (
     <main className="share-stage-page" data-share-stage-page={id} id="main-content">
       <div className="docs-preview share-stage-fill">
-        {id === 'install' ? <CopyChip command={INSTALL_COMMAND} /> : null}
+        {id === 'install' ? <CopyChip command={installCommand(['glass-button'], 'react')} /> : null}
         {id === 'phone' ? <HomePhone /> : null}
         {id !== 'install' && id !== 'phone' ? (
           <ReleaseFeedbackProvider>

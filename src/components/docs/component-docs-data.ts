@@ -1,4 +1,5 @@
 import registry from '../../../registry.json';
+import { installCommand } from '@/lib/install-command';
 
 type ComponentStatus = 'ready' | 'experimental' | 'planned';
 
@@ -386,7 +387,7 @@ export function Header() {
       },
       {
         title: 'The action button',
-        body: 'Actions can be any buttons or links. The usage example uses Glass Button; install it with `pnpm dlx shadcn@4.14.1 add @glassyui/glass-button`.',
+        body: `Actions can be any buttons or links. The usage example uses Glass Button; install it with \`${installCommand(['glass-button'], 'react')}\`.`,
       },
       {
         title: 'Make room for the header',
@@ -2240,7 +2241,7 @@ export const componentDocs: ComponentDoc[] = componentDocContent.map((content) =
     ...content,
     dependencies: [...(item.dependencies ?? [])],
     directFiles: item.files.map((file) => file.target),
-    install: `pnpm dlx shadcn@4.14.1 add @glassyui/${item.name}`,
+    install: installCommand([item.name], 'react'),
     installedDependencies: unique(closure.flatMap((closureItem) => closureItem.dependencies ?? [])),
     installedFiles: unique(
       closure.flatMap((closureItem) => closureItem.files.map((file) => file.target)),
@@ -2251,7 +2252,7 @@ export const componentDocs: ComponentDoc[] = componentDocContent.map((content) =
   };
 });
 
-export const initializeShadcn = 'pnpm dlx shadcn@4.14.1 init';
+export const initializeShadcn = 'npx shadcn@4.14.1 init';
 
 export const glassThemeRoot = `<html lang="en" data-lg-theme="light">
   <body>{children}</body>

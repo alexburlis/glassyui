@@ -81,7 +81,7 @@
       "name": "glass-button",
       "type": "registry:ui",
       "title": "Glass Button",
-      "description": "A glass button that swells when pressed and lights up from the point you press.",
+      "description": "A slab of glass resting just above the page that sets down when pressed and lights up where you press.",
       "meta": {
         "sourceModules": ["button"]
       },
