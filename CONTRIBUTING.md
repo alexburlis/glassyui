@@ -37,15 +37,21 @@ automatically when their source, fixtures, generators or shared inputs change.
 CI checks both stock shadcn styles; retain the full palette checks for styling
 semantics and release work.
 
-Every CI run checks formatting, generated registries, lint, security, privacy,
-builds and types. It also checks the clean three-browser web consumer, served
-routes, agent HTTP, launch assets, platform choice, public Pro links,
-intercepted consent and development interactions. Relevant PR changes also run
-the full release UI/accessibility, refraction and material matrix.
-Documentation-only PRs skip that separate matrix. Common toolchain/CI inputs and
-unclassified files select all owners; deleted and renamed paths still select
-their owners. `node scripts/check-ci-routing.mjs` exercises those decisions
-through real Git history and rejects failed gate inputs.
+Every CI run checks formatting and exercises routing through real Git history.
+Documentation-only changes to the root Markdown files, `docs/*.md` or issue
+templates stop there: no browser installation, app build or consumer matrix.
+Other changes also check generated registries, lint, security, privacy, builds
+and types, the clean three-browser web consumer, served routes, agent HTTP,
+launch assets, platform choice, public Pro links, consent and development
+interactions.
+
+Known analytics/diagnostics source and their base-check scripts use those base
+checks. Rendering changes also select the full release UI/accessibility,
+refraction and material matrix. Native, theme and drop-in changes select their
+consumer owners as described above. Common toolchain/CI inputs and unclassified
+files select all owners; empty diffs stay conservative, and deleted or renamed
+paths still select their owners. `node scripts/check-ci-routing.mjs` exercises
+those decisions and rejects failed, missing or inconsistent gate inputs.
 
 `release-gate` is the single required result: all selected owners must pass.
 Newer commits cancel older runs of the same PR. Manual dispatch runs all owners.
