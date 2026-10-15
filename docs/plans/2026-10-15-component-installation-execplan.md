@@ -6,7 +6,7 @@ Schema: 2
 
 Kind: feature
 
-State: executing
+State: complete
 
 Risk: high
 
@@ -580,7 +580,7 @@ effect.
       recorded.
 - [x] Implement complete publication, recipes, UI and related documentation.
 - [x] Pass static/build, clean consumer and browser acceptance.
-- [ ] Push verified commit to main and confirm live rollout.
+- [x] Push verified commit to main and confirm live rollout.
 
 ## Decision Log
 
@@ -717,3 +717,28 @@ keynote and site-motion suites in all three engines after the verified
 measurement repairs; final platform/installation replay, full lint and full
 formatter checks pass. Required installation/build/browser acceptance is now
 complete. Publication and live acceptance remain the next protected step.
+
+## Outcomes & Retrospective
+
+The discovery and installation flow shipped through public PR #8, merged as
+`06d54d6f716437f078e1afe3fbb9d2da0c812ff5` on 15 October 2026. The merged source
+contains implementation `48b054a8aba2ed7f608c66f24354c6c95a855352` and the
+repository copy policy. GitHub main CI run `38768310925` succeeded.
+
+A fresh live check on 15 October confirmed HTTP 200 and
+`X-GlassyUI-Release: glassyui@06d54d6f716437f078e1afe3fbb9d2da0c812ff5`. The
+existing installation/platform browser check passed against
+`https://glassyui.com`, including desktop/mobile recipes, real clipboard
+readback, full Manual source, platform persistence and visible recovery. The
+published button payload contains its complete ten-file closure and no internal
+registry dependency. This confirms the intended installation outcome; it does
+not claim new physical-device acceptance.
+
+The old private planning checkout is a superseded draft, not another release
+candidate. All 109 dirty paths map to the integrated public implementation; 65
+match public main exactly and 44 have later public improvements. Its work
+remains preserved. The task must use the public repository for future updates.
+
+Coolify's management endpoint was unreachable during this closeout. The live
+release header, successful main CI and browser smoke establish the serving
+source and user path; this closeout adds no fresh container-log claim.
