@@ -1063,13 +1063,19 @@ export function createSceneRenderer({
 
     const request = (cors: boolean, onLoad: (next: HTMLImageElement) => void) => {
       const next = new Image();
+      let delivered = false;
+
+      const loaded = () => {
+        if (delivered || generation !== loadGeneration || destroyed) return;
+
+        delivered = true;
+        onLoad(next);
+      };
 
       if (cors) next.crossOrigin = 'anonymous';
 
       next.decoding = 'async';
-      next.addEventListener('load', () => {
-        if (generation === loadGeneration && !destroyed) onLoad(next);
-      });
+      next.addEventListener('load', loaded, { once: true });
       next.addEventListener('error', () => {
         if (generation !== loadGeneration || destroyed) return;
 
@@ -1081,6 +1087,10 @@ export function createSceneRenderer({
         );
       });
       next.src = url;
+
+      // A preloaded theme image is already drawable. Waiting for its load event would leave
+      // the old wallpaper in the canvas for a paint after the page has changed appearance.
+      if (next.complete && next.naturalWidth > 0) loaded();
     };
 
     const accept = (next: HTMLImageElement) => {

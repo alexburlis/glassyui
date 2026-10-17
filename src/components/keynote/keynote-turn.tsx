@@ -1,6 +1,7 @@
 'use client';
 
 import type { PlayerRef } from '@remotion/player';
+import { preload } from 'react-dom';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { usePreferences } from '@/components/liquid';
@@ -49,6 +50,10 @@ type KeynoteTurnProps = {
  * reduced motion the desk stays put and the phone and features follow it, still.
  */
 export function KeynoteTurn({ caption, children, nativeCount }: KeynoteTurnProps) {
+  for (const theme of ['light', 'dark']) {
+    preload(`/keynote/phone-wallpaper-${theme}.webp`, { as: 'image' });
+  }
+
   const trackRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const deskRef = useRef<HTMLDivElement>(null);
@@ -185,8 +190,6 @@ export function KeynoteTurn({ caption, children, nativeCount }: KeynoteTurnProps
     };
   }, [moving, restoreDesk]);
 
-  const wallpaper = `/keynote/phone-wallpaper-${theme}.webp`;
-
   // Remotion and the phone's wallpaper arrive before the desk reaches them.
   useEffect(() => {
     if (!moving || stageModule) return;
@@ -201,10 +204,6 @@ export function KeynoteTurn({ caption, children, nativeCount }: KeynoteTurnProps
       current = false;
     };
   }, [moving, stageModule]);
-
-  useEffect(() => {
-    if (moving) new Image().src = wallpaper;
-  }, [moving, wallpaper]);
 
   useEffect(() => {
     const track = trackRef.current;

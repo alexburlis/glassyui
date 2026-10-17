@@ -26,7 +26,7 @@ if (!baseUrl) {
 
 const engines = (process.env.GLASS_ENGINES ?? 'chromium,webkit,firefox').split(',');
 
-// The WebGL scene, liquid control motion, or the preference switch's own motion.
+// The WebGL scene, backdrop loading, liquid control motion, or the preference switch's own motion.
 const suites = new Set((process.env.GLASS_SUITES ?? 'scene,motion').split(','));
 
 const supportedSuites = new Set(['scene', 'contracts', 'preferences', 'motion']);
@@ -3039,6 +3039,9 @@ try {
 
     try {
       if (suites.has('scene')) await checkScene(engine, browser, statsPage, results);
+
+      if (suites.has('backdrops') && !suites.has('scene'))
+        await checkBackdropRequests(engine, browser, results);
 
       if (suites.has('scene') || suites.has('contracts'))
         await checkAlphaContract(engine, browser, statsPage, results);
