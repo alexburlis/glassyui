@@ -37,6 +37,7 @@ const expectedItems = [
   'glass-alert',
   'glass-avatar',
   'glass-kbd',
+  'glass-scroll-area',
   'glass-command',
   'glass-breadcrumb',
   'glass-pagination',

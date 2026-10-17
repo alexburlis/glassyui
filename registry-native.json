@@ -578,7 +578,7 @@
       "name": "glass-picker",
       "type": "registry:ui",
       "title": "Glass Picker",
-      "description": "A labelled system picker on glass, with a wheel on iOS and native dropdowns on Android and the web.",
+      "description": "A labelled glass picker: a native menu or wheel on iOS, a dropdown on Android and a select on the web.",
       "dependencies": ["@expo/ui"],
       "registryDependencies": ["@glassyui-native/glass-surface", "@glassyui-native/glass-provider"],
       "files": [
@@ -608,7 +608,7 @@
       "name": "glass-swipe-row",
       "type": "registry:ui",
       "title": "Glass Swipe Row",
-      "description": "A row whose actions follow a swipe and spring into place, with a labelled action button and selection haptics.",
+      "description": "A row that reveals action buttons on swipe, for iOS, Android and the web.",
       "dependencies": [
         "react-native-gesture-handler",
         "react-native-reanimated",
@@ -633,7 +633,7 @@
       "name": "glass-card-stack",
       "type": "registry:ui",
       "title": "Glass Card Stack",
-      "description": "A stack of cards that follows your finger and settles with a velocity-aware spring, with navigation controls and selection haptics.",
+      "description": "A swipeable card deck with Previous and Next buttons, for iOS, Android and the web.",
       "dependencies": [
         "react-native-gesture-handler",
         "react-native-reanimated",

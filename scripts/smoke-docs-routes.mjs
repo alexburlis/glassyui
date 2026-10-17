@@ -47,6 +47,7 @@ const checks = [
     ['glass-alert', 'Glass Alert'],
     ['glass-avatar', 'Glass Avatar'],
     ['glass-kbd', 'Glass Kbd'],
+    ['glass-scroll-area', 'Glass Scroll Area'],
     ['glass-command', 'Glass Command'],
     ['glass-breadcrumb', 'Glass Breadcrumb'],
     ['glass-pagination', 'Glass Pagination'],

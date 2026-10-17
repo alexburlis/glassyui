@@ -3,9 +3,11 @@ import { getNativeComponentDoc } from '@/lib/native-component-docs';
 import { getNativeUsage } from '@/lib/native-usage-source';
 import { sourceUrl } from '@/lib/site-links';
 import { getComponentInstallation } from '@/lib/component-installation-data';
+import { ApiReference } from './api-reference';
 import { ComponentInstallation, InstallCommandBlock } from './component-installation';
 import { CopyCodeBlock } from './copy-code-block';
 import { DocsShell } from './docs-shell';
+import { Requirement } from './requirement';
 
 export function NativeComponentDoc({ id }: { id: string }) {
   const component = getNativeComponentDoc(id);
@@ -21,8 +23,7 @@ export function NativeComponentDoc({ id }: { id: string }) {
       toc={[
         { href: '#installation', title: 'Installation' },
         { href: '#usage', title: 'Usage' },
-        { href: '#api', title: 'API' },
-        { href: '#notes', title: 'Notes' },
+        { href: '#api', title: 'API reference' },
       ]}
     >
       <article className="docs-component-doc">
@@ -32,6 +33,7 @@ export function NativeComponentDoc({ id }: { id: string }) {
           </p>
           <h1>{item.title}</h1>
           <p>{item.description}</p>
+          {component.requires ? <Requirement>{component.requires}</Requirement> : null}
           <div className="docs-page-links">
             <a href={sourceUrl(`registry/glassyui-native/${id}.tsx`)}>View source on GitHub</a>
             <a href={`/r/native/${id}.json`}>Registry JSON</a>
@@ -44,9 +46,7 @@ export function NativeComponentDoc({ id }: { id: string }) {
           <CopyCodeBlock code={usage.source} label={`${item.title} usage`} />
           {usage.alsoUses.length ? (
             <>
-              <p>
-                This example also uses {usage.alsoUses.join(' and ')}. Install everything it uses:
-              </p>
+              <p>It also uses {usage.alsoUses.join(' and ')}. Install them together:</p>
               <InstallCommandBlock
                 items={usage.items}
                 platform="react-native"
@@ -56,45 +56,12 @@ export function NativeComponentDoc({ id }: { id: string }) {
           ) : null}
         </section>
         <section className="docs-section" id="api">
-          <h2>API</h2>
-          <div className="docs-table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Prop</th>
-                  <th>Type</th>
-                  <th>Use</th>
-                </tr>
-              </thead>
-              <tbody>
-                {component.api.map((row) => (
-                  <tr key={row.prop}>
-                    <td>
-                      <code>{row.prop}</code>
-                    </td>
-                    <td>
-                      <code>{row.type}</code>
-                    </td>
-                    <td>{row.description}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p>
-            Each component also accepts <code>style</code> and <code>testID</code>.
-          </p>
-        </section>
-        <section className="docs-section" id="notes">
-          <h2>Notes</h2>
-          <ul>
-            {component.notes.map((note) => (
-              <li key={note}>{note}</li>
-            ))}
-          </ul>
-          <p>
-            <Link href="/mobile">Browse the Expo components</Link>.
-          </p>
+          <h2>API reference</h2>
+          <ApiReference
+            accessibility={component.accessibility}
+            parts={component.api}
+            types={component.types}
+          />
         </section>
       </article>
     </DocsShell>

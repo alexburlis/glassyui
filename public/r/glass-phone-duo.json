@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-phone-duo",
   "title": "Glass Phone Duo",
-  "description": "A folding glass phone with flat screen content, an outer display, and a smooth titanium frame.",
+  "description": "A WebGL2 folding phone mockup with your screenshots on both displays.",
   "dependencies": [
     "clsx"
   ],

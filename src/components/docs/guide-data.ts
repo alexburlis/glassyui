@@ -9,7 +9,7 @@ export const guides = [
     slug: 'shadcn-theme',
     title: 'Make a shadcn/ui app glassy with one command',
     description:
-      'Install the Glassy UI theme for shadcn/ui: the components you already use turn to lit, tinted glass in your own colours, with no code changes.',
+      'Install the Glassy UI theme for shadcn/ui to restyle your existing components as glass in your palette, with no code changes.',
   },
   {
     slug: 'expo',

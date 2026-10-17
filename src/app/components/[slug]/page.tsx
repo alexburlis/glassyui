@@ -2,7 +2,9 @@ import Link from 'next/link';
 import { Fragment, type ReactNode } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { ApiReference } from '@/components/docs/api-reference';
 import { ComponentPreview } from '@/components/docs/component-preview';
+import { Requirement } from '@/components/docs/requirement';
 import { CopyCodeBlock } from '@/components/docs/copy-code-block';
 import { FixedWallpaperExample } from '@/components/docs/fixed-wallpaper-example';
 import {
@@ -147,6 +149,7 @@ export default async function ComponentPage({ params }: ComponentPageProps) {
           </p>
           <h1>{component.name}</h1>
           <p>{component.description}</p>
+          {component.requires ? <Requirement>{component.requires}</Requirement> : null}
           {native ? <PlatformSwitch /> : null}
           <ByPlatform
             native={
@@ -182,9 +185,8 @@ export default async function ComponentPage({ params }: ComponentPageProps) {
           {native ? (
             <PlatformPane platform="react-native">
               <p>
-                This preview runs the React version. In an app, iOS 26 and later draw the React
-                Native version with the system&rsquo;s own glass.{' '}
-                <Link href="/mobile">See it on a phone</Link>.
+                The preview runs the React version. On iOS 26 and later, the React Native version
+                uses the system&rsquo;s own glass. <Link href="/mobile">See it on a phone</Link>.
               </p>
             </PlatformPane>
           ) : null}
@@ -207,10 +209,7 @@ export default async function ComponentPage({ params }: ComponentPageProps) {
                   <CopyCodeBlock code={native.source} label="React Native usage" />
                   {native.alsoUses.length > 0 ? (
                     <>
-                      <p>
-                        This example also uses {native.alsoUses.join(' and ')}. Install everything
-                        it uses:
-                      </p>
+                      <p>It also uses {native.alsoUses.join(' and ')}. Install them together:</p>
                       <InstallCommandBlock
                         items={native.items}
                         platform="react-native"
@@ -225,11 +224,11 @@ export default async function ComponentPage({ params }: ComponentPageProps) {
               example ? (
                 <>
                   <p>
-                    Save this as <code>{example.file}</code>. It is the complete example shown
-                    above, including its artwork.
+                    The complete preview above, artwork included. Save it as{' '}
+                    <code>{example.file}</code>.
                   </p>
                   <CopyCodeBlock code={example.source} label="Usage" />
-                  <p>Install every component this example uses:</p>
+                  <p>Install every component it uses:</p>
                   <InstallCommandBlock
                     items={example.items}
                     platform="react"
@@ -257,7 +256,7 @@ export default async function ComponentPage({ params }: ComponentPageProps) {
         </section>
 
         <section className="docs-section" id="api">
-          <h2>API</h2>
+          <h2>API reference</h2>
           <ByPlatform
             native={
               native ? (
@@ -276,76 +275,39 @@ export default async function ComponentPage({ params }: ComponentPageProps) {
                     </p>
                   ) : null}
                   <p>
-                    Read the{' '}
+                    The{' '}
                     <a href={sourceUrl(`registry/glassyui-native/${component.registryItem}.tsx`)}>
                       React Native props and exports
                     </a>{' '}
-                    in the component&rsquo;s copied source.
+                    are in the component&rsquo;s source.
                   </p>
                 </>
               ) : null
             }
             react={
-              <div className="docs-api-list">
-                {component.api.map((item) => (
-                  <div key={item.name}>
-                    <code>{item.name}</code>
-                    <p>{item.description}</p>
-                  </div>
-                ))}
-              </div>
-            }
-          />
-        </section>
-
-        <section className="docs-section" id="notes">
-          <h2>Notes</h2>
-          <ByPlatform
-            native={
-              native ? (
-                <p>
-                  The <Link href="/guides/expo">Expo guide</Link> covers native glass, shared
-                  preferences and platform differences.
-                </p>
-              ) : null
-            }
-            react={
-              <div className="docs-note-grid">
-                {component.notes?.map((note) => (
-                  <div key={note.title}>
-                    <h3>{note.title}</h3>
-                    <p>{note.body}</p>
-                  </div>
-                ))}
-                <div>
-                  <h3>Accessibility</h3>
-                  <p>
-                    Keep the Radix-backed semantics intact and preserve visible labels, focus
-                    states, and keyboard operation when copying the source.
-                  </p>
-                </div>
-                <div>
-                  <h3>Performance</h3>
-                  <p>
-                    Use provider quality preferences for dense app screens. Reserve strong
-                    refraction for hero or showcase surfaces.
-                  </p>
-                </div>
-              </div>
+              <ApiReference
+                accessibility={component.accessibility}
+                parts={component.api}
+                types={component.types}
+              />
             }
           />
         </section>
 
         <nav className="docs-pagination" aria-label="Component pagination">
           {adjacent.previous ? (
-            <Link href={adjacent.previous.route ?? '/components'}>
-              Previous: {adjacent.previous.name}
+            <Link href={adjacent.previous.route ?? '/components'} rel="prev">
+              <span>Previous</span>
+              {adjacent.previous.name}
             </Link>
           ) : (
             <span />
           )}
           {adjacent.next ? (
-            <Link href={adjacent.next.route ?? '/components'}>Next: {adjacent.next.name}</Link>
+            <Link href={adjacent.next.route ?? '/components'} rel="next">
+              <span>Next</span>
+              {adjacent.next.name}
+            </Link>
           ) : (
             <span />
           )}

@@ -13,8 +13,28 @@ type ComponentCategory =
   | 'Effects'
   | 'Mockups';
 
+/** One prop in a component's API table. `default` is shown as written; '—' means none. */
+export type ComponentProp = {
+  name: string;
+  type: string;
+  default: string;
+  description: string;
+  required?: boolean;
+};
+
+/** One exported part of a component, with the props Glassy UI adds or changes. */
+export type ComponentApiPart = {
+  name: string;
+  description?: string;
+  /** What else the part accepts, such as "HTML button attributes". */
+  extends?: string;
+  props: ComponentProp[];
+};
+
 export type ComponentDoc = {
-  api: Array<{ name: string; description: string }>;
+  /** A line that tells a developer what to do to keep the component accessible. */
+  accessibility?: string;
+  api: ComponentApiPart[];
   category: ComponentCategory;
   dependencies: string[];
   description: string;
@@ -31,14 +51,17 @@ export type ComponentDoc = {
   installedFiles: string[];
   localFiles: string[];
   name: string;
-  notes?: Array<{ body: string; title: string }>;
   pageToc: Array<{ href: string; title: string }>;
   registryDependencies: string[];
   registryItem: string;
+  /** A hard requirement, such as WebGL2, shown under the description. */
+  requires?: string;
   route?: string;
   /** The page title in search results, when the name alone says too little. */
   searchTitle?: string;
   status: ComponentStatus;
+  /** Exported types a developer imports alongside the component. */
+  types?: string[];
   usage?: string;
 };
 
@@ -70,8 +93,7 @@ const standardToc = [
   { href: '#installation', title: 'Installation' },
   { href: '#usage', title: 'Usage' },
   { href: '#examples', title: 'Examples' },
-  { href: '#api', title: 'API' },
-  { href: '#notes', title: 'Notes' },
+  { href: '#api', title: 'API reference' },
 ];
 
 // SAFETY: check-registry requires every item's name and files, and each file's path, target and type.
@@ -131,7 +153,8 @@ const componentDocContent: ComponentDocContent[] = [
     category: 'Core',
     status: 'ready',
     route: '/components/glass-provider',
-    description: 'Sets the theme and the accessibility preferences every glass component follows.',
+    description:
+      'Sets the theme and accessibility preferences that every Glassy UI component follows.',
     usage: `import { GlassProvider } from "@/components/glassyui/glass-provider";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
@@ -154,24 +177,95 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       {
         name: 'GlassProvider',
         description:
-          'Applies document-level preferences and data attributes. `defaultTheme` ("light" or "dark") is the theme a visitor sees until they choose one, whatever their system prefers; without it the provider follows the system. A choice made with `usePreferences` is saved and always wins.',
-      },
-      { name: 'PreferencesProvider', description: 'Compatibility alias for GlassProvider.' },
-      {
-        name: 'useOptionalPreferences',
-        description:
-          'Reads provider preferences when mounted and otherwise returns the static default preferences.',
+          'Holds the preferences and writes them to data-lg-* attributes on the html element.',
+        props: [
+          {
+            name: 'children',
+            type: 'ReactNode',
+            default: '—',
+            description: 'The app, or the part of it that uses glass components.',
+            required: true,
+          },
+          {
+            name: 'defaultTheme',
+            type: "'light' | 'dark'",
+            default: 'system setting',
+            description:
+              'Theme a visitor sees until they choose one; without it the provider follows prefers-color-scheme. A saved choice always wins.',
+          },
+        ],
       },
       {
         name: 'usePreferences',
         description:
-          'Reads and updates persisted Glassy UI preferences: theme, mode, quality, reduceMotion, reduceTransparency and thickness (0.25 to 2, regular glass is 1). Requires GlassProvider.',
+          'Hook that returns { preferences, setPreferences }. Throws outside GlassProvider.',
+        props: [
+          {
+            name: 'preferences.theme',
+            type: "'light' | 'dark'",
+            default: 'defaultTheme, else system',
+            description: 'Active colour theme.',
+          },
+          {
+            name: 'preferences.mode',
+            type: "'clear' | 'tinted'",
+            default: "'clear'",
+            description: 'Glass appearance mode.',
+          },
+          {
+            name: 'preferences.quality',
+            type: "'low' | 'medium' | 'high'",
+            default: 'detected',
+            description:
+              'Rendering quality: low with reduced transparency or 4 GB of device memory or less, medium on touch or with reduced motion, otherwise high.',
+          },
+          {
+            name: 'preferences.reduceMotion',
+            type: 'boolean',
+            default: 'prefers-reduced-motion',
+            description: 'Stops glass motion.',
+          },
+          {
+            name: 'preferences.reduceTransparency',
+            type: 'boolean',
+            default: 'prefers-reduced-transparency',
+            description: 'Makes glass opaque and turns off the lens and refraction.',
+          },
+          {
+            name: 'preferences.thickness',
+            type: 'number',
+            default: '1',
+            description: 'Glass thickness as a multiple of regular; applied between 0.25 and 2.',
+          },
+          {
+            name: 'setPreferences',
+            type: '(prefs: Partial<GlassyUiPreferences>) => void',
+            default: '—',
+            description:
+              'Merges and applies the given preferences, and saves them to localStorage under glassy-ui-preferences.',
+          },
+        ],
+      },
+      {
+        name: 'useOptionalPreferences',
+        description:
+          'Same shape as usePreferences, but safe outside GlassProvider: it then returns the defaults, follows the system reduced-transparency setting, and setPreferences does nothing.',
+        props: [],
+      },
+      {
+        name: 'PreferencesProvider',
+        description: 'Alias of GlassProvider, kept for compatibility.',
+        extends: 'GlassProvider props',
+        props: [],
       },
       {
         name: 'LiquidFilters',
-        description: 'Defines legacy shared SVG filters for CSS paths that still reference them.',
+        description:
+          'Hidden SVG filter definitions (#lg-liquid-refraction and others) for your own CSS. No Glassy UI component needs it. Import it from liquid-filters.',
+        props: [],
       },
     ],
+    types: ['GlassyUiPreferences', 'GlassyUiTheme', 'GlassyUiMode', 'GlassyUiQuality'],
     pageToc: standardToc,
   },
   {
@@ -180,8 +274,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     category: 'Surfaces',
     status: 'ready',
     route: '/components/glass-surface',
-    description:
-      'The glass material on its own: frost, rim light and refraction for your own components.',
+    description: 'The glass material as a plain div, for building your own glass components.',
     usage: `import { GlassSurface } from "@/components/glassyui/glass-surface";
 
 export function SurfaceDemo() {
@@ -220,52 +313,68 @@ export function SurfaceDemo() {
       },
     ],
     api: [
-      { name: 'GlassSurface', description: 'Forward-ref surface component rendered as a div.' },
       {
-        name: 'GlassSurfaceProps',
-        description: 'Native div props plus Glassy UI material and refraction options.',
-      },
-      { name: 'SurfacePreset', description: 'Exported material preset type.' },
-      { name: 'SurfaceRefraction', description: 'Exported none, soft, or strong refraction type.' },
-      {
-        name: 'preset',
-        description: 'Material strength: subtle, standard, prominent, control, or showcase.',
-      },
-      {
-        name: 'lens',
-        description:
-          'Chromium lens: the rim is a slab of glass that bends and splits the page behind it. On by default for the control and showcase presets, and for dialogs, popovers, sheets and menus.',
-      },
-      {
-        name: 'thickness',
-        description:
-          'Glass thickness as a multiple of regular (1). Thicker glass widens the rim, bends the backdrop further and splits more colour. Defaults to the thickness preference. Works with a supplied backdrop in every browser, or with the Chromium lens over live content.',
-      },
-      {
-        name: 'refraction',
-        description:
-          'Material level: none, soft, or strong. Generated refraction requires refractionBackground.',
-      },
-      {
-        name: 'refractionBackground',
-        description:
-          'Decorative visual layer bent inside the surface; do not pass semantic or interactive content.',
-      },
-      {
-        name: 'refractionBackgroundSpace',
-        description:
-          'Coordinate space for the supplied layer: local (default) or viewport. Viewport keeps the scene fixed while the surface scrolls.',
-      },
-      {
-        name: 'refractionDisplacement',
-        description:
-          'Bend strength for supplied-background refraction, 72 for soft and 112 for strong by default. The rim bend is capped so it never mirrors the scene.',
-      },
-      {
-        name: 'interactive',
-        description: 'Brightens the surface a touch on hover. Defaults to false.',
+        name: 'GlassSurface',
+        extends: 'HTML div attributes',
+        props: [
+          {
+            name: 'preset',
+            type: "'subtle' | 'standard' | 'prominent' | 'control' | 'showcase'",
+            default: "'standard'",
+            description:
+              'Material strength. control and showcase also turn the lens on by default.',
+          },
+          {
+            name: 'lens',
+            type: 'boolean',
+            default: 'true for control and showcase',
+            description:
+              'Chromium-only rim lens that bends and splits the page behind it. Off with reduced transparency, while generated refraction runs, or above 720,000 px² of area.',
+          },
+          {
+            name: 'thickness',
+            type: 'number',
+            default: 'thickness preference',
+            description:
+              'Glass thickness as a multiple of regular (1); thicker glass widens the rim and bends further.',
+          },
+          {
+            name: 'refraction',
+            type: "'none' | 'soft' | 'strong'",
+            default: "'strong' for showcase, else 'none'",
+            description:
+              'Generated refraction of refractionBackground. Needs refractionBackground and is off under reduced motion or reduced transparency.',
+          },
+          {
+            name: 'refractionBackground',
+            type: 'ReactNode',
+            default: '—',
+            description:
+              'Decorative layer bent inside the surface; not for interactive or semantic content. Needs a uniform border radius.',
+          },
+          {
+            name: 'refractionBackgroundSpace',
+            type: "'local' | 'viewport'",
+            default: "'local'",
+            description:
+              'Aligns refractionBackground to the surface or to the viewport; use viewport for a fixed wallpaper.',
+          },
+          {
+            name: 'refractionDisplacement',
+            type: 'number',
+            default: '72 soft, 112 strong',
+            description: 'Bend strength of generated refraction.',
+          },
+          {
+            name: 'interactive',
+            type: 'boolean',
+            default: 'false',
+            description: 'Brightens the surface slightly on hover.',
+          },
+        ],
       },
     ],
+    types: ['GlassSurfaceProps', 'SurfacePreset', 'SurfaceRefraction', 'RefractionBackgroundSpace'],
     pageToc: standardToc,
   },
   {
@@ -274,7 +383,7 @@ export function SurfaceDemo() {
     category: 'Surfaces',
     status: 'ready',
     route: '/components/glass-panel',
-    description: 'Glass cards, panels and pills for anything that floats above your content.',
+    description: 'A glass container in a panel, card or pill shape.',
     usage: `import { GlassPanel } from "@/components/glassyui/glass-panel";
 
 export function PanelDemo() {
@@ -293,28 +402,75 @@ export function PanelDemo() {
       },
     ],
     api: [
-      { name: 'GlassPanel', description: 'Forward-ref composed surface rendered as a div.' },
-      { name: 'GlassPanelProps', description: 'Native div props plus panel composition options.' },
-      { name: 'variant', description: 'Shape and spacing: panel, card, or pill.' },
-      { name: 'elevation', description: 'Shadow and border level: base or raised.' },
-      { name: 'preset', description: 'Material preset forwarded to GlassSurface.' },
-      { name: 'lens', description: 'Chromium lens forwarded to GlassSurface.' },
-      { name: 'thickness', description: 'Glass thickness forwarded to GlassSurface.' },
       {
-        name: 'interactive',
-        description: 'Brightens the panel a touch on hover. Defaults to false.',
+        name: 'GlassPanel',
+        description: 'A GlassSurface with shape, spacing and elevation.',
+        extends: 'HTML div attributes',
+        props: [
+          {
+            name: 'variant',
+            type: "'panel' | 'card' | 'pill'",
+            default: "'panel'",
+            description: 'Shape and spacing.',
+          },
+          {
+            name: 'elevation',
+            type: "'base' | 'raised'",
+            default: "'base'",
+            description: 'Shadow and border level.',
+          },
+          {
+            name: 'preset',
+            type: "'subtle' | 'standard' | 'prominent' | 'control' | 'showcase'",
+            default: "'control' for pill, else 'standard'",
+            description: 'Material strength, as on GlassSurface.',
+          },
+          {
+            name: 'lens',
+            type: 'boolean',
+            default: 'true for control and showcase',
+            description: 'Chromium-only rim lens, as on GlassSurface; pills get it by default.',
+          },
+          {
+            name: 'thickness',
+            type: 'number',
+            default: 'thickness preference',
+            description: 'Glass thickness as a multiple of regular (1).',
+          },
+          {
+            name: 'refraction',
+            type: "'none' | 'soft' | 'strong'",
+            default: "'strong' for showcase, else 'none'",
+            description: 'Generated refraction; needs refractionBackground.',
+          },
+          {
+            name: 'refractionBackground',
+            type: 'ReactNode',
+            default: '—',
+            description: 'Decorative layer bent inside the panel.',
+          },
+          {
+            name: 'refractionBackgroundSpace',
+            type: "'local' | 'viewport'",
+            default: "'local'",
+            description: 'Aligns refractionBackground to the panel or to the viewport.',
+          },
+          {
+            name: 'refractionDisplacement',
+            type: 'number',
+            default: '72 soft, 112 strong',
+            description: 'Bend strength of generated refraction.',
+          },
+          {
+            name: 'interactive',
+            type: 'boolean',
+            default: 'false',
+            description: 'Brightens the panel slightly on hover.',
+          },
+        ],
       },
-      { name: 'refraction', description: 'Material refraction level forwarded to GlassSurface.' },
-      {
-        name: 'refractionBackground',
-        description: 'Decorative supplied background forwarded to GlassSurface.',
-      },
-      {
-        name: 'refractionBackgroundSpace',
-        description: 'Local or viewport scene alignment forwarded to GlassSurface.',
-      },
-      { name: 'refractionDisplacement', description: 'Bend strength forwarded to GlassSurface.' },
     ],
+    types: ['GlassPanelProps'],
     pageToc: standardToc,
   },
   {
@@ -324,7 +480,8 @@ export function PanelDemo() {
     status: 'ready',
     isNew: true,
     route: '/components/glass-header',
-    description: 'A floating glass capsule with a brand, navigation links and actions.',
+    description:
+      'A floating glass header with a brand, navigation links, actions and a compact menu.',
     usage: `import { GlassHeader } from "@/components/glassyui/glass-header";
 import { GlassButton } from "@/components/glassyui/glass-button";
 
@@ -354,54 +511,56 @@ export function Header() {
       },
     ],
     api: [
-      { name: 'GlassHeader', description: 'A semantic header with a ref to its header element.' },
       {
-        name: 'GlassHeaderProps',
-        description: 'Native header attributes plus brand, actions, placement and condensing.',
-      },
-      { name: 'brand', description: 'A logo or wordmark, usually linked to the home page.' },
-      {
-        name: 'children',
-        description: 'Navigation links. The same links appear in the mobile menu.',
-      },
-      { name: 'actions', description: 'Buttons or links on the right, visible at every width.' },
-      {
-        name: 'position',
-        description:
-          '"fixed" (default) floats 14px from the top; "static" stays in the surrounding layout.',
-      },
-      {
-        name: 'condenseOnScroll',
-        description:
-          'Opens a fixed header out across the top of the page without glass and condenses it into the capsule once the page scrolls.',
-      },
-      {
-        name: 'navigationLabel',
-        description: 'Accessible name for the navigation, "Primary" by default.',
+        name: 'GlassHeader',
+        description: 'A header element with a nav for its links.',
+        extends: 'HTML header attributes',
+        props: [
+          {
+            name: 'brand',
+            type: 'ReactNode',
+            default: '—',
+            description: 'Logo or wordmark, usually linked to the home page.',
+            required: true,
+          },
+          {
+            name: 'children',
+            type: 'ReactNode',
+            default: '—',
+            description:
+              'Navigation links. They render twice, in the inline nav and in the Menu used below 780px of header width, so avoid ids inside them.',
+          },
+          {
+            name: 'actions',
+            type: 'ReactNode',
+            default: '—',
+            description: 'Buttons or links at the end, shown at every width.',
+          },
+          {
+            name: 'position',
+            type: "'fixed' | 'static'",
+            default: "'fixed'",
+            description:
+              'fixed floats 14px from the top (8px on narrow screens) and needs about 84px of room above your content; static stays in the layout.',
+          },
+          {
+            name: 'condenseOnScroll',
+            type: 'boolean',
+            default: 'false',
+            description:
+              'Starts as a full-width bar without glass and condenses into the capsule after 8px of scroll. Fixed headers only.',
+          },
+          {
+            name: 'navigationLabel',
+            type: 'string',
+            default: "'Primary'",
+            description: 'Accessible name for both navs.',
+          },
+        ],
       },
     ],
-    notes: [
-      {
-        title: 'Condense on scroll',
-        body: 'With condenseOnScroll, the header spans up to 1200px at the top of the page with no glass behind its links. Once the page scrolls 8px, its glass forms and it springs into the 920px capsule; back at the top it opens again. Reduced motion switches shape without moving.',
-      },
-      {
-        title: 'The action button',
-        body: `Actions can be any buttons or links. The usage example uses Glass Button; install it with \`${installCommand(['glass-button'], 'react')}\`.`,
-      },
-      {
-        title: 'Make room for the header',
-        body: 'The fixed capsule is 56px tall and up to 920px wide. Leave at least 84px above your page content.',
-      },
-      {
-        title: 'A menu when space is tight',
-        body: 'Below 780px of available width, the links move into a Menu disclosure. Escape closes the menu and returns focus; choosing a link also closes it. Supply links as children, with unique navigationLabel values when a page contains multiple headers.',
-      },
-      {
-        title: 'Shared glass preferences',
-        body: 'The header follows GlassProvider theme, thickness and reduced transparency preferences. Its glass uses the existing surface renderer.',
-      },
-    ],
+    types: ['GlassHeaderProps'],
+    accessibility: 'Give each header a unique navigationLabel when a page has more than one.',
     pageToc: standardToc,
   },
   {
@@ -410,8 +569,7 @@ export function Header() {
     category: 'Controls',
     status: 'ready',
     route: '/components/glass-button',
-    description:
-      'A slab of glass resting just above the page that sets down when pressed and lights up where you press.',
+    description: 'A glass button with four variants, three sizes and an asChild mode for links.',
     usage: `import { GlassButton } from "@/components/glassyui/glass-button";
 
 export function ButtonDemo() {
@@ -437,45 +595,51 @@ export function ButtonDemo() {
     api: [
       {
         name: 'GlassButton',
-        description: 'Forward-ref HTML button with owned glass interaction state.',
-      },
-      {
-        name: 'ButtonProps',
-        description: 'HTML button props plus Glassy UI material options.',
-      },
-      {
-        name: 'ButtonVariant',
-        description: 'Exported primary, prominent, soft, or ghost visual-intent type.',
-      },
-      { name: 'ButtonSize', description: 'Exported sm, md, or lg size type.' },
-      {
-        name: 'variant',
-        description:
-          'Visual intent: primary (clear glass, the default), prominent (blue glass for the main action: it tints whatever lies behind it and keeps white text at 4.5:1), soft, or ghost.',
-      },
-      {
-        name: 'asChild',
-        description:
-          'Renders the single child element, such as a link, with the button material. Links cannot be disabled.',
-      },
-      { name: 'size', description: 'Control size: sm, md, or lg.' },
-      { name: 'preset', description: 'Material preset applied to the button surface.' },
-      {
-        name: 'lens',
-        description:
-          'Chromium lens: the rim bends and splits the page behind it. On by default for every variant except ghost.',
+        extends: 'HTML button attributes',
+        props: [
+          {
+            name: 'variant',
+            type: "'primary' | 'prominent' | 'soft' | 'ghost'",
+            default: "'primary'",
+            description:
+              'Visual style. prominent is blue glass for the main action; ghost has no glass.',
+          },
+          {
+            name: 'size',
+            type: "'sm' | 'md' | 'lg'",
+            default: "'md'",
+            description: 'Control size.',
+          },
+          {
+            name: 'asChild',
+            type: 'boolean',
+            default: 'false',
+            description:
+              "Renders the single child, such as a link, with the button's material. disabled has no effect then.",
+          },
+          {
+            name: 'type',
+            type: "'button' | 'submit' | 'reset'",
+            default: "'button'",
+            description: "Native button type. Set 'submit' to submit a form.",
+          },
+          {
+            name: 'preset',
+            type: "'control' | 'showcase'",
+            default: "'control'",
+            description: 'Material preset; showcase allows a stronger backdrop blur.',
+          },
+          {
+            name: 'lens',
+            type: 'boolean',
+            default: 'true except ghost',
+            description:
+              'Chromium-only rim lens that bends the page behind it. Off while disabled or with reduced transparency.',
+          },
+        ],
       },
     ],
-    notes: [
-      {
-        title: 'Motion',
-        body: 'The glass rests just above the page, lit from above. A pointer lowers it and a press sets it down, so its shadow draws in under it, and light spreads from the point you press. A pointer also swings the light along the rim of a prominent button over to the top left. Reduced motion moves it at once and drops the light.',
-      },
-      {
-        title: 'Glass Scene',
-        body: 'Inside a Glass Scene the canvas draws the button as real glass that bends the backdrop.',
-      },
-    ],
+    types: ['ButtonProps', 'ButtonVariant', 'ButtonSize'],
     pageToc: standardToc,
   },
   {
@@ -484,7 +648,7 @@ export function ButtonDemo() {
     category: 'Controls',
     status: 'ready',
     route: '/components/glass-input',
-    description: 'A recessed glass text field with a label and an optional hint.',
+    description: 'A recessed glass text field with an optional label and hint.',
     usage: `import { GlassInput } from "@/components/glassyui/glass-input";
 
 export function InputDemo() {
@@ -502,12 +666,35 @@ export function InputDemo() {
       },
     ],
     api: [
-      { name: 'GlassInput', description: 'Forward-ref native input with optional label and hint.' },
-      { name: 'GlassInputProps', description: 'Native input props plus label and hint options.' },
-      { name: 'label', description: 'Optional visible label rendered above the input.' },
-      { name: 'hint', description: 'Optional helper text rendered below the input.' },
-      { name: 'type', description: 'Native input type. Defaults to text.' },
+      {
+        name: 'GlassInput',
+        description:
+          'An input in a wrapper with its label and hint. className and ref go to the input.',
+        extends: 'HTML input attributes',
+        props: [
+          {
+            name: 'label',
+            type: 'string',
+            default: '—',
+            description: 'Visible label above the field, linked with htmlFor.',
+          },
+          {
+            name: 'hint',
+            type: 'string',
+            default: '—',
+            description: 'Helper text below the field, linked with aria-describedby.',
+          },
+          {
+            name: 'type',
+            type: 'string',
+            default: "'text'",
+            description: 'Native input type.',
+          },
+        ],
+      },
     ],
+    types: ['GlassInputProps'],
+    accessibility: 'Without a label, name the field with aria-label.',
     pageToc: standardToc,
   },
   {
@@ -517,8 +704,7 @@ export function InputDemo() {
     isNew: true,
     status: 'ready',
     route: '/components/glass-checkbox',
-    description:
-      'A glass checkbox whose mark draws itself in and out, with an indeterminate state.',
+    description: 'A glass checkbox with an optional label, description and indeterminate state.',
     usage: `import { GlassCheckbox } from "@/components/glassyui/glass-checkbox";
 
 export function CheckboxDemo() {
@@ -541,33 +727,46 @@ export function CheckboxDemo() {
     api: [
       {
         name: 'GlassCheckbox',
-        description: 'Forward-ref Radix checkbox with an optional label and description.',
-      },
-      {
-        name: 'GlassCheckboxProps',
-        description: 'Radix checkbox props plus label, description and size.',
-      },
-      { name: 'label', description: 'Text beside the box. Clicking it toggles the box.' },
-      {
-        name: 'description',
-        description: 'A muted line under the label, linked with aria-describedby.',
-      },
-      { name: 'size', description: 'md (default) or sm.' },
-      {
-        name: 'checked',
-        description: 'true, false or "indeterminate". Also defaultChecked and onCheckedChange.',
+        description: 'With a label, className goes to the wrapper; without one, to the box.',
+        extends: 'Radix Checkbox.Root props, except children',
+        props: [
+          {
+            name: 'checked / defaultChecked',
+            type: "boolean | 'indeterminate'",
+            default: '—',
+            description:
+              "Checked state; 'indeterminate' shows a dash for a parent of several choices.",
+          },
+          {
+            name: 'onCheckedChange',
+            type: "(checked: boolean | 'indeterminate') => void",
+            default: '—',
+            description: 'Called when the user toggles the box.',
+          },
+          {
+            name: 'label',
+            type: 'ReactNode',
+            default: '—',
+            description: 'Text beside the box; clicking it toggles the box.',
+          },
+          {
+            name: 'description',
+            type: 'ReactNode',
+            default: '—',
+            description:
+              'Muted line under the label, linked with aria-describedby. Shown only with a label.',
+          },
+          {
+            name: 'size',
+            type: "'sm' | 'md'",
+            default: "'md'",
+            description: 'Box size: 16px or 20px.',
+          },
+        ],
       },
     ],
-    notes: [
-      {
-        title: 'Motion',
-        body: 'The tick is a stroke that draws itself and the fill fades, in both directions, so clearing a box moves as smoothly as ticking it. Reduced motion shows the end state at once.',
-      },
-      {
-        title: 'Accessibility',
-        body: 'Space toggles. Without a label, name the box with aria-label. Forced colours use the system highlight.',
-      },
-    ],
+    types: ['GlassCheckboxProps', 'GlassCheckboxSize'],
+    accessibility: 'Without a label, name the box with aria-label.',
     pageToc: standardToc,
   },
   {
@@ -577,7 +776,7 @@ export function CheckboxDemo() {
     isNew: true,
     status: 'ready',
     route: '/components/glass-radio-group',
-    description: 'Options where exactly one is chosen, with a dot that pops in and shrinks away.',
+    description: 'A group of glass radio buttons where exactly one option is chosen.',
     usage: `import { GlassRadioGroup, GlassRadioGroupItem } from "@/components/glassyui/glass-radio-group";
 
 export function PlanDemo() {
@@ -601,22 +800,54 @@ export function PlanDemo() {
     api: [
       {
         name: 'GlassRadioGroup',
-        description: 'Radix radio group. The arrow keys move the choice.',
+        extends: 'Radix RadioGroup.Root props',
+        props: [
+          {
+            name: 'value / defaultValue',
+            type: 'string',
+            default: '—',
+            description: "The chosen option's value.",
+          },
+          {
+            name: 'onValueChange',
+            type: '(value: string) => void',
+            default: '—',
+            description: 'Called when the user chooses an option.',
+          },
+        ],
       },
       {
         name: 'GlassRadioGroupItem',
-        description: 'One option, with an optional label and description.',
+        description:
+          'One option. With a label, className goes to the wrapper; without one, to the button.',
+        extends: 'Radix RadioGroup.Item props, except children',
+        props: [
+          {
+            name: 'value',
+            type: 'string',
+            default: '—',
+            description: 'The value this option sets.',
+            required: true,
+          },
+          {
+            name: 'label',
+            type: 'ReactNode',
+            default: '—',
+            description: 'Text beside the button; clicking it chooses the option.',
+          },
+          {
+            name: 'description',
+            type: 'ReactNode',
+            default: '—',
+            description:
+              'Muted line under the label, linked with aria-describedby. Shown only with a label.',
+          },
+        ],
       },
-      { name: 'value / onValueChange', description: 'Controlled choice. Also defaultValue.' },
-      { name: 'label', description: 'Text beside the button. Clicking it chooses the option.' },
-      { name: 'description', description: 'A muted line under the label.' },
     ],
-    notes: [
-      {
-        title: 'Accessibility',
-        body: 'Name the group with aria-label or aria-labelledby. Tab enters the group and the arrow keys move within it.',
-      },
-    ],
+    types: ['GlassRadioGroupProps', 'GlassRadioGroupItemProps'],
+    accessibility:
+      'Name the group with aria-label or aria-labelledby, and name any item without a label with aria-label.',
     pageToc: standardToc,
   },
   {
@@ -626,7 +857,7 @@ export function PlanDemo() {
     isNew: true,
     status: 'ready',
     route: '/components/glass-textarea',
-    description: 'A recessed glass field for longer text that can grow as you type.',
+    description: 'A recessed glass text area that can grow with its text.',
     usage: `import { GlassTextarea } from "@/components/glassyui/glass-textarea";
 
 export function MessageDemo() {
@@ -643,25 +874,49 @@ export function MessageDemo() {
       },
     ],
     api: [
-      { name: 'GlassTextarea', description: 'Forward-ref native textarea styled like GlassInput.' },
       {
-        name: 'GlassTextareaProps',
-        description: 'Native textarea props plus label, hint, autoResize and maxRows.',
-      },
-      { name: 'label', description: 'Optional visible label rendered above the field.' },
-      { name: 'hint', description: 'Optional helper text rendered below the field.' },
-      { name: 'autoResize', description: 'Grows with its text, up to maxRows, then scrolls.' },
-      {
-        name: 'maxRows',
-        description: 'The most rows an auto-resizing textarea grows to. Defaults to 8.',
+        name: 'GlassTextarea',
+        description:
+          'A textarea in a wrapper with its label and hint. className and ref go to the textarea.',
+        extends: 'HTML textarea attributes',
+        props: [
+          {
+            name: 'label',
+            type: 'string',
+            default: '—',
+            description: 'Visible label above the field, linked with htmlFor.',
+          },
+          {
+            name: 'hint',
+            type: 'string',
+            default: '—',
+            description: 'Helper text below the field, linked with aria-describedby.',
+          },
+          {
+            name: 'rows',
+            type: 'number',
+            default: '3',
+            description:
+              'Starting height in rows. Without autoResize the field has a vertical resize handle.',
+          },
+          {
+            name: 'autoResize',
+            type: 'boolean',
+            default: 'false',
+            description:
+              'Grows with its text, refitting when the width changes, then scrolls past maxRows.',
+          },
+          {
+            name: 'maxRows',
+            type: 'number',
+            default: '8',
+            description: 'The most rows an auto-resizing field grows to.',
+          },
+        ],
       },
     ],
-    notes: [
-      {
-        title: 'Rewrapping',
-        body: 'An auto-resizing field fits again when its width changes and the text rewraps.',
-      },
-    ],
+    types: ['GlassTextareaProps'],
+    accessibility: 'Without a label, name the field with aria-label.',
     pageToc: standardToc,
   },
   {
@@ -671,7 +926,7 @@ export function MessageDemo() {
     isNew: true,
     status: 'ready',
     route: '/components/glass-select',
-    description: 'A recessed trigger that opens a slab of glass to choose from.',
+    description: 'A select field whose options open on a raised glass panel.',
     usage: `import {
   GlassSelect,
   GlassSelectContent,
@@ -712,36 +967,117 @@ export function FrameworkDemo() {
     api: [
       {
         name: 'GlassSelect',
-        description: 'Radix select root. value, onValueChange, defaultValue, disabled and name.',
+        extends: 'Radix Select.Root props',
+        props: [
+          {
+            name: 'value / defaultValue',
+            type: 'string',
+            default: '—',
+            description: 'Controlled or uncontrolled selected value.',
+          },
+          {
+            name: 'onValueChange',
+            type: '(value: string) => void',
+            default: '—',
+            description: 'Called with the value of the chosen item.',
+          },
+          {
+            name: 'open / onOpenChange',
+            type: 'boolean / (open: boolean) => void',
+            default: '—',
+            description: 'Controls whether the list is open.',
+          },
+          {
+            name: 'name',
+            type: 'string',
+            default: '—',
+            description:
+              'Submits the value with a native form, and a form reset restores the initial value.',
+          },
+          {
+            name: 'disabled',
+            type: 'boolean',
+            default: 'false',
+            description: 'Stops the select from opening.',
+          },
+        ],
       },
       {
         name: 'GlassSelectTrigger',
-        description: 'The closed field. Name it with aria-label or a label element.',
+        description: 'The closed field, with a chevron.',
+        extends: 'Radix Select.Trigger props',
+        props: [],
       },
-      { name: 'GlassSelectValue', description: 'Shows the chosen item, or the placeholder.' },
+      {
+        name: 'GlassSelectValue',
+        description: "Shows the chosen item's text inside the trigger.",
+        extends: 'Radix Select.Value props',
+        props: [
+          {
+            name: 'placeholder',
+            type: 'ReactNode',
+            default: '—',
+            description: 'Shown while no value is chosen.',
+          },
+        ],
+      },
       {
         name: 'GlassSelectContent',
-        description: 'The open list, as wide as the trigger. Edge lens on Chromium.',
+        description: 'The open list on a glass panel, at least as wide as the trigger.',
+        extends: 'Radix Select.Content props',
+        props: [
+          {
+            name: 'position',
+            type: "'popper' | 'item-aligned'",
+            default: "'popper'",
+            description:
+              'popper places the list below the trigger; item-aligned lays it over the trigger at the chosen item.',
+          },
+          {
+            name: 'sideOffset',
+            type: 'number',
+            default: '8',
+            description: 'Gap between the trigger and the list, in pixels.',
+          },
+          {
+            name: 'className',
+            type: 'string',
+            default: '—',
+            description: 'Applies to the glass panel.',
+          },
+        ],
       },
       {
         name: 'GlassSelectItem',
-        description: 'One option. value is required and cannot be empty.',
+        description: 'One option, with a check mark when chosen.',
+        extends: 'Radix Select.Item props',
+        props: [
+          {
+            name: 'value',
+            type: 'string',
+            default: '—',
+            description:
+              "The option's value. Cannot be an empty string; an empty value shows the placeholder.",
+            required: true,
+          },
+          {
+            name: 'disabled',
+            type: 'boolean',
+            default: 'false',
+            description: 'Makes the option unselectable.',
+          },
+        ],
       },
       {
         name: 'GlassSelectGroup / GlassSelectLabel / GlassSelectSeparator',
-        description: 'Group options under a heading.',
+        description: 'Group options under a heading and divide groups with a line.',
+        extends: 'Radix Select.Group, Select.Label and Select.Separator props',
+        props: [],
       },
     ],
-    notes: [
-      {
-        title: 'Keyboard',
-        body: 'Arrow keys move, typing jumps to a matching item, Enter or Space chooses and Escape closes.',
-      },
-      {
-        title: 'Forms',
-        body: 'With a name, the select submits its value in a native form and takes part in form resets.',
-      },
-    ],
+    types: ['GlassSelectTriggerProps', 'GlassSelectContentProps', 'GlassSelectItemProps'],
+    accessibility:
+      'Name the trigger with aria-label or a label element; it shows only the chosen value.',
     pageToc: standardToc,
   },
   {
@@ -750,7 +1086,7 @@ export function FrameworkDemo() {
     category: 'Navigation',
     status: 'ready',
     route: '/components/glass-tabs',
-    description: 'Tabs whose glass bubble stretches like a drop on its way to the selected tab.',
+    description: 'Tabs on a glass pill, with one indicator that moves to the selected tab.',
     usage: `import { GlassTabs, GlassTabsContent, GlassTabsList, GlassTabsTrigger } from "@/components/glassyui/glass-tabs";
 
 export function TabsDemo() {
@@ -767,18 +1103,75 @@ export function TabsDemo() {
 }`,
     examples: [{ title: 'Default tab', code: `<GlassTabs defaultValue="preview">...</GlassTabs>` }],
     api: [
-      { name: 'GlassTabs', description: 'Radix Tabs root.' },
-      { name: 'GlassTabsList', description: 'Glass pill list for triggers.' },
+      {
+        name: 'GlassTabs',
+        extends: 'Radix Tabs.Root props',
+        props: [
+          {
+            name: 'value / defaultValue',
+            type: 'string',
+            default: '—',
+            description: "Controlled or uncontrolled selected tab, matching a trigger's value.",
+          },
+          {
+            name: 'onValueChange',
+            type: '(value: string) => void',
+            default: '—',
+            description: "Called with the newly selected tab's value.",
+          },
+          {
+            name: 'orientation',
+            type: "'horizontal' | 'vertical'",
+            default: "'horizontal'",
+            description: 'Sets which arrow keys move between triggers.',
+          },
+        ],
+      },
+      {
+        name: 'GlassTabsList',
+        description: 'The glass pill that holds the triggers and the moving indicator.',
+        extends: 'Radix Tabs.List props',
+        props: [
+          {
+            name: 'className',
+            type: 'string',
+            default: '—',
+            description: 'Applies to the glass pill.',
+          },
+        ],
+      },
       {
         name: 'GlassTabsTrigger',
-        description: 'Semantic Radix trigger with active glass styling.',
+        extends: 'Radix Tabs.Trigger props',
+        props: [
+          {
+            name: 'value',
+            type: 'string',
+            default: '—',
+            description: 'Ties the trigger to the GlassTabsContent with the same value.',
+            required: true,
+          },
+        ],
       },
-      { name: 'GlassTabsContent', description: 'Panel-backed tab content.' },
-    ],
-    notes: [
       {
-        title: 'Motion',
-        body: 'One glass bubble serves the whole list. It lifts, stretches toward the new tab and settles with a small bounce. Until scripts run, the active tab draws its own bubble. Reduced motion moves it straight there.',
+        name: 'GlassTabsContent',
+        description: "The tab's panel, on a glass card.",
+        extends: 'Radix Tabs.Content props',
+        props: [
+          {
+            name: 'value',
+            type: 'string',
+            default: '—',
+            description: 'Shown when the trigger with the same value is selected.',
+            required: true,
+          },
+          {
+            name: 'className',
+            type: 'string',
+            default: '—',
+            description: 'Applies to the glass card.',
+          },
+        ],
       },
     ],
     pageToc: standardToc,
@@ -789,7 +1182,7 @@ export function TabsDemo() {
     category: 'Overlays',
     status: 'ready',
     route: '/components/glass-dialog',
-    description: 'A modal on raised glass that holds focus until it closes.',
+    description: 'A modal glass dialog with an overlay, a focus trap and a close button.',
     usage: `import { GlassDialog, GlassDialogContent, GlassDialogTitle, GlassDialogTrigger } from "@/components/glassyui/glass-dialog";
 
 export function DialogDemo() {
@@ -806,21 +1199,92 @@ export function DialogDemo() {
       { title: 'Modal content', code: `<GlassDialogContent>Modal content</GlassDialogContent>` },
     ],
     api: [
-      { name: 'GlassDialog', description: 'Radix Dialog root.' },
-      { name: 'GlassDialogTrigger', description: 'Radix trigger primitive.' },
-      { name: 'GlassDialogPortal', description: 'Radix portal primitive.' },
-      { name: 'GlassDialogOverlay', description: 'Styled modal overlay.' },
+      {
+        name: 'GlassDialog',
+        extends: 'Radix Dialog.Root props',
+        props: [
+          {
+            name: 'open / defaultOpen',
+            type: 'boolean',
+            default: 'false',
+            description: 'Controlled or uncontrolled open state.',
+          },
+          {
+            name: 'onOpenChange',
+            type: '(open: boolean) => void',
+            default: '—',
+            description: 'Called when the dialog opens or closes.',
+          },
+          {
+            name: 'modal',
+            type: 'boolean',
+            default: 'true',
+            description: 'Traps focus and makes the page behind inert.',
+          },
+        ],
+      },
+      {
+        name: 'GlassDialogTrigger',
+        description: 'Opens the dialog.',
+        extends: 'Radix Dialog.Trigger props',
+        props: [
+          {
+            name: 'asChild',
+            type: 'boolean',
+            default: 'false',
+            description: 'Renders your own element, such as a GlassButton, as the trigger.',
+          },
+        ],
+      },
       {
         name: 'GlassDialogContent',
-        description: 'Portal, overlay, named close button, and glass panel content.',
+        description: 'Renders the portal, overlay, glass panel and a close button in the corner.',
+        extends: 'Radix Dialog.Content props',
+        props: [
+          {
+            name: 'closeLabel',
+            type: 'string',
+            default: "'Close dialog'",
+            description: 'Accessible name of the built-in close button.',
+          },
+          {
+            name: 'thickness',
+            type: 'number',
+            default: 'thickness preference',
+            description:
+              'Glass thickness as a multiple of regular (1); thicker glass bends the backdrop further at the rim.',
+          },
+          {
+            name: 'className',
+            type: 'string',
+            default: '—',
+            description: 'Applies to the glass panel.',
+          },
+        ],
       },
       {
-        name: 'GlassDialogContentProps',
-        description: 'Radix content props plus an optional closeLabel and thickness.',
+        name: 'GlassDialogTitle',
+        description: "The dialog's heading and accessible name.",
+        extends: 'Radix Dialog.Title props',
+        props: [],
       },
-      { name: 'GlassDialogTitle', description: 'Radix accessible dialog title.' },
-      { name: 'GlassDialogDescription', description: 'Radix accessible dialog description.' },
+      {
+        name: 'GlassDialogDescription',
+        description: 'Supporting text, linked to the dialog with aria-describedby.',
+        extends: 'Radix Dialog.Description props',
+        props: [],
+      },
+      {
+        name: 'GlassDialogPortal / GlassDialogOverlay',
+        description:
+          'The portal and the dimmed overlay. GlassDialogContent already renders both; use them only to build your own content.',
+        extends: 'Radix Dialog.Portal and Dialog.Overlay props',
+        props: [],
+      },
     ],
+    types: ['GlassDialogContentProps'],
+    accessibility:
+      'Put a GlassDialogTitle in every dialog; the dialog takes its accessible name from it.',
     pageToc: standardToc,
   },
   {
@@ -829,7 +1293,7 @@ export function DialogDemo() {
     category: 'Overlays',
     status: 'ready',
     route: '/components/glass-popover',
-    description: 'Floating glass content anchored to the control that opens it.',
+    description: 'A glass popover anchored to the control that opens it.',
     usage: `import { GlassPopover, GlassPopoverContent, GlassPopoverTrigger } from "@/components/glassyui/glass-popover";
 
 export function PopoverDemo() {
@@ -847,11 +1311,77 @@ export function PopoverDemo() {
       },
     ],
     api: [
-      { name: 'GlassPopover', description: 'Radix Popover root.' },
-      { name: 'GlassPopoverTrigger', description: 'Radix trigger primitive.' },
-      { name: 'GlassPopoverAnchor', description: 'Radix anchor primitive for custom positioning.' },
-      { name: 'GlassPopoverContent', description: 'Portal-backed glass content.' },
+      {
+        name: 'GlassPopover',
+        extends: 'Radix Popover.Root props',
+        props: [
+          {
+            name: 'open / defaultOpen',
+            type: 'boolean',
+            default: 'false',
+            description: 'Controlled or uncontrolled open state.',
+          },
+          {
+            name: 'onOpenChange',
+            type: '(open: boolean) => void',
+            default: '—',
+            description: 'Called when the popover opens or closes.',
+          },
+        ],
+      },
+      {
+        name: 'GlassPopoverTrigger',
+        description: 'Toggles the popover.',
+        extends: 'Radix Popover.Trigger props',
+        props: [
+          {
+            name: 'asChild',
+            type: 'boolean',
+            default: 'false',
+            description: 'Renders your own element, such as a GlassButton, as the trigger.',
+          },
+        ],
+      },
+      {
+        name: 'GlassPopoverAnchor',
+        description: 'Positions the popover against an element other than the trigger.',
+        extends: 'Radix Popover.Anchor props',
+        props: [],
+      },
+      {
+        name: 'GlassPopoverContent',
+        description: 'The floating glass panel, rendered in a portal.',
+        extends: 'Radix Popover.Content props',
+        props: [
+          {
+            name: 'sideOffset',
+            type: 'number',
+            default: '12',
+            description: 'Gap between the trigger and the panel, in pixels.',
+          },
+          {
+            name: 'side / align',
+            type: "'top' | 'right' | 'bottom' | 'left' / 'start' | 'center' | 'end'",
+            default: "'bottom' / 'center'",
+            description: 'Preferred placement; it flips to stay on screen.',
+          },
+          {
+            name: 'thickness',
+            type: 'number',
+            default: 'thickness preference',
+            description:
+              'Glass thickness as a multiple of regular (1); thicker glass bends the backdrop further at the rim.',
+          },
+          {
+            name: 'className',
+            type: 'string',
+            default: '—',
+            description: 'Applies to the glass panel.',
+          },
+        ],
+      },
     ],
+    types: ['GlassPopoverContentProps'],
     pageToc: standardToc,
   },
   {
@@ -875,17 +1405,77 @@ export function TooltipDemo() {
 }`,
     examples: [{ title: 'Short hint', code: `<GlassTooltipContent>Copied</GlassTooltipContent>` }],
     api: [
-      { name: 'GlassTooltipProvider', description: 'Radix Tooltip provider.' },
-      { name: 'GlassTooltip', description: 'Radix Tooltip root.' },
-      { name: 'GlassTooltipTrigger', description: 'Radix trigger primitive.' },
-      { name: 'GlassTooltipContent', description: 'Glass panel tooltip content with arrow.' },
-    ],
-    notes: [
       {
-        title: 'Motion',
-        body: 'A tip settles in from the side it opens toward and fades out again. Moving to the next trigger skips the entrance, so the tip follows you. Reduced motion shows and hides it at once.',
+        name: 'GlassTooltipProvider',
+        description: 'Shares open delays between tooltips. Wrap your app or a section in one.',
+        extends: 'Radix Tooltip.Provider props',
+        props: [
+          {
+            name: 'delayDuration',
+            type: 'number',
+            default: '700',
+            description: 'Milliseconds of hover before a tooltip opens.',
+          },
+        ],
+      },
+      {
+        name: 'GlassTooltip',
+        extends: 'Radix Tooltip.Root props',
+        props: [
+          {
+            name: 'open / defaultOpen',
+            type: 'boolean',
+            default: 'false',
+            description: 'Controlled or uncontrolled open state.',
+          },
+          {
+            name: 'onOpenChange',
+            type: '(open: boolean) => void',
+            default: '—',
+            description: 'Called when the tooltip opens or closes.',
+          },
+        ],
+      },
+      {
+        name: 'GlassTooltipTrigger',
+        description: 'The element the tooltip describes.',
+        extends: 'Radix Tooltip.Trigger props',
+        props: [
+          {
+            name: 'asChild',
+            type: 'boolean',
+            default: 'false',
+            description: 'Renders your own focusable element as the trigger.',
+          },
+        ],
+      },
+      {
+        name: 'GlassTooltipContent',
+        description: 'The glass label, rendered in a portal.',
+        extends: 'Radix Tooltip.Content props',
+        props: [
+          {
+            name: 'sideOffset',
+            type: 'number',
+            default: '6',
+            description: 'Gap between the trigger and the label, in pixels.',
+          },
+          {
+            name: 'side',
+            type: "'top' | 'right' | 'bottom' | 'left'",
+            default: "'top'",
+            description: 'Preferred side; it flips to stay on screen.',
+          },
+          {
+            name: 'className',
+            type: 'string',
+            default: '—',
+            description: 'Applies to the glass panel.',
+          },
+        ],
       },
     ],
+    requires: 'a GlassTooltipProvider around every GlassTooltip.',
     pageToc: standardToc,
   },
   {
@@ -894,7 +1484,7 @@ export function TooltipDemo() {
     category: 'Feedback',
     status: 'ready',
     route: '/components/glass-toast',
-    description: 'A glass notification for brief updates, announced to screen readers.',
+    description: 'A glass notification for brief updates that screen readers announce.',
     usage: `import { GlassToast, GlassToastDescription, GlassToastProvider, GlassToastTitle, GlassToastViewport } from "@/components/glassyui/glass-toast";
 
 export function ToastDemo() {
@@ -928,28 +1518,121 @@ export function ToastDemo() {
       },
     ],
     api: [
-      { name: 'GlassToastProvider', description: 'Radix Toast provider.' },
-      { name: 'GlassToast', description: 'Glass panel toast root.' },
-      { name: 'GlassToastViewport', description: 'Fixed viewport for toast placement.' },
-      { name: 'GlassToastTitle', description: 'Styled Radix toast title.' },
-      { name: 'GlassToastDescription', description: 'Styled Radix toast description.' },
       {
-        name: 'GlassToastClose',
+        name: 'GlassToastProvider',
         description:
-          'A round dismiss button that draws its own ×. Named "Dismiss" unless you pass aria-label.',
+          'Holds the toasts and their shared settings. Wrap your toasts and the viewport in it.',
+        extends: 'Radix Toast.Provider props',
+        props: [
+          {
+            name: 'duration',
+            type: 'number',
+            default: '5000',
+            description: 'Milliseconds before a toast closes on its own.',
+          },
+          {
+            name: 'swipeDirection',
+            type: "'right' | 'left' | 'up' | 'down'",
+            default: "'right'",
+            description:
+              'The way a swipe dismisses a toast; toasts also slide in from and out to this side.',
+          },
+          {
+            name: 'label',
+            type: 'string',
+            default: "'Notification'",
+            description: 'Prefix screen readers announce before each toast.',
+          },
+        ],
+      },
+      {
+        name: 'GlassToast',
+        description: 'One toast on a glass card.',
+        extends: 'Radix Toast.Root props',
+        props: [
+          {
+            name: 'open / defaultOpen',
+            type: 'boolean',
+            default: 'true',
+            description:
+              'Controlled or uncontrolled open state; an uncontrolled toast shows when it mounts.',
+          },
+          {
+            name: 'onOpenChange',
+            type: '(open: boolean) => void',
+            default: '—',
+            description: 'Called when the toast opens, times out or is dismissed.',
+          },
+          {
+            name: 'duration',
+            type: 'number',
+            default: 'provider duration',
+            description: "Overrides the provider's duration for this toast.",
+          },
+          {
+            name: 'className',
+            type: 'string',
+            default: '—',
+            description: 'Applies to the outer list item, not the glass card inside it.',
+          },
+        ],
+      },
+      {
+        name: 'GlassToastTitle / GlassToastDescription',
+        description: 'The heading and the message text.',
+        extends: 'Radix Toast.Title and Toast.Description props',
+        props: [],
       },
       {
         name: 'GlassToastAction',
-        description:
-          'A pill under the message, such as Undo. altText says how to do it without the button.',
+        description: 'A pill button under the message, such as Undo.',
+        extends: 'Radix Toast.Action props',
+        props: [
+          {
+            name: 'altText',
+            type: 'string',
+            default: '—',
+            description: 'Tells screen reader users how to do the action without the button.',
+            required: true,
+          },
+        ],
       },
-    ],
-    notes: [
       {
-        title: 'Motion',
-        body: "A toast slides in from the side its swipe direction points to (the right unless the provider's swipeDirection says otherwise) and back out when it closes. Drag it that way to dismiss it: a short drag springs back and a fling sends it away. Reduced motion shows and hides it at once.",
+        name: 'GlassToastClose',
+        description: 'A round dismiss button that draws its own ×.',
+        extends: 'Radix Toast.Close props',
+        props: [
+          {
+            name: 'aria-label',
+            type: 'string',
+            default: "'Dismiss'",
+            description:
+              "The button's name. The default applies only without children; with children, their text names it.",
+          },
+          {
+            name: 'children',
+            type: 'ReactNode',
+            default: '× icon',
+            description: 'Replaces the × icon.',
+          },
+        ],
+      },
+      {
+        name: 'GlassToastViewport',
+        description:
+          'The fixed list at the top right where toasts appear, portalled to document.body after hydration.',
+        extends: 'Radix Toast.Viewport props',
+        props: [
+          {
+            name: 'hotkey',
+            type: 'string[]',
+            default: "['F8']",
+            description: 'Keys that move focus to the viewport.',
+          },
+        ],
       },
     ],
+    requires: 'a GlassToastProvider around your toasts and one GlassToastViewport.',
     pageToc: standardToc,
   },
   {
@@ -958,7 +1641,7 @@ export function ToastDemo() {
     category: 'Navigation',
     status: 'ready',
     route: '/components/glass-accordion',
-    description: 'Sections that expand and collapse on glass, one at a time or several.',
+    description: 'Collapsible glass sections that open one at a time or several at once.',
     usage: `import { GlassAccordion, GlassAccordionContent, GlassAccordionItem, GlassAccordionTrigger } from "@/components/glassyui/glass-accordion";
 
 export function AccordionDemo() {
@@ -978,17 +1661,72 @@ export function AccordionDemo() {
       },
     ],
     api: [
-      { name: 'GlassAccordion', description: 'Radix Accordion root.' },
-      { name: 'GlassAccordionItem', description: 'Radix Accordion item.' },
-      { name: 'GlassAccordionTrigger', description: 'Glass trigger inside a Radix header.' },
-      { name: 'GlassAccordionContent', description: 'Panel-backed collapsible content.' },
-    ],
-    notes: [
       {
-        title: 'Motion',
-        body: 'The card opens and closes like a curtain, and the chevron turns with it. Reduced motion opens and closes it at once.',
+        name: 'GlassAccordion',
+        extends: 'Radix Accordion.Root props',
+        props: [
+          {
+            name: 'type',
+            type: "'single' | 'multiple'",
+            default: '—',
+            description: 'Whether one item or several can be open at once.',
+            required: true,
+          },
+          {
+            name: 'value / defaultValue',
+            type: 'string (single) | string[] (multiple)',
+            default: '—',
+            description: 'Controlled or uncontrolled open item or items.',
+          },
+          {
+            name: 'onValueChange',
+            type: '(value: string) => void | (value: string[]) => void',
+            default: '—',
+            description: 'Called with the open item or items.',
+          },
+          {
+            name: 'collapsible',
+            type: 'boolean',
+            default: 'false',
+            description: 'With type single, lets the open item close again.',
+          },
+        ],
+      },
+      {
+        name: 'GlassAccordionItem',
+        extends: 'Radix Accordion.Item props',
+        props: [
+          {
+            name: 'value',
+            type: 'string',
+            default: '—',
+            description: 'Identifies the item in value and defaultValue.',
+            required: true,
+          },
+        ],
+      },
+      {
+        name: 'GlassAccordionTrigger',
+        description: 'A glass button with a chevron, wrapped in an h3.',
+        extends: 'Radix Accordion.Trigger props',
+        props: [],
+      },
+      {
+        name: 'GlassAccordionContent',
+        description: "The item's panel on a glass card.",
+        extends: 'Radix Accordion.Content props',
+        props: [
+          {
+            name: 'className',
+            type: 'string',
+            default: '—',
+            description: 'Applies to the glass card.',
+          },
+        ],
       },
     ],
+    accessibility:
+      'Each trigger sits inside an h3 that you cannot change, so place the accordion where an h3 fits the page outline.',
     pageToc: standardToc,
   },
   {
@@ -997,7 +1735,7 @@ export function AccordionDemo() {
     category: 'Controls',
     status: 'ready',
     route: '/components/glass-switch',
-    description: 'An on/off switch whose knob turns to glass and stretches as it slides.',
+    description: 'A glass on/off switch in two sizes.',
     usage: `import { GlassSwitch } from "@/components/glassyui/glass-switch";
 
 export function SwitchDemo() {
@@ -1014,22 +1752,46 @@ export function SwitchDemo() {
       { title: 'Small', code: `<GlassSwitch aria-label="Mute" size="sm" />` },
     ],
     api: [
-      { name: 'GlassSwitch', description: 'Forward-ref Radix Switch root with a glass thumb.' },
-      { name: 'GlassSwitchProps', description: 'Radix Switch root props plus size.' },
-      { name: 'size', description: 'Track size: sm or md. Defaults to md.' },
-      { name: 'checked / defaultChecked', description: 'Controlled or uncontrolled on state.' },
-      { name: 'onCheckedChange', description: 'Called with the next checked value.' },
-    ],
-    notes: [
       {
-        title: 'Accessibility',
-        body: 'Renders a button with role switch. Name it with aria-label or wrap it in a visible label.',
-      },
-      {
-        title: 'Motion',
-        body: 'The knob turns to clear glass while pressed and stretches like a drop as it slides. Reduced motion keeps the colour change and drops the travel.',
+        name: 'GlassSwitch',
+        description: 'A button with role switch and a glass knob.',
+        extends: 'Radix Switch.Root props',
+        props: [
+          {
+            name: 'size',
+            type: "'sm' | 'md'",
+            default: "'md'",
+            description: 'Track size.',
+          },
+          {
+            name: 'checked / defaultChecked',
+            type: 'boolean',
+            default: 'false',
+            description: 'Controlled or uncontrolled on state.',
+          },
+          {
+            name: 'onCheckedChange',
+            type: '(checked: boolean) => void',
+            default: '—',
+            description: 'Called with the next checked value.',
+          },
+          {
+            name: 'disabled',
+            type: 'boolean',
+            default: 'false',
+            description: 'Stops the switch from toggling.',
+          },
+          {
+            name: 'name / value',
+            type: 'string',
+            default: "— / 'on'",
+            description: 'Submits the switch with a native form when checked.',
+          },
+        ],
       },
     ],
+    types: ['GlassSwitchProps'],
+    accessibility: 'Name the switch with aria-label or wrap it in a visible label element.',
     pageToc: standardToc,
   },
   {
@@ -1038,7 +1800,7 @@ export function SwitchDemo() {
     category: 'Controls',
     status: 'ready',
     route: '/components/glass-slider',
-    description: 'A slider whose glass thumb stretches with your drag, for one value or a range.',
+    description: 'A glass slider for one value or a range, with one named thumb per value.',
     usage: `import { GlassSlider } from "@/components/glassyui/glass-slider";
 
 export function SliderDemo() {
@@ -1057,33 +1819,54 @@ export function SliderDemo() {
     api: [
       {
         name: 'GlassSlider',
-        description: 'Forward-ref Radix Slider root with a track, range, and one thumb per value.',
-      },
-      { name: 'GlassSliderProps', description: 'Radix Slider root props plus thumbLabels.' },
-      {
-        name: 'thumbLabels',
-        description:
-          'Accessible names for the thumbs in value order. A single thumb uses the slider aria-label.',
-      },
-      {
-        name: 'value / defaultValue',
-        description: 'Controlled or uncontrolled values; the array length sets the thumb count.',
-      },
-      {
-        name: 'onValueChange / onValueCommit',
-        description: 'Called while dragging and when a drag ends.',
+        description: 'Renders the track, the filled range and one thumb per value.',
+        extends: 'Radix Slider.Root props',
+        props: [
+          {
+            name: 'value / defaultValue',
+            type: 'number[]',
+            default: '[min]',
+            description:
+              'Controlled or uncontrolled values; the array length sets the number of thumbs.',
+          },
+          {
+            name: 'onValueChange',
+            type: '(value: number[]) => void',
+            default: '—',
+            description: 'Called on every change while dragging or stepping.',
+          },
+          {
+            name: 'onValueCommit',
+            type: '(value: number[]) => void',
+            default: '—',
+            description: 'Called when a drag ends or a key changes the value.',
+          },
+          {
+            name: 'min / max / step',
+            type: 'number',
+            default: '0 / 100 / 1',
+            description: 'Range and increment of the values.',
+          },
+          {
+            name: 'aria-label',
+            type: 'string',
+            default: '—',
+            description:
+              "Moved to the thumbs: a single thumb takes it as is; range thumbs get it with ', minimum', ', maximum' or ', 2 of 3' added.",
+          },
+          {
+            name: 'thumbLabels',
+            type: 'string[]',
+            default: '—',
+            description:
+              'Names each thumb in value order, replacing the names built from aria-label.',
+          },
+        ],
       },
     ],
-    notes: [
-      {
-        title: 'Accessibility',
-        body: 'Each thumb is a separate slider. Range thumbs default to minimum and maximum names built from the slider label.',
-      },
-      {
-        title: 'Motion',
-        body: 'The thumb swells into clear glass while dragged and stretches along the track with your speed. Reduced motion keeps its shape.',
-      },
-    ],
+    types: ['GlassSliderProps'],
+    accessibility:
+      'Each thumb is its own slider; name range sliders with aria-label or thumbLabels, because aria-labelledby is copied to every thumb and gives them all the same name.',
     pageToc: standardToc,
   },
   {
@@ -1093,7 +1876,7 @@ export function SliderDemo() {
     status: 'ready',
     route: '/components/glass-segmented-control',
     description:
-      'A single-choice control whose glass bubble stretches between options and can be dragged.',
+      'A single-choice glass control for two to six options, with a draggable selection.',
     usage: `import { GlassSegmentedControl, GlassSegmentedControlItem } from "@/components/glassyui/glass-segmented-control";
 
 export function SegmentedDemo() {
@@ -1119,26 +1902,48 @@ export function SegmentedDemo() {
     api: [
       {
         name: 'GlassSegmentedControl',
-        description: 'Radix RadioGroup root on a glass pill with the liquid bubble.',
+        description: 'A Radix RadioGroup root rendered as a glass pill.',
+        extends: 'Radix RadioGroup.Root props',
+        props: [
+          {
+            name: 'value / defaultValue',
+            type: 'string',
+            default: '—',
+            description: 'The selected option, controlled or uncontrolled.',
+          },
+          {
+            name: 'onValueChange',
+            type: '(value: string) => void',
+            default: '—',
+            description: 'Called with the value of the newly selected option.',
+          },
+          {
+            name: 'children',
+            type: 'ReactNode',
+            default: '—',
+            description:
+              'Two to six GlassSegmentedControlItem elements placed directly inside the control, which CSS counts to place the selection before scripts run.',
+          },
+        ],
       },
-      { name: 'GlassSegmentedControlItem', description: 'Radix RadioGroup item; one per option.' },
-      { name: 'GlassSegmentedControlProps', description: 'Radix RadioGroup root props.' },
-      { name: 'value / defaultValue', description: 'Controlled or uncontrolled selected option.' },
+      {
+        name: 'GlassSegmentedControlItem',
+        description: 'One option; options share the width equally.',
+        extends: 'Radix RadioGroup.Item props',
+        props: [
+          {
+            name: 'value',
+            type: 'string',
+            default: '—',
+            description: 'The value this option selects.',
+            required: true,
+          },
+        ],
+      },
     ],
-    notes: [
-      {
-        title: 'Layout',
-        body: 'Options share the width equally. CSS positions the bubble from the checked item, so it is right from the first server render.',
-      },
-      {
-        title: 'Motion',
-        body: 'The bubble lifts and stretches toward the new option while the labels stay fixed. Drag it to another option to choose that one. Reduced motion moves it straight there.',
-      },
-      {
-        title: 'Keyboard',
-        body: 'Arrow keys move the selection, as in any radio group. Name the group with aria-label.',
-      },
-    ],
+    types: ['GlassSegmentedControlProps'],
+    accessibility:
+      'Name the group with aria-label or aria-labelledby; arrow keys move the selection, as in any radio group.',
     pageToc: standardToc,
   },
   {
@@ -1164,18 +1969,27 @@ export function BadgeDemo() {
       },
     ],
     api: [
-      { name: 'GlassBadge', description: 'Forward-ref span with a tinted glass fill.' },
-      { name: 'GlassBadgeProps', description: 'Native span props plus dot and tone.' },
-      { name: 'GlassBadgeTone', description: 'neutral, blue, green, orange, red, or purple.' },
-      { name: 'dot', description: 'Adds a leading status dot in the tone colour.' },
-    ],
-    notes: [
       {
-        title: 'Rendering',
-        body: 'A plain span with no client JavaScript, so it works in server components.',
+        name: 'GlassBadge',
+        description: 'A span with no client JavaScript, so it works in Server Components.',
+        extends: 'HTML span attributes',
+        props: [
+          {
+            name: 'tone',
+            type: "'neutral' | 'blue' | 'green' | 'orange' | 'red' | 'purple'",
+            default: "'neutral'",
+            description: 'Tint and text colour.',
+          },
+          {
+            name: 'dot',
+            type: 'boolean',
+            default: 'false',
+            description: 'Adds a leading dot in the tone colour.',
+          },
+        ],
       },
-      { title: 'Contrast', body: 'Tone text colours are tuned for 4.5:1 contrast on both themes.' },
     ],
+    types: ['GlassBadgeProps', 'GlassBadgeTone'],
     pageToc: standardToc,
   },
   {
@@ -1186,7 +2000,7 @@ export function BadgeDemo() {
     status: 'ready',
     route: '/components/glass-progress',
     description:
-      'A glass track with a fill that slides to its value, or sweeps when the length is unknown.',
+      'A glass progress bar for known values, with a sweeping state for unknown lengths.',
     usage: `import { GlassProgress } from "@/components/glassyui/glass-progress";
 
 export function UploadDemo() {
@@ -1204,26 +2018,55 @@ export function UploadDemo() {
       },
     ],
     api: [
-      { name: 'GlassProgress', description: 'A progressbar with a glass track and fill.' },
       {
-        name: 'value',
-        description: 'How far along. Leave it out, or pass null, when the length is unknown.',
+        name: 'GlassProgress',
+        description: 'A progressbar track with an optional label row above it.',
+        extends: 'HTML div attributes, except children',
+        props: [
+          {
+            name: 'value',
+            type: 'number | null',
+            default: '—',
+            description:
+              'Progress toward max, clamped to 0–max; omit it or pass null when the length is unknown.',
+          },
+          {
+            name: 'max',
+            type: 'number',
+            default: '100',
+            description: 'The value that means complete.',
+          },
+          {
+            name: 'label',
+            type: 'ReactNode',
+            default: '—',
+            description: 'Text above the bar that also names it.',
+          },
+          {
+            name: 'showValue',
+            type: 'boolean',
+            default: 'false',
+            description: 'Shows the rounded percentage beside the label while the value is known.',
+          },
+          {
+            name: 'size',
+            type: "'sm' | 'md' | 'lg'",
+            default: "'md'",
+            description: 'Track height: 0.25rem, 0.5rem or 0.75rem.',
+          },
+          {
+            name: 'aria-label / aria-labelledby',
+            type: 'string',
+            default: '—',
+            description:
+              'Names the bar when there is no visible label; applied to the progressbar track, not the outer div.',
+          },
+        ],
       },
-      { name: 'max', description: 'The value that means done. Defaults to 100.' },
-      { name: 'label', description: 'Text above the bar. It also names the bar.' },
-      { name: 'showValue', description: 'Shows the percentage beside the label.' },
-      { name: 'size', description: 'sm, md (default) or lg.' },
     ],
-    notes: [
-      {
-        title: 'Motion',
-        body: 'The fill slides with a soft ease. A bar of unknown length sweeps at 30 frames a second, which spares the GPU. Reduced motion jumps to the value and holds a short fill in the middle instead of sweeping.',
-      },
-      {
-        title: 'Accessibility',
-        body: 'The track is a progressbar with aria-valuenow, or none when the length is unknown. Give it a label or aria-label.',
-      },
-    ],
+    types: ['GlassProgressProps', 'GlassProgressSize'],
+    accessibility:
+      'Give the bar a label, aria-label or aria-labelledby; an unknown length leaves out aria-valuenow.',
     pageToc: standardToc,
   },
   {
@@ -1233,7 +2076,7 @@ export function UploadDemo() {
     isNew: true,
     status: 'ready',
     route: '/components/glass-spinner',
-    description: 'A ring with a fading tail, for waiting on something short.',
+    description: 'A small spinning ring that tells screen readers something is loading.',
     usage: `import { GlassSpinner } from "@/components/glassyui/glass-spinner";
 
 export function SavingDemo() {
@@ -1249,20 +2092,35 @@ export function SavingDemo() {
       },
     ],
     api: [
-      { name: 'GlassSpinner', description: 'A status element with a rotating ring.' },
-      { name: 'label', description: 'Read out by screen readers. Defaults to Loading.' },
-      { name: 'size', description: 'sm, md (default) or lg.' },
-    ],
-    notes: [
       {
-        title: 'Colour',
-        body: 'The ring takes its colour from the surrounding text, so it suits any button or surface.',
-      },
-      {
-        title: 'Reduced motion',
-        body: 'The ring stops turning. Its label still tells assistive technology that work is under way.',
+        name: 'GlassSpinner',
+        description:
+          "A span with role status; the ring is drawn in the theme's foreground colour, so set color to change it.",
+        extends: 'HTML span attributes, except children',
+        props: [
+          {
+            name: 'label',
+            type: 'string',
+            default: "'Loading'",
+            description: 'Visually hidden text that screen readers announce.',
+          },
+          {
+            name: 'size',
+            type: "'sm' | 'md' | 'lg'",
+            default: "'md'",
+            description: 'Diameter: 1rem, 1.5rem or 2.25rem.',
+          },
+          {
+            name: 'role',
+            type: 'string',
+            default: "'status'",
+            description:
+              'Live-region role; override it when the spinner sits inside another live region.',
+          },
+        ],
       },
     ],
+    types: ['GlassSpinnerProps', 'GlassSpinnerSize'],
     pageToc: standardToc,
   },
   {
@@ -1272,7 +2130,8 @@ export function SavingDemo() {
     isNew: true,
     status: 'ready',
     route: '/components/glass-skeleton',
-    description: 'A quiet glass placeholder with a slow sheen, shaped like what will replace it.',
+    description:
+      'A glass placeholder block, circle or set of text lines shown while content loads.',
     usage: `import { GlassSkeleton } from "@/components/glassyui/glass-skeleton";
 
 export function LoadingProfile() {
@@ -1292,28 +2151,28 @@ export function LoadingProfile() {
     api: [
       {
         name: 'GlassSkeleton',
-        description: 'A placeholder block. It is hidden from assistive technology.',
-      },
-      {
-        name: 'variant',
-        description:
-          'block (default, sized with CSS), circle (square and round) or text (a stack of lines).',
-      },
-      {
-        name: 'lines',
-        description: 'How many lines a text skeleton draws. The last is shorter. Defaults to 3.',
-      },
-    ],
-    notes: [
-      {
-        title: 'Accessibility',
-        body: 'Skeletons are aria-hidden. Set aria-busy on the region that is loading so assistive technology knows to wait.',
-      },
-      {
-        title: 'Motion',
-        body: 'The sheen is a single transform per skeleton, stepped at 30 frames a second to spare the GPU. Reduced motion leaves the placeholders still.',
+        description: 'A div hidden from assistive technology with aria-hidden.',
+        extends: 'HTML div attributes, except children',
+        props: [
+          {
+            name: 'variant',
+            type: "'block' | 'circle' | 'text'",
+            default: "'block'",
+            description:
+              'block is sized with CSS, circle is a 2.5rem circle you can resize with width, and text is a stack of lines.',
+          },
+          {
+            name: 'lines',
+            type: 'number',
+            default: '3',
+            description:
+              'Line count for the text variant, at least 1; the last of several lines is shorter.',
+          },
+        ],
       },
     ],
+    types: ['GlassSkeletonProps', 'GlassSkeletonVariant'],
+    accessibility: 'Skeletons are aria-hidden, so set aria-busy on the region that is loading.',
     pageToc: standardToc,
   },
   {
@@ -1323,7 +2182,7 @@ export function LoadingProfile() {
     isNew: true,
     status: 'ready',
     route: '/components/glass-alert',
-    description: 'A short message set in tinted glass, with four tones and an optional dismiss.',
+    description: 'A tinted glass message with four tones, an icon and an optional dismiss button.',
     usage: `import { GlassAlert } from "@/components/glassyui/glass-alert";
 
 export function TrialAlert() {
@@ -1346,32 +2205,53 @@ export function TrialAlert() {
     api: [
       {
         name: 'GlassAlert',
-        description: 'Forward-ref div with a tone icon, title and description.',
-      },
-      { name: 'tone', description: 'info (default), success, warning or danger.' },
-      { name: 'title', description: 'A short bold line above the message.' },
-      { name: 'icon', description: 'Replaces the tone icon. Pass false for none.' },
-      {
-        name: 'onDismiss',
         description:
-          'Shows a close button. The alert folds away, then this runs: remove the alert there, and give each alert a stable key so a later one never inherits the fold.',
+          'className, ref and other props reach the inner alert. Space stacked dismissible alerts with margin, not a parent gap, so the space folds away with them.',
+        extends: 'HTML div attributes, with title replaced',
+        props: [
+          {
+            name: 'tone',
+            type: "'info' | 'success' | 'warning' | 'danger'",
+            default: "'info'",
+            description: 'Colour, icon and announcement role.',
+          },
+          {
+            name: 'title',
+            type: 'ReactNode',
+            default: '—',
+            description: 'A bold line above the message.',
+          },
+          {
+            name: 'icon',
+            type: 'ReactNode | false',
+            default: 'tone icon',
+            description: "Replaces the tone's decorative icon; false shows none.",
+          },
+          {
+            name: 'onDismiss',
+            type: '() => void',
+            default: '—',
+            description:
+              'Shows a close button and runs after the alert folds away; remove the alert here and give each alert a stable key.',
+          },
+          {
+            name: 'dismissLabel',
+            type: 'string',
+            default: "'Dismiss'",
+            description: 'Accessible name of the close button.',
+          },
+          {
+            name: 'role',
+            type: 'string',
+            default: "'alert' for warning and danger, else 'status'",
+            description: 'Overrides the announcement role.',
+          },
+        ],
       },
-      { name: 'dismissLabel', description: 'Names the close button. Defaults to Dismiss.' },
     ],
-    notes: [
-      {
-        title: 'Announcements',
-        body: 'Warnings and errors use role="alert" and interrupt screen readers. Info and success use role="status" and wait. Override with role.',
-      },
-      {
-        title: 'Contrast',
-        body: 'Every tone keeps 4.5:1 text contrast over a pure black or pure white backdrop in both themes.',
-      },
-      {
-        title: 'Motion',
-        body: "Dismissing folds the alert to nothing, so what sits below it slides up instead of jumping. Its own padding and margin fold with it; space that comes from a parent's gap cannot, so put the space between stacked alerts in a margin on the alert. Reduced motion removes it at once.",
-      },
-    ],
+    types: ['GlassAlertProps', 'GlassAlertTone'],
+    accessibility:
+      'warning and danger use role alert and interrupt screen readers, while info and success use role status; pass role to change that.',
     pageToc: standardToc,
   },
   {
@@ -1382,7 +2262,7 @@ export function TrialAlert() {
     status: 'ready',
     route: '/components/glass-avatar',
     description:
-      'A round photo that falls back to coloured initials, with a presence dot and stacked groups.',
+      'A round photo that falls back to initials, with a presence dot and stacked groups.',
     usage: `import { GlassAvatar } from "@/components/glassyui/glass-avatar";
 
 export function PersonDemo() {
@@ -1401,36 +2281,77 @@ export function PersonDemo() {
     api: [
       {
         name: 'GlassAvatar',
-        description: 'A Radix avatar with glass rim, coloured initials and a status dot.',
-      },
-      {
-        name: 'name',
         description:
-          'Names the person. Its initials fill in for a missing image and pick a stable colour.',
-      },
-      { name: 'src / alt', description: 'The photo and its description. alt defaults to name.' },
-      { name: 'fallback', description: 'Replaces the initials.' },
-      { name: 'size', description: 'xs, sm, md (default), lg or xl.' },
-      {
-        name: 'status',
-        description: 'online, away, busy or offline: a presence dot on the corner.',
+          'A span with role img, named by alt or name plus its status; the photo uses Radix Avatar inside it.',
+        extends: 'HTML span attributes, except children',
+        props: [
+          {
+            name: 'name',
+            type: 'string',
+            default: '—',
+            description: "The person's name; supplies the initials and a stable initials colour.",
+          },
+          {
+            name: 'src',
+            type: 'string',
+            default: '—',
+            description: 'Image URL; the initials show until it loads, or if it fails.',
+          },
+          {
+            name: 'alt',
+            type: 'string',
+            default: 'name',
+            description: 'Accessible name of the avatar.',
+          },
+          {
+            name: 'fallback',
+            type: 'ReactNode',
+            default: 'initials of name',
+            description: 'Replaces the initials.',
+          },
+          {
+            name: 'size',
+            type: "'xs' | 'sm' | 'md' | 'lg' | 'xl'",
+            default: "'md'",
+            description: 'Diameter; ignored inside a GlassAvatarGroup, which sizes its avatars.',
+          },
+          {
+            name: 'status',
+            type: "'online' | 'away' | 'busy' | 'offline'",
+            default: '—',
+            description: 'A presence dot on the corner, also added to the accessible name.',
+          },
+        ],
       },
       {
         name: 'GlassAvatarGroup',
-        description:
-          'Stacks avatars edge to edge. max shows a +N for the rest; size sizes all of them.',
+        description: 'A div with role group that overlaps its avatars.',
+        extends: 'HTML div attributes',
+        props: [
+          {
+            name: 'children',
+            type: 'ReactNode',
+            default: '—',
+            description: 'GlassAvatar elements, placed directly inside the group.',
+          },
+          {
+            name: 'max',
+            type: 'number',
+            default: '—',
+            description: 'Shows this many avatars, then a +N avatar for the rest.',
+          },
+          {
+            name: 'size',
+            type: "'xs' | 'sm' | 'md' | 'lg' | 'xl'",
+            default: "'md'",
+            description: "Sizes every avatar in the group, overriding each avatar's own size.",
+          },
+        ],
       },
     ],
-    notes: [
-      {
-        title: 'Cut, not ringed',
-        body: 'A status dot or an overlapping neighbour cuts the circle away with a mask instead of drawing a ring in a background colour, so it works over any glass or wallpaper.',
-      },
-      {
-        title: 'Accessibility',
-        body: 'The avatar is one image named by alt or name, plus its status. Initials are hidden from assistive technology.',
-      },
-    ],
+    types: ['GlassAvatarProps', 'GlassAvatarSize', 'GlassAvatarStatus', 'GlassAvatarGroupProps'],
+    accessibility:
+      'Name each GlassAvatarGroup with aria-label; the avatar announces its name and status.',
     pageToc: standardToc,
   },
   {
@@ -1440,7 +2361,7 @@ export function PersonDemo() {
     isNew: true,
     status: 'ready',
     route: '/components/glass-kbd',
-    description: 'A keycap with a lit top edge, for shortcuts in menus, hints and docs.',
+    description: 'A keycap for showing keyboard shortcuts in menus, hints and docs.',
     usage: `import { GlassKbd, GlassKbdGroup } from "@/components/glassyui/glass-kbd";
 
 export function SearchHint() {
@@ -1460,16 +2381,99 @@ export function SearchHint() {
     api: [
       {
         name: 'GlassKbd',
-        description: 'A kbd element styled as a keycap. One key or symbol in each.',
+        description: 'A kbd element for one key or symbol, with no client JavaScript.',
+        extends: 'HTML element attributes',
+        props: [],
       },
-      { name: 'GlassKbdGroup', description: 'Sets a shortcut’s keys side by side.' },
-    ],
-    notes: [
       {
-        title: 'Rendering',
-        body: 'Plain elements with no client JavaScript, so they work in server components.',
+        name: 'GlassKbdGroup',
+        description: "A span that sets a shortcut's keys side by side.",
+        extends: 'HTML span attributes',
+        props: [],
       },
     ],
+    pageToc: standardToc,
+  },
+  {
+    id: 'glass-scroll-area',
+    name: 'Glass Scroll Area',
+    category: 'Surfaces',
+    isNew: true,
+    status: 'ready',
+    route: '/components/glass-scroll-area',
+    description:
+      'A scroll container with a thin glass scrollbar that shows on hover and while scrolling.',
+    accessibility:
+      'When the content holds no links or controls, pass tabIndex={0}, role="region" and an aria-label in viewportProps so keyboard users can scroll it.',
+    usage: `import { GlassScrollArea } from "@/components/glassyui/glass-scroll-area";
+
+export function ReleaseNotes({ notes }: { notes: string[] }) {
+  return (
+    <GlassScrollArea
+      className="h-64"
+      viewportProps={{ "aria-label": "Release notes", role: "region", tabIndex: 0 }}
+    >
+      <ul className="space-y-3 p-4">
+        {notes.map((note) => (
+          <li key={note}>{note}</li>
+        ))}
+      </ul>
+    </GlassScrollArea>
+  );
+}`,
+    examples: [
+      {
+        title: 'Grow to a maximum height',
+        code: `<GlassScrollArea className="max-h-80">{children}</GlassScrollArea>`,
+      },
+      {
+        title: 'Scroll sideways',
+        code: `<GlassScrollArea scrollbars="horizontal">
+  <div className="flex w-max gap-3">{cards}</div>
+</GlassScrollArea>`,
+      },
+      {
+        title: 'Show the scrollbar whenever the content overflows',
+        code: `<GlassScrollArea type="auto" className="h-64">{children}</GlassScrollArea>`,
+      },
+    ],
+    api: [
+      {
+        name: 'GlassScrollArea',
+        description:
+          "A div whose viewport scrolls natively, with glass scrollbars in place of the system's.",
+        extends: 'HTML div attributes',
+        props: [
+          {
+            name: 'scrollbars',
+            type: "'vertical' | 'horizontal' | 'both'",
+            default: "'vertical'",
+            description: 'Which scrollbars to draw.',
+          },
+          {
+            name: 'type',
+            type: "'hover' | 'scroll' | 'auto' | 'always'",
+            default: "'hover'",
+            description:
+              'When a scrollbar shows: on hover and while scrolling, only while scrolling, whenever the content overflows, or always.',
+          },
+          {
+            name: 'scrollHideDelay',
+            type: 'number',
+            default: '600',
+            description:
+              'Milliseconds a scrollbar stays after the pointer leaves or scrolling stops.',
+          },
+          {
+            name: 'viewportProps',
+            type: 'ScrollAreaViewportProps',
+            default: '—',
+            description: 'Props for the element that scrolls, such as a ref, role or aria-label.',
+          },
+        ],
+      },
+    ],
+    types: ['GlassScrollAreaProps'],
     pageToc: standardToc,
   },
   {
@@ -1478,7 +2482,7 @@ export function SearchHint() {
     category: 'Navigation',
     status: 'ready',
     route: '/components/glass-dock',
-    description: 'A row of app icons on a glass shelf that name themselves on hover.',
+    description: 'A row of app icons on a glass shelf, with labels on hover and focus.',
     examples: [
       {
         title: 'Render the copied example',
@@ -1490,25 +2494,61 @@ export default function Page() {
       },
     ],
     api: [
-      { name: 'GlassDock', description: 'Glass shelf under a row of items.' },
+      {
+        name: 'GlassDock',
+        description: 'The row; a glass shelf is drawn behind its items.',
+        extends: 'HTML div attributes',
+        props: [],
+      },
       {
         name: 'GlassDockItem',
-        description: 'Icon button with a hover label and a running indicator.',
+        description: 'An icon button with a hover label and a running dot.',
+        extends: 'HTML button attributes',
+        props: [
+          {
+            name: 'label',
+            type: 'string',
+            default: '—',
+            description:
+              'Accessible name and the label shown above the icon on hover or keyboard focus.',
+            required: true,
+          },
+          {
+            name: 'children',
+            type: 'ReactNode',
+            default: '—',
+            description: 'The icon; it fills the item unless you size it.',
+          },
+          {
+            name: 'active',
+            type: 'boolean',
+            default: 'false',
+            description: 'Shows the running dot under the icon.',
+          },
+          {
+            name: 'asChild',
+            type: 'boolean',
+            default: 'false',
+            description: 'Renders the single child, such as a link, as the item.',
+          },
+          {
+            name: 'type',
+            type: "'button' | 'submit' | 'reset'",
+            default: "'button'",
+            description: 'Native button type; not set when asChild is true.',
+          },
+        ],
       },
       {
-        name: 'label',
-        description: 'Required accessible name, also shown above the icon on hover.',
-      },
-      { name: 'active', description: 'Shows the running dot under the icon.' },
-      { name: 'asChild', description: 'Renders the single child, such as a link, as the item.' },
-      { name: 'GlassDockSeparator', description: 'Vertical divider between item groups.' },
-    ],
-    notes: [
-      {
-        title: 'Input',
-        body: 'Icons keep their size wherever the pointer is. Hover or keyboard focus shows the label. A click or tap opens an item without taking keyboard focus, so only Tab draws the focus ring.',
+        name: 'GlassDockSeparator',
+        description: 'A vertical separator between groups of items.',
+        extends: 'HTML div attributes',
+        props: [],
       },
     ],
+    types: ['GlassDockProps', 'GlassDockItemProps'],
+    accessibility:
+      'GlassDock adds no landmark or name, so wrap it in a nav or give it aria-label when it is navigation.',
     pageToc: standardToc,
   },
   {
@@ -1518,8 +2558,7 @@ export default function Page() {
     isNew: true,
     status: 'ready',
     route: '/components/glass-breadcrumb',
-    description:
-      'The trail to the current page, with links that lift on hover and folded steps in a menu.',
+    description: 'A breadcrumb trail to the current page, with an ellipsis for folded steps.',
     usage: `import {
   GlassBreadcrumb,
   GlassBreadcrumbItem,
@@ -1563,31 +2602,59 @@ export function Trail() {
     api: [
       {
         name: 'GlassBreadcrumb',
-        description: 'A nav landmark labelled Breadcrumb, holding an ordered list.',
+        description:
+          'A nav landmark labelled Breadcrumb around an ordered list. Works in Server Components.',
+        extends: 'HTML nav attributes',
+        props: [
+          {
+            name: 'aria-label',
+            type: 'string',
+            default: "'Breadcrumb'",
+            description: 'Accessible name of the landmark.',
+          },
+        ],
       },
       {
         name: 'GlassBreadcrumbItem',
-        description: 'One step. It draws the chevron after itself, except on the last.',
+        description: 'One step. It draws a chevron after itself, except on the last step.',
+        extends: 'HTML li attributes',
+        props: [],
       },
       {
         name: 'GlassBreadcrumbLink',
-        description: 'A link step. asChild renders your own link, such as a router’s.',
+        description: 'A link step.',
+        extends: 'HTML anchor attributes',
+        props: [
+          {
+            name: 'asChild',
+            type: 'boolean',
+            default: 'false',
+            description: "Renders your own link, such as a router's, with the link styles.",
+          },
+        ],
       },
       {
         name: 'GlassBreadcrumbPage',
         description: 'The current page, as text with aria-current="page".',
+        extends: 'HTML span attributes',
+        props: [],
       },
       {
         name: 'GlassBreadcrumbEllipsis',
-        description: 'A button that stands in for folded steps, so it can open a menu of them.',
+        description:
+          'A button that stands in for folded steps, so it can trigger a GlassMenu of them.',
+        extends: 'HTML button attributes',
+        props: [
+          {
+            name: 'aria-label',
+            type: 'string',
+            default: "'Show hidden pages'",
+            description: 'Accessible name of the button.',
+          },
+        ],
       },
     ],
-    notes: [
-      {
-        title: 'Rendering',
-        body: 'Plain elements with no client JavaScript, so it works in server components.',
-      },
-    ],
+    types: ['GlassBreadcrumbLinkProps'],
     pageToc: standardToc,
   },
   {
@@ -1597,7 +2664,8 @@ export function Trail() {
     isNew: true,
     status: 'ready',
     route: '/components/glass-pagination',
-    description: 'Numbered pages with previous and next, folding long runs into an ellipsis.',
+    description:
+      'Numbered page buttons with previous and next, folding long runs into an ellipsis.',
     usage: `import { GlassPagination } from "@/components/glassyui/glass-pagination";
 
 export function Pages() {
@@ -1614,27 +2682,60 @@ export function Pages() {
     api: [
       {
         name: 'GlassPagination',
-        description: 'A nav landmark labelled Pagination, with a button for each page.',
-      },
-      { name: 'page', description: 'The current page, counting from 1.' },
-      { name: 'pageCount', description: 'How many pages there are.' },
-      { name: 'onPageChange', description: 'Called with the page to show.' },
-      {
-        name: 'siblingCount / boundaryCount',
-        description:
-          'Pages shown either side of the current one, and at each end. Both default to 1.',
-      },
-      {
-        name: 'previousLabel / nextLabel',
-        description: 'Name the step buttons. Default to Previous page and Next page.',
+        description: 'A nav landmark labelled Pagination, with a button for each shown page.',
+        extends: 'HTML nav attributes (except onChange)',
+        props: [
+          {
+            name: 'page',
+            type: 'number',
+            default: '—',
+            description:
+              'The current page, counting from 1. Values outside 1 to pageCount are clamped.',
+            required: true,
+          },
+          {
+            name: 'pageCount',
+            type: 'number',
+            default: '—',
+            description: 'How many pages there are.',
+            required: true,
+          },
+          {
+            name: 'onPageChange',
+            type: '(page: number) => void',
+            default: '—',
+            description: 'Called with the page to show. Store it and pass it back as page.',
+            required: true,
+          },
+          {
+            name: 'siblingCount',
+            type: 'number',
+            default: '1',
+            description: 'Pages shown on each side of the current page.',
+          },
+          {
+            name: 'boundaryCount',
+            type: 'number',
+            default: '1',
+            description: 'Pages always shown at each end.',
+          },
+          {
+            name: 'previousLabel',
+            type: 'string',
+            default: "'Previous page'",
+            description: 'Accessible name of the previous button.',
+          },
+          {
+            name: 'nextLabel',
+            type: 'string',
+            default: "'Next page'",
+            description: 'Accessible name of the next button.',
+          },
+        ],
       },
     ],
-    notes: [
-      {
-        title: 'Accessibility',
-        body: 'Each page button is named Page N and the current one carries aria-current="page". The step buttons disable at the ends.',
-      },
-    ],
+    types: ['GlassPaginationProps'],
+    accessibility: 'Page buttons are named Page N and the current one has aria-current="page".',
     pageToc: standardToc,
   },
   {
@@ -1643,7 +2744,8 @@ export function Pages() {
     category: 'Overlays',
     status: 'ready',
     route: '/components/glass-sheet',
-    description: 'A glass panel that slides in from an edge. Bottom sheets drag down to dismiss.',
+    description:
+      'A modal glass panel that slides in from a screen edge; bottom sheets drag down to close.',
     usage: `import { GlassSheet, GlassSheetContent, GlassSheetDescription, GlassSheetTitle, GlassSheetTrigger } from "@/components/glassyui/glass-sheet";
 
 export function SheetDemo() {
@@ -1685,43 +2787,95 @@ export function SheetDemo() {
       },
     ],
     api: [
-      { name: 'GlassSheet', description: 'Radix Dialog root.' },
       {
-        name: 'GlassSheetTrigger / GlassSheetClose',
-        description: 'Radix trigger and close primitives.',
+        name: 'GlassSheet',
+        extends: 'Radix Dialog.Root props',
+        props: [
+          {
+            name: 'open / defaultOpen',
+            type: 'boolean',
+            default: '—',
+            description: 'Controlled or initial open state.',
+          },
+          {
+            name: 'onOpenChange',
+            type: '(open: boolean) => void',
+            default: '—',
+            description: 'Called when the sheet opens or closes.',
+          },
+        ],
+      },
+      {
+        name: 'GlassSheetTrigger',
+        extends: 'Radix Dialog.Trigger props',
+        props: [
+          {
+            name: 'asChild',
+            type: 'boolean',
+            default: 'false',
+            description: 'Uses your own element, such as a GlassButton, as the trigger.',
+          },
+        ],
       },
       {
         name: 'GlassSheetContent',
-        description: 'Portal, overlay, glass panel, drag handle, and named close button.',
+        description: 'Portal, overlay, glass panel and a close button in the top corner.',
+        extends: 'Radix Dialog.Content props',
+        props: [
+          {
+            name: 'side',
+            type: "'top' | 'right' | 'bottom' | 'left'",
+            default: "'bottom'",
+            description:
+              'Edge the sheet slides in from. Only bottom sheets get a drag handle that dismisses them.',
+          },
+          {
+            name: 'closeLabel',
+            type: 'string',
+            default: "'Close sheet'",
+            description: 'Accessible name of the close button.',
+          },
+          {
+            name: 'thickness',
+            type: 'number',
+            default: 'thickness preference',
+            description: 'Glass thickness as a multiple of regular.',
+          },
+          {
+            name: 'onCloseAutoFocus',
+            type: '(event: Event) => void',
+            default: '—',
+            description:
+              'Radix focus hook; use it to send focus back when the sheet has no trigger.',
+          },
+        ],
       },
       {
-        name: 'side',
-        description: 'Edge to slide from: top, right, bottom, or left. Defaults to bottom.',
+        name: 'GlassSheetTitle',
+        extends: 'Radix Dialog.Title props',
+        props: [],
       },
       {
-        name: 'closeLabel',
-        description: 'Accessible name of the close button. Defaults to Close sheet.',
+        name: 'GlassSheetDescription',
+        extends: 'Radix Dialog.Description props',
+        props: [],
       },
       {
-        name: 'thickness',
-        description:
-          'How thick the glass is, as a multiple of regular. Defaults to the thickness preference.',
-      },
-      {
-        name: 'GlassSheetTitle / GlassSheetDescription',
-        description: 'Radix accessible title and description.',
+        name: 'GlassSheetClose',
+        extends: 'Radix Dialog.Close props',
+        props: [
+          {
+            name: 'asChild',
+            type: 'boolean',
+            default: 'false',
+            description: 'Uses your own element as an extra close control.',
+          },
+        ],
       },
     ],
-    notes: [
-      {
-        title: 'Gestures',
-        body: 'Drag the bottom handle down past a quarter of the sheet, or fling it, to dismiss. Short drags spring back.',
-      },
-      {
-        title: 'Accessibility',
-        body: 'Radix traps focus, closes on Escape, and returns focus to the trigger. A sheet opened from a menu has no trigger, so send focus back to the menu button with onCloseAutoFocus. Always render a title.',
-      },
-    ],
+    types: ['GlassSheetContentProps', 'GlassSheetSide'],
+    accessibility:
+      'Render a GlassSheetTitle in every sheet, and when a sheet opens from a menu item rather than a trigger, return focus to the menu button in onCloseAutoFocus.',
     pageToc: standardToc,
   },
   {
@@ -1730,7 +2884,7 @@ export function SheetDemo() {
     category: 'Overlays',
     status: 'ready',
     route: '/components/glass-menu',
-    description: 'A dropdown menu on glass with shortcuts, checkbox and radio items, and submenus.',
+    description: 'A glass dropdown menu with shortcuts, checkbox and radio items, and submenus.',
     usage: `import { GlassMenu, GlassMenuContent, GlassMenuItem, GlassMenuShortcut, GlassMenuTrigger } from "@/components/glassyui/glass-menu";
 
 export function MenuDemo() {
@@ -1770,43 +2924,185 @@ export function MenuDemo() {
     api: [
       {
         name: 'GlassMenu',
-        description:
-          'Radix DropdownMenu root. Non-modal by default, so the page keeps its scroll; pass modal to lock it.',
+        extends: 'Radix DropdownMenu.Root props',
+        props: [
+          {
+            name: 'modal',
+            type: 'boolean',
+            default: 'false',
+            description:
+              'Locks page scroll and hides the page from assistive technology while open. Off by default, so the page keeps its scroll.',
+          },
+          {
+            name: 'open / defaultOpen',
+            type: 'boolean',
+            default: '—',
+            description: 'Controlled or initial open state.',
+          },
+          {
+            name: 'onOpenChange',
+            type: '(open: boolean) => void',
+            default: '—',
+            description: 'Called when the menu opens or closes.',
+          },
+        ],
       },
-      { name: 'GlassMenuTrigger', description: 'Radix trigger primitive.' },
+      {
+        name: 'GlassMenuTrigger',
+        extends: 'Radix DropdownMenu.Trigger props',
+        props: [
+          {
+            name: 'asChild',
+            type: 'boolean',
+            default: 'false',
+            description: 'Uses your own element, such as a GlassButton, as the trigger.',
+          },
+        ],
+      },
       {
         name: 'GlassMenuContent',
-        description: 'Portal-backed glass panel. sideOffset defaults to 8.',
+        description: 'The glass panel, rendered in a portal.',
+        extends: 'Radix DropdownMenu.Content props',
+        props: [
+          {
+            name: 'sideOffset',
+            type: 'number',
+            default: '8',
+            description: 'Gap in pixels between the trigger and the menu.',
+          },
+          {
+            name: 'thickness',
+            type: 'number',
+            default: 'thickness preference',
+            description: 'Glass thickness as a multiple of regular.',
+          },
+        ],
       },
       {
         name: 'GlassMenuItem',
-        description: 'Menu item with inset and tone (default or destructive) options.',
+        extends: 'Radix DropdownMenu.Item props',
+        props: [
+          {
+            name: 'tone',
+            type: "'default' | 'destructive'",
+            default: "'default'",
+            description: 'destructive colours the item for actions such as Delete.',
+          },
+          {
+            name: 'inset',
+            type: 'boolean',
+            default: 'false',
+            description: 'Indents the label to line up with checkbox and radio items.',
+          },
+          {
+            name: 'onSelect',
+            type: '(event: Event) => void',
+            default: '—',
+            description: 'Called when the item is chosen by click or keyboard.',
+          },
+        ],
       },
       {
-        name: 'GlassMenuCheckboxItem / GlassMenuRadioItem',
-        description: 'Stateful items with a check or dot indicator.',
+        name: 'GlassMenuCheckboxItem',
+        description: 'An item with a check mark.',
+        extends: 'Radix DropdownMenu.CheckboxItem props',
+        props: [
+          {
+            name: 'checked',
+            type: "boolean | 'indeterminate'",
+            default: '—',
+            description: 'Whether the check shows.',
+          },
+          {
+            name: 'onCheckedChange',
+            type: '(checked: boolean) => void',
+            default: '—',
+            description: 'Called when the item is toggled.',
+          },
+        ],
       },
-      { name: 'GlassMenuGroup / GlassMenuRadioGroup', description: 'Radix grouping primitives.' },
+      {
+        name: 'GlassMenuRadioGroup',
+        extends: 'Radix DropdownMenu.RadioGroup props',
+        props: [
+          {
+            name: 'value / onValueChange',
+            type: 'string / (value: string) => void',
+            default: '—',
+            description: "The selected item's value, and the handler that changes it.",
+          },
+        ],
+      },
+      {
+        name: 'GlassMenuRadioItem',
+        description: 'An item with a dot when selected.',
+        extends: 'Radix DropdownMenu.RadioItem props',
+        props: [
+          {
+            name: 'value',
+            type: 'string',
+            default: '—',
+            description: 'The value this item selects in its GlassMenuRadioGroup.',
+            required: true,
+          },
+        ],
+      },
+      {
+        name: 'GlassMenuGroup',
+        extends: 'Radix DropdownMenu.Group props',
+        props: [],
+      },
       {
         name: 'GlassMenuLabel / GlassMenuSeparator',
-        description: 'Section label and hairline divider.',
+        description: 'A section label and a hairline divider.',
+        extends: 'Radix DropdownMenu.Label / Separator props',
+        props: [],
       },
-      { name: 'GlassMenuShortcut', description: 'Right-aligned keyboard shortcut hint.' },
       {
-        name: 'GlassMenuSub / GlassMenuSubTrigger / GlassMenuSubContent',
-        description: 'Nested submenu with a chevron trigger.',
+        name: 'GlassMenuShortcut',
+        description: 'A keyboard shortcut hint pushed to the end of an item.',
+        extends: 'HTML span attributes',
+        props: [],
+      },
+      {
+        name: 'GlassMenuSub',
+        extends: 'Radix DropdownMenu.Sub props',
+        props: [],
+      },
+      {
+        name: 'GlassMenuSubTrigger',
+        description: 'The item that opens a submenu, with a chevron.',
+        extends: 'Radix DropdownMenu.SubTrigger props',
+        props: [
+          {
+            name: 'inset',
+            type: 'boolean',
+            default: 'false',
+            description: 'Indents the label to line up with checkbox and radio items.',
+          },
+        ],
+      },
+      {
+        name: 'GlassMenuSubContent',
+        description: "The submenu's glass panel, rendered in a portal.",
+        extends: 'Radix DropdownMenu.SubContent props',
+        props: [
+          {
+            name: 'sideOffset',
+            type: 'number',
+            default: '6',
+            description: 'Gap in pixels between the submenu and its trigger.',
+          },
+          {
+            name: 'alignOffset',
+            type: 'number',
+            default: '-6',
+            description: 'Shifts the submenu along its trigger so the first item lines up.',
+          },
+        ],
       },
     ],
-    notes: [
-      {
-        title: 'Keyboard',
-        body: 'Radix handles arrow keys, typeahead, Escape, and submenu opening with the right arrow key.',
-      },
-      {
-        title: 'Right to left',
-        body: 'Indents, shortcuts, and the submenu chevron use logical properties and flip in right-to-left layouts.',
-      },
-    ],
+    types: ['GlassMenuContentProps', 'GlassMenuItemProps'],
     pageToc: standardToc,
   },
   {
@@ -1816,8 +3112,7 @@ export function MenuDemo() {
     isNew: true,
     status: 'ready',
     route: '/components/glass-command',
-    description:
-      'A searchable command list that filters as you type, alone or in a launcher dialog.',
+    description: 'A searchable command list that filters as you type, alone or in a dialog.',
     usage: `import {
   GlassCommand,
   GlassCommandDialog,
@@ -1872,39 +3167,159 @@ export function Launcher({ open, onOpenChange }: { open: boolean; onOpenChange: 
     api: [
       {
         name: 'GlassCommand',
-        description: 'The searchable list, on cmdk. filter, shouldFilter, loop and value apply.',
+        description:
+          'The searchable list, with no glass of its own. Place it in GlassCommandDialog, a GlassPanel or a GlassPopover.',
+        extends: 'cmdk Command props',
+        props: [
+          {
+            name: 'label',
+            type: 'string',
+            default: '—',
+            description: 'Accessible name of the list. Not shown.',
+          },
+          {
+            name: 'value / onValueChange',
+            type: 'string / (value: string) => void',
+            default: '—',
+            description: "The highlighted item's value, and the handler that changes it.",
+          },
+          {
+            name: 'shouldFilter',
+            type: 'boolean',
+            default: 'true',
+            description: 'Set to false to filter the items yourself.',
+          },
+          {
+            name: 'filter',
+            type: '(value: string, search: string, keywords?: string[]) => number',
+            default: "cmdk's fuzzy score",
+            description: 'Scores each item from 0 (hidden) to 1 (best match).',
+          },
+          {
+            name: 'loop',
+            type: 'boolean',
+            default: 'false',
+            description: 'Wraps the arrow keys from the last item to the first.',
+          },
+        ],
       },
       {
         name: 'GlassCommandDialog',
-        description:
-          'A glass dialog near the top of the page that holds a command list. open, onOpenChange and title.',
+        description: 'A glass dialog near the top of the page that holds a GlassCommand.',
+        extends: 'Radix Dialog.Root props',
+        props: [
+          {
+            name: 'open / onOpenChange',
+            type: 'boolean / (open: boolean) => void',
+            default: '—',
+            description: 'Controlled open state and its handler.',
+          },
+          {
+            name: 'title',
+            type: 'string',
+            default: "'Command menu'",
+            description: 'Accessible name of the dialog. Not shown.',
+          },
+          {
+            name: 'className',
+            type: 'string',
+            default: '—',
+            description: 'Classes for the glass panel.',
+          },
+        ],
       },
-      { name: 'GlassCommandInput', description: 'The search field, with a magnifier.' },
-      { name: 'GlassCommandList', description: 'The scrolling results. It resizes with them.' },
-      { name: 'GlassCommandGroup', description: 'A heading and its items. Pass heading.' },
+      {
+        name: 'GlassCommandInput',
+        description: 'The search field, with a magnifier icon.',
+        extends: 'cmdk Command.Input props',
+        props: [
+          {
+            name: 'value / onValueChange',
+            type: 'string / (search: string) => void',
+            default: '—',
+            description: 'Controlled search text and its handler.',
+          },
+        ],
+      },
+      {
+        name: 'GlassCommandList',
+        description:
+          'The scrolling results. Its height follows the results, up to 22rem or 60% of the viewport.',
+        extends: 'cmdk Command.List props',
+        props: [],
+      },
+      {
+        name: 'GlassCommandEmpty',
+        description: 'Shown only when the search matches nothing.',
+        extends: 'cmdk Command.Empty props',
+        props: [],
+      },
+      {
+        name: 'GlassCommandGroup',
+        extends: 'cmdk Command.Group props',
+        props: [
+          {
+            name: 'heading',
+            type: 'ReactNode',
+            default: '—',
+            description: "The group's heading. Without one, pass a unique value.",
+          },
+        ],
+      },
       {
         name: 'GlassCommandItem',
-        description: 'One command. onSelect runs on Enter or click; keywords widen the search.',
+        extends: 'cmdk Command.Item props',
+        props: [
+          {
+            name: 'onSelect',
+            type: '(value: string) => void',
+            default: '—',
+            description: 'Runs on Enter or click.',
+          },
+          {
+            name: 'value',
+            type: 'string',
+            default: "the item's text",
+            description:
+              'Unique value used for search and selection. Pass one if the text changes.',
+          },
+          {
+            name: 'keywords',
+            type: 'string[]',
+            default: '—',
+            description: 'Extra words the search matches.',
+          },
+          {
+            name: 'disabled',
+            type: 'boolean',
+            default: 'false',
+            description: 'Skips the item in navigation and selection.',
+          },
+        ],
       },
       {
-        name: 'GlassCommandEmpty / GlassCommandSeparator / GlassCommandShortcut',
-        description: 'The no-results message, a divider, and a right-aligned shortcut hint.',
+        name: 'GlassCommandSeparator',
+        description: 'A decorative divider between groups, hidden from assistive technology.',
+        extends: 'HTML div attributes',
+        props: [
+          {
+            name: 'alwaysRender',
+            type: 'boolean',
+            default: 'false',
+            description: 'Keeps the divider while a search is typed; by default it hides.',
+          },
+        ],
+      },
+      {
+        name: 'GlassCommandShortcut',
+        description: 'A shortcut hint pushed to the end of an item. Put GlassKbd keys inside.',
+        extends: 'HTML span attributes',
+        props: [],
       },
     ],
-    notes: [
-      {
-        title: 'Keyboard',
-        body: 'Arrow keys move the highlight, Enter runs the item and Escape closes the dialog. Focus stays in the search field, and returns to whatever opened the dialog when it closes.',
-      },
-      {
-        title: 'Composition',
-        body: 'GlassCommand is a bare list. Put it in a GlassPanel, a GlassPopover or GlassCommandDialog.',
-      },
-      {
-        title: 'On this site',
-        body: 'The search in the header is a GlassCommandDialog. Press ⌘K (Ctrl K elsewhere) to open it.',
-      },
-    ],
+    types: ['GlassCommandDialogProps', 'GlassCommandSeparatorProps'],
+    accessibility:
+      'GlassCommandDialog returns focus to the element that had it when the dialog opened.',
     pageToc: standardToc,
   },
   {
@@ -1913,7 +3328,7 @@ export function Launcher({ open, onOpenChange }: { open: boolean; onOpenChange: 
     category: 'Effects',
     status: 'ready',
     route: '/components/glass-lens',
-    description: 'A draggable magnifier whose glass rim bends the content beneath it.',
+    description: 'A draggable magnifier with a glass rim that bends the content beneath it.',
     examples: [
       {
         title: 'Render the copied example',
@@ -1927,31 +3342,46 @@ export default function Page() {
     api: [
       {
         name: 'GlassLens',
-        description: 'Stage that renders its children plus a draggable magnifier over them.',
+        description: 'A stage that renders its children with a draggable lens over them.',
+        extends: 'HTML div attributes',
+        props: [
+          {
+            name: 'children',
+            type: 'ReactNode',
+            default: '—',
+            description:
+              'Content to magnify. It renders twice, so give it its own background and avoid ids.',
+            required: true,
+          },
+          {
+            name: 'size',
+            type: 'number',
+            default: '160',
+            description: 'Lens diameter in pixels.',
+          },
+          {
+            name: 'zoom',
+            type: 'number',
+            default: '1.6',
+            description: 'Magnification inside the lens.',
+          },
+          {
+            name: 'defaultPosition',
+            type: '{ x: number; y: number }',
+            default: '{ x: 0.5, y: 0.5 }',
+            description: "Starting centre as fractions of the stage's width and height.",
+          },
+          {
+            name: 'label',
+            type: 'string',
+            default: "'Magnifier'",
+            description: 'Accessible name of the lens.',
+          },
+        ],
       },
-      {
-        name: 'children',
-        description:
-          'Content to magnify. It renders twice, so give it its own background and avoid ids.',
-      },
-      { name: 'size', description: 'Lens diameter in pixels. Defaults to 160.' },
-      { name: 'zoom', description: 'Magnification inside the lens. Defaults to 1.6.' },
-      {
-        name: 'defaultPosition',
-        description: 'Starting centre as fractions of the stage. Defaults to the middle.',
-      },
-      { name: 'label', description: 'Accessible name of the lens. Defaults to Magnifier.' },
     ],
-    notes: [
-      {
-        title: 'Browsers',
-        body: 'The rim bends through an SVG filter on the magnified copy, which every current engine draws. Reduced motion and reduced transparency keep a plain magnifier.',
-      },
-      {
-        title: 'Keyboard',
-        body: 'The lens is focusable. Arrow keys move it 10 pixels, or 50 with Shift.',
-      },
-    ],
+    types: ['GlassLensProps'],
+    accessibility: 'The lens is focusable: arrow keys move it 10px, or 50px with Shift.',
     pageToc: standardToc,
   },
   {
@@ -1961,7 +3391,7 @@ export default function Page() {
     status: 'ready',
     route: '/components/glass-scene',
     description:
-      'Draws the glass inside it as real bevelled glass that bends its backdrop and melts together.',
+      'A WebGL2 canvas that refracts a backdrop image through the glass components inside it.',
     examples: [
       {
         title: 'Render the copied example',
@@ -1976,60 +3406,93 @@ export default function Page() {
       {
         name: 'GlassScene',
         description:
-          'Stage that paints its backdrop and draws the glass inside it on one WebGL2 canvas.',
-      },
-      {
-        name: 'backdrop',
-        description:
-          'The image the glass refracts: a URL, or a CSS url() or var() value. Serve it from your origin or with CORS.',
-      },
-      {
-        name: 'backdropSpace',
-        description:
-          "'local' (default) paints the backdrop across the scene. 'viewport' pins it to the viewport, so scrolling carries the glass across a still image.",
-      },
-      {
-        name: 'flow',
-        description:
-          'Lets drops ripple like liquid. Reduced motion holds them still. Defaults to false.',
-      },
-      {
-        name: 'optics',
-        description:
-          'ior (1.5), thickness (40), bevel (28), dispersion (0.15), frost (1), merge (12) and specular (1). Lengths are CSS pixels.',
+          'Paints the backdrop and the glass inside it on one canvas. GlassSurface, GlassPanel, GlassButton (except ghost) and GlassDrop join it; portalled overlays and glass nested in other glass keep their CSS glass.',
+        extends: 'HTML div attributes',
+        props: [
+          {
+            name: 'backdrop',
+            type: 'string',
+            default: '—',
+            description:
+              'The image the glass refracts: a URL, or a CSS url() or var() value. Without it, or --lg-scene-backdrop in CSS, the scene keeps its CSS glass.',
+          },
+          {
+            name: 'backdropSpace',
+            type: "'local' | 'viewport'",
+            default: "'local'",
+            description:
+              'local covers the scene with the backdrop; viewport pins it to the viewport, like background-attachment: fixed.',
+          },
+          {
+            name: 'flow',
+            type: 'boolean',
+            default: 'false',
+            description:
+              'Lets GlassDrops ripple like liquid. Held still under reduced motion and low quality.',
+          },
+          {
+            name: 'optics.ior',
+            type: 'number',
+            default: '1.5',
+            description: 'Refractive index. Higher values bend the backdrop more.',
+          },
+          {
+            name: 'optics.thickness',
+            type: 'number',
+            default: '40 × thickness preference',
+            description: 'Slab height in CSS pixels. Thicker glass bends further.',
+          },
+          {
+            name: 'optics.bevel',
+            type: 'number',
+            default: '28 × (0.6 + 0.4 × thickness preference)',
+            description: 'Width of the curved rim in CSS pixels.',
+          },
+          {
+            name: 'optics.dispersion',
+            type: 'number',
+            default: '0.15 × thickness preference',
+            description: 'How far the rim splits light into colour. 0 turns it off.',
+          },
+          {
+            name: 'optics.frost',
+            type: 'number',
+            default: '1',
+            description: "Multiplier on every piece's frost.",
+          },
+          {
+            name: 'optics.merge',
+            type: 'number',
+            default: '12',
+            description: 'Distance in CSS pixels within which neighbouring pieces melt together.',
+          },
+          {
+            name: 'optics.specular',
+            type: 'number',
+            default: '1',
+            description: 'Strength of reflections and highlights.',
+          },
+        ],
       },
       {
         name: 'GlassDrop',
-        description: 'A plain drop of glass. Size, round and place it with CSS.',
-      },
-      {
-        name: 'merge',
-        description:
-          'GlassDrop only: this drop’s merge distance in pixels. Defaults to the scene’s.',
-      },
-    ],
-    notes: [
-      {
-        title: 'What joins the scene',
-        body: 'GlassSurface, GlassPanel, GlassButton and GlassDrop inside a scene hand their glass to it. Ghost buttons, glass nested in other glass and surfaces with a generated refraction keep their own. Nested glass drops its shadow and tints away from the pane’s text, so its labels stay legible.',
-      },
-      {
-        title: 'Legible text',
-        body: 'Text on scene glass keeps 4.5:1 over any backdrop: where the backdrop is too bright or too dark, the face dims or lifts just enough and the rim keeps its light. Each piece protects the colour in --lg-scene-ink, the muted text on surfaces and the label on buttons. Set it to transparent on glass without text.',
-      },
-      {
-        title: 'Optics',
-        body: 'Each piece is a thick slab floating just above the backdrop. Light bends through its top, its body and the air beneath, so steeper rims and a higher ior bend more, and dispersion splits the bent light into a spectrum. Past the critical angle a rim mirrors the scene instead, and tinted glass absorbs more where it is thicker and casts a tinted shadow.',
-      },
-      {
-        title: 'Browsers',
-        body: 'The scene needs WebGL2, which every current browser has. Without it the scene logs one warning and every piece keeps its CSS glass.',
-      },
-      {
-        title: 'Accessibility',
-        body: 'Reduced transparency, increased contrast and forced colours switch the canvas off and return the CSS glass. Reduced motion holds the flow still. The canvas never takes clicks or focus.',
+        description: 'A plain piece of glass for a scene. Size, round and place it with CSS.',
+        extends: 'HTML div attributes',
+        props: [
+          {
+            name: 'merge',
+            type: 'number',
+            default: "the scene's optics.merge",
+            description: "This drop's merge distance in CSS pixels.",
+          },
+        ],
       },
     ],
+    types: ['GlassSceneProps', 'GlassSceneOptics', 'GlassDropProps'],
+    requires:
+      'WebGL2 and a backdrop image from your origin or served with CORS. Without either, every piece keeps its CSS glass.',
+    accessibility:
+      'Scene glass keeps text in its --lg-scene-ink colour at 4.5:1 contrast over any backdrop; set --lg-scene-ink to transparent on custom glass that carries no text.',
     pageToc: standardToc,
   },
   {
@@ -2040,7 +3503,7 @@ export default function Page() {
     route: '/components/glass-laptop',
     searchTitle: 'Glass Laptop: a CSS 3D React laptop mockup',
     guide: '/guides/laptop-mockup',
-    description: 'A CSS 3D laptop mockup whose lid opens onto your screenshot or React screen.',
+    description: 'A CSS 3D laptop mockup whose screen shows your screenshot or React content.',
     usage: `import { GlassLaptop } from "@/components/glassyui/glass-laptop";
 
 export function Showcase() {
@@ -2074,40 +3537,47 @@ return (
     api: [
       {
         name: 'GlassLaptop',
-        description: 'Forward-ref figure drawing the laptop. Its children fill the screen.',
+        description: 'A figure that draws the laptop. Its children fill the screen.',
+        extends: 'HTML figure attributes',
+        props: [
+          {
+            name: 'children',
+            type: 'ReactNode',
+            default: '—',
+            description:
+              'Screen content, laid out at resolution CSS pixels wide and scaled to fit. It mounts only while the lid is open and still.',
+          },
+          {
+            name: 'open',
+            type: 'boolean',
+            default: 'true',
+            description: 'Whether the lid is up. Changing it opens or closes the lid.',
+          },
+          {
+            name: 'finish',
+            type: "'black' | 'silver'",
+            default: "'black'",
+            description: 'Case colour.',
+          },
+          {
+            name: 'resolution',
+            type: 'number',
+            default: '1728',
+            description:
+              'Width in CSS pixels the content is laid out at before it is scaled to the screen.',
+          },
+          {
+            name: 'glare',
+            type: 'boolean',
+            default: 'true',
+            description: 'A faint reflection across the screen. Turn it off for flat screenshots.',
+          },
+        ],
       },
-      {
-        name: 'children',
-        description:
-          'Screen content, laid out at the resolution below and scaled to fit. It renders only while the screen is lit.',
-      },
-      {
-        name: 'open',
-        description:
-          'Whether the lid is up. Changing it opens or closes the lid. Defaults to true.',
-      },
-      { name: 'finish', description: 'black or silver. Defaults to black.' },
-      {
-        name: 'resolution',
-        description:
-          'Width in CSS pixels the screen lays its content out at before scaling to fit. Defaults to 1728.',
-      },
-      { name: 'glare', description: 'A faint reflection across the glass. Defaults to true.' },
     ],
-    notes: [
-      {
-        title: 'Rendering',
-        body: 'The laptop mockup has a notched screen, keyboard and trackpad. It uses CSS 3D with no images or WebGL. Open, the lid faces you; shut, the view rises to show the closed case from above, and it moves back down as the lid opens.',
-      },
-      {
-        title: 'Screen',
-        body: 'The screen lights once the lid and the view have come to rest, and goes dark before the lid closes. Menus and dialogs that the content opens in a portal appear on the page at full size, so a screen meant to be looked at can be marked inert.',
-      },
-      {
-        title: 'Accessibility',
-        body: 'Reduced motion opens and closes the lid at once, and reduced transparency takes the reflection off the glass. Give the figure an aria-label that says what the screen shows.',
-      },
-    ],
+    types: ['GlassLaptopProps', 'GlassLaptopFinish'],
+    accessibility:
+      'Give the figure an aria-label that says what the screen shows, and mark display-only screen content inert.',
     pageToc: standardToc,
   },
   {
@@ -2117,8 +3587,7 @@ return (
     isNew: true,
     status: 'ready',
     route: '/components/glass-phone-duo',
-    description:
-      'A folding glass phone with flat screen content, an outer display, and a smooth titanium frame.',
+    description: 'A WebGL2 folding phone mockup with your screenshots on both displays.',
     usage: `import { GlassPhoneDuo } from "@/components/glassyui/glass-phone-duo";
 
 export function Showcase() {
@@ -2180,55 +3649,83 @@ return (
       },
     ],
     api: [
-      { name: 'GlassPhoneDuo', description: 'Forward-ref figure containing the WebGL 2 device.' },
       {
-        name: 'screenSrc',
-        description:
-          'One landscape screenshot for the entire inner OLED. Required; use a 2670:1878 aspect ratio.',
+        name: 'GlassPhoneDuo',
+        description: 'A figure with role img that draws the phone on a canvas.',
+        extends: 'HTML figure attributes (no children)',
+        props: [
+          {
+            name: 'screenSrc',
+            type: 'string',
+            default: '—',
+            description:
+              'Landscape screenshot for the inner display, at a 2670:1878 ratio. Same origin or served with CORS.',
+            required: true,
+          },
+          {
+            name: 'coverSrc',
+            type: 'string',
+            default: '—',
+            description:
+              'Portrait screenshot for the outer display, at a 1398:2034 ratio. Same origin or served with CORS.',
+            required: true,
+          },
+          {
+            name: 'screenAlt',
+            type: 'string',
+            default: "'App on the unfolded phone display'",
+            description: 'Accessible label while the front of the open phone shows.',
+          },
+          {
+            name: 'coverAlt',
+            type: 'string',
+            default: "'App on the outer phone display'",
+            description:
+              'Accessible label while the closed phone shows, or the back of the open phone.',
+          },
+          {
+            name: 'open',
+            type: 'boolean',
+            default: 'true',
+            description: 'Opens or closes the hinge. Ignored when angle is set.',
+          },
+          {
+            name: 'angle',
+            type: 'number',
+            default: '—',
+            description:
+              'Hinge angle from 0 (closed) to 180 (flat), clamped. Overrides open; while it is set, view and pose changes apply at once.',
+          },
+          {
+            name: 'finish',
+            type: "'night-sky' | 'star-white'",
+            default: "'night-sky'",
+            description: 'Frame colour.',
+          },
+          {
+            name: 'view',
+            type: "'front' | 'back'",
+            default: "'front'",
+            description: 'Which side faces you. back shows the rear cameras.',
+          },
+          {
+            name: 'pose',
+            type: "'upright' | 'book' | 'tent' | 'laptop' | 'side'",
+            default: "'upright'",
+            description:
+              'Device orientation; angle still sets the hinge. tent and laptop show screenSrc on the outer display and coverSrc across the inner one.',
+          },
+          {
+            name: 'glare',
+            type: 'boolean',
+            default: 'true',
+            description: 'A faint reflection across the displays.',
+          },
+        ],
       },
-      {
-        name: 'coverSrc',
-        description:
-          'Portrait screenshot for the outer display. Required; use a 1398:2034 aspect ratio.',
-      },
-      {
-        name: 'screenAlt / coverAlt',
-        description:
-          'Accessible descriptions of the screenshots. Only the displayed side is announced.',
-      },
-      { name: 'open', description: 'Animates the hinge open or closed. Defaults to true.' },
-      {
-        name: 'angle',
-        description:
-          'Hinge angle from 0 (closed) to 180 (flat). Overrides open with a short, interruptible settle for smooth scrubbing. Reduced motion applies the angle immediately.',
-      },
-      { name: 'finish', description: 'night-sky or star-white. Defaults to night-sky.' },
-      {
-        name: 'view',
-        description:
-          'front or back. Turning over exposes the horizontal rear cameras. Defaults to front.',
-      },
-      {
-        name: 'pose',
-        description:
-          'upright (default), book, tent, laptop or side. Sets the orientation; angle still controls the hinge. Try book at 120°, tent at 60°, laptop at 90° or side at 180°.',
-      },
-      { name: 'glare', description: 'A faint reflection across the displays. Defaults to true.' },
     ],
-    notes: [
-      {
-        title: 'Screen captures',
-        body: 'In the upright pose, the screenshot stays on a flat plane while the glass lifts, blurs, and dims above it, like the website intro. The other poses attach content to the displays. Tent and laptop rotate the captures to keep the UI upright: the landscape capture serves the outer display, and the portrait capture spans the inner leaves. Use same-origin or CORS-enabled images. The mockup requires WebGL 2.',
-      },
-      {
-        title: 'Geometry',
-        body: 'The model uses a 164.6 × 117.8 × 5.2 mm unfolded body. The camera housing, layered lens rings, concealed inner camera, hinge, antenna breaks, buttons and USB-C recess are approximated from the reference product images.',
-      },
-      {
-        title: 'Accessibility',
-        body: 'System and site reduced motion put the hinge and view directly at their destination. Reduced transparency removes reflections. The two displays share one accessible description.',
-      },
-    ],
+    types: ['GlassPhoneDuoProps', 'GlassPhoneDuoFinish', 'GlassPhoneDuoPose'],
+    requires: 'WebGL2 and screenshots from your origin or served with CORS.',
     pageToc: standardToc,
   },
 ];

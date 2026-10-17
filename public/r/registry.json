@@ -6,7 +6,7 @@
     {
       "name": "glass-provider",
       "title": "Glass Provider",
-      "description": "Sets the theme and the accessibility preferences every glass component follows.",
+      "description": "Sets the theme and accessibility preferences that every Glassy UI component follows.",
       "files": [
         {
           "path": "registry/glassyui/glass-provider.tsx",
@@ -40,7 +40,7 @@
     {
       "name": "glass-surface",
       "title": "Glass Surface",
-      "description": "The glass material on its own: frost, rim light and refraction for your own components.",
+      "description": "The glass material as a plain div, for building your own glass components.",
       "dependencies": [
         "clsx"
       ],
@@ -106,7 +106,7 @@
     {
       "name": "glass-button",
       "title": "Glass Button",
-      "description": "A slab of glass resting just above the page that sets down when pressed and lights up where you press.",
+      "description": "A glass button with four variants, three sizes and an asChild mode for links.",
       "dependencies": [
         "@radix-ui/react-slot",
         "clsx"
@@ -173,7 +173,7 @@
     {
       "name": "glass-panel",
       "title": "Glass Panel",
-      "description": "Glass cards, panels and pills for anything that floats above your content.",
+      "description": "A glass container in a panel, card or pill shape.",
       "dependencies": [
         "clsx"
       ],
@@ -244,7 +244,7 @@
     {
       "name": "glass-header",
       "title": "Glass Header",
-      "description": "A floating glass capsule with a brand, navigation links and actions.",
+      "description": "A floating glass header with a brand, navigation links, actions and a compact menu.",
       "dependencies": [
         "clsx"
       ],
@@ -325,7 +325,7 @@
     {
       "name": "glass-input",
       "title": "Glass Input",
-      "description": "A recessed glass text field with a label and an optional hint.",
+      "description": "A recessed glass text field with an optional label and hint.",
       "dependencies": [
         "clsx"
       ],
@@ -366,7 +366,7 @@
     {
       "name": "glass-checkbox",
       "title": "Glass Checkbox",
-      "description": "A glass checkbox whose mark draws itself in and out, with an indeterminate state.",
+      "description": "A glass checkbox with an optional label, description and indeterminate state.",
       "dependencies": [
         "@radix-ui/react-checkbox",
         "clsx"
@@ -408,7 +408,7 @@
     {
       "name": "glass-radio-group",
       "title": "Glass Radio Group",
-      "description": "Options where exactly one is chosen, with a dot that pops in and shrinks away.",
+      "description": "A group of glass radio buttons where exactly one option is chosen.",
       "dependencies": [
         "@radix-ui/react-radio-group",
         "clsx"
@@ -450,7 +450,7 @@
     {
       "name": "glass-textarea",
       "title": "Glass Textarea",
-      "description": "A recessed glass field for longer text that can grow as you type.",
+      "description": "A recessed glass text area that can grow with its text.",
       "dependencies": [
         "clsx"
       ],
@@ -496,7 +496,7 @@
     {
       "name": "glass-select",
       "title": "Glass Select",
-      "description": "A recessed trigger that opens a slab of glass to choose from.",
+      "description": "A select field whose options open on a raised glass panel.",
       "dependencies": [
         "clsx",
         "@radix-ui/react-select"
@@ -573,7 +573,7 @@
     {
       "name": "glass-tabs",
       "title": "Glass Tabs",
-      "description": "Tabs whose glass bubble stretches like a drop on its way to the selected tab.",
+      "description": "Tabs on a glass pill, with one indicator that moves to the selected tab.",
       "dependencies": [
         "clsx",
         "@radix-ui/react-tabs"
@@ -655,7 +655,7 @@
     {
       "name": "glass-dialog",
       "title": "Glass Dialog",
-      "description": "A modal on raised glass that holds focus until it closes.",
+      "description": "A modal glass dialog with an overlay, a focus trap and a close button.",
       "dependencies": [
         "clsx",
         "@radix-ui/react-dialog"
@@ -732,7 +732,7 @@
     {
       "name": "glass-popover",
       "title": "Glass Popover",
-      "description": "Floating glass content anchored to the control that opens it.",
+      "description": "A glass popover anchored to the control that opens it.",
       "dependencies": [
         "clsx",
         "@radix-ui/react-popover"
@@ -886,7 +886,7 @@
     {
       "name": "glass-toast",
       "title": "Glass Toast",
-      "description": "A glass notification for brief updates, announced to screen readers.",
+      "description": "A glass notification for brief updates that screen readers announce.",
       "dependencies": [
         "clsx",
         "@radix-ui/react-toast"
@@ -963,7 +963,7 @@
     {
       "name": "glass-accordion",
       "title": "Glass Accordion",
-      "description": "Sections that expand and collapse on glass, one at a time or several.",
+      "description": "Collapsible glass sections that open one at a time or several at once.",
       "dependencies": [
         "clsx",
         "@radix-ui/react-accordion"
@@ -1040,7 +1040,7 @@
     {
       "name": "glass-switch",
       "title": "Glass Switch",
-      "description": "An on/off switch whose knob turns to glass and stretches as it slides.",
+      "description": "A glass on/off switch in two sizes.",
       "dependencies": [
         "@radix-ui/react-switch",
         "clsx"
@@ -1092,7 +1092,7 @@
     {
       "name": "glass-slider",
       "title": "Glass Slider",
-      "description": "A slider whose glass thumb stretches with your drag, for one value or a range.",
+      "description": "A glass slider for one value or a range, with one named thumb per value.",
       "dependencies": [
         "@radix-ui/react-slider",
         "clsx"
@@ -1144,7 +1144,7 @@
     {
       "name": "glass-segmented-control",
       "title": "Glass Segmented Control",
-      "description": "A single-choice control whose glass bubble stretches between options and can be dragged.",
+      "description": "A single-choice glass control for two to six options, with a draggable selection.",
       "dependencies": [
         "clsx",
         "@radix-ui/react-radio-group"
@@ -1267,7 +1267,7 @@
     {
       "name": "glass-progress",
       "title": "Glass Progress",
-      "description": "A glass track with a fill that slides to its value, or sweeps when the length is unknown.",
+      "description": "A glass progress bar for known values, with a sweeping state for unknown lengths.",
       "dependencies": [
         "clsx"
       ],
@@ -1308,7 +1308,7 @@
     {
       "name": "glass-spinner",
       "title": "Glass Spinner",
-      "description": "A ring with a fading tail, for waiting on something short.",
+      "description": "A small spinning ring that tells screen readers something is loading.",
       "dependencies": [
         "clsx"
       ],
@@ -1349,7 +1349,7 @@
     {
       "name": "glass-skeleton",
       "title": "Glass Skeleton",
-      "description": "A quiet glass placeholder with a slow sheen, shaped like what will replace it.",
+      "description": "A glass placeholder block, circle or set of text lines shown while content loads.",
       "dependencies": [
         "clsx"
       ],
@@ -1390,7 +1390,7 @@
     {
       "name": "glass-alert",
       "title": "Glass Alert",
-      "description": "A short message set in tinted glass, with four tones and an optional dismiss.",
+      "description": "A tinted glass message with four tones, an icon and an optional dismiss button.",
       "dependencies": [
         "clsx"
       ],
@@ -1431,7 +1431,7 @@
     {
       "name": "glass-avatar",
       "title": "Glass Avatar",
-      "description": "A round photo that falls back to coloured initials, with a presence dot and stacked groups.",
+      "description": "A round photo that falls back to initials, with a presence dot and stacked groups.",
       "dependencies": [
         "@radix-ui/react-avatar",
         "clsx"
@@ -1473,7 +1473,7 @@
     {
       "name": "glass-kbd",
       "title": "Glass Kbd",
-      "description": "A keycap with a lit top edge, for shortcuts in menus, hints and docs.",
+      "description": "A keycap for showing keyboard shortcuts in menus, hints and docs.",
       "dependencies": [
         "clsx"
       ],
@@ -1512,9 +1512,51 @@
       "type": "registry:ui"
     },
     {
+      "name": "glass-scroll-area",
+      "title": "Glass Scroll Area",
+      "description": "A scroll container with a thin glass scrollbar that shows on hover and while scrolling.",
+      "dependencies": [
+        "@radix-ui/react-scroll-area",
+        "clsx"
+      ],
+      "files": [
+        {
+          "path": "registry/glassyui/glass-provider.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-provider.tsx"
+        },
+        {
+          "path": "registry/glassyui/liquid-filters.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/liquid-filters.tsx"
+        },
+        {
+          "path": "registry/glassyui/lib/preferences.ts",
+          "type": "registry:lib",
+          "target": "components/glassyui/lib/preferences.ts"
+        },
+        {
+          "path": "registry/glassyui/styles/liquid.css",
+          "type": "registry:file",
+          "target": "components/glassyui/styles/liquid.css"
+        },
+        {
+          "path": "registry/glassyui/glass-scroll-area.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-scroll-area.tsx"
+        }
+      ],
+      "meta": {
+        "sourceModules": [
+          "scroll-area"
+        ]
+      },
+      "type": "registry:ui"
+    },
+    {
       "name": "glass-dock",
       "title": "Glass Dock",
-      "description": "A row of app icons on a glass shelf that name themselves on hover.",
+      "description": "A row of app icons on a glass shelf, with labels on hover and focus.",
       "dependencies": [
         "clsx",
         "@radix-ui/react-slot"
@@ -1586,7 +1628,7 @@
     {
       "name": "glass-breadcrumb",
       "title": "Glass Breadcrumb",
-      "description": "The trail to the current page, with links that lift on hover and folded steps in a menu.",
+      "description": "A breadcrumb trail to the current page, with an ellipsis for folded steps.",
       "dependencies": [
         "@radix-ui/react-slot",
         "clsx"
@@ -1628,7 +1670,7 @@
     {
       "name": "glass-pagination",
       "title": "Glass Pagination",
-      "description": "Numbered pages with previous and next, folding long runs into an ellipsis.",
+      "description": "Numbered page buttons with previous and next, folding long runs into an ellipsis.",
       "dependencies": [
         "clsx"
       ],
@@ -1669,7 +1711,7 @@
     {
       "name": "glass-sheet",
       "title": "Glass Sheet",
-      "description": "A glass panel that slides in from an edge. Bottom sheets drag down to dismiss.",
+      "description": "A modal glass panel that slides in from a screen edge; bottom sheets drag down to close.",
       "dependencies": [
         "clsx",
         "@radix-ui/react-dialog"
@@ -1746,7 +1788,7 @@
     {
       "name": "glass-menu",
       "title": "Glass Menu",
-      "description": "A dropdown menu on glass with shortcuts, checkbox and radio items, and submenus.",
+      "description": "A glass dropdown menu with shortcuts, checkbox and radio items, and submenus.",
       "dependencies": [
         "clsx",
         "@radix-ui/react-dropdown-menu"
@@ -1823,7 +1865,7 @@
     {
       "name": "glass-command",
       "title": "Glass Command",
-      "description": "A searchable command list that filters as you type, alone or in a launcher dialog.",
+      "description": "A searchable command list that filters as you type, alone or in a dialog.",
       "dependencies": [
         "clsx",
         "@radix-ui/react-dialog",
@@ -1901,7 +1943,7 @@
     {
       "name": "glass-lens",
       "title": "Glass Lens",
-      "description": "A draggable magnifier whose glass rim bends the content beneath it.",
+      "description": "A draggable magnifier with a glass rim that bends the content beneath it.",
       "dependencies": [
         "clsx"
       ],
@@ -1972,7 +2014,7 @@
     {
       "name": "glass-scene",
       "title": "Glass Scene",
-      "description": "Draws the glass inside it as real bevelled glass that bends its backdrop and melts together.",
+      "description": "A WebGL2 canvas that refracts a backdrop image through the glass components inside it.",
       "dependencies": [
         "clsx"
       ],
@@ -2038,7 +2080,7 @@
     {
       "name": "glass-laptop",
       "title": "Glass Laptop",
-      "description": "A CSS 3D laptop mockup whose lid opens onto your screenshot or React screen.",
+      "description": "A CSS 3D laptop mockup whose screen shows your screenshot or React content.",
       "dependencies": [
         "clsx"
       ],
@@ -2064,7 +2106,7 @@
     {
       "name": "glass-phone-duo",
       "title": "Glass Phone Duo",
-      "description": "A folding glass phone with flat screen content, an outer display, and a smooth titanium frame.",
+      "description": "A WebGL2 folding phone mockup with your screenshots on both displays.",
       "dependencies": [
         "clsx"
       ],

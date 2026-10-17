@@ -2946,6 +2946,129 @@
   }
 
   /* ============================================
+     Scroll area: native scrolling with a thin glass scrollbar over its edge.
+     The bar shows while the pointer is over the area or it scrolls, rests
+     narrow, and widens under the pointer.
+     ============================================ */
+
+  .lg-scroll-area {
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* A max-height on the area bounds the viewport as well as a height does. */
+  .lg-scroll-area-viewport {
+    width: 100%;
+    height: 100%;
+    max-height: inherit;
+    border-radius: inherit;
+  }
+
+  .lg-scroll-area-viewport:focus-visible {
+    outline: 2px solid var(--lg-focus-ring);
+    outline-offset: -2px;
+  }
+
+  .lg-scrollbar {
+    z-index: 1;
+    display: flex;
+    box-sizing: border-box;
+    padding: 3px;
+    touch-action: none;
+    user-select: none;
+    transition: padding 160ms var(--lg-ease-out);
+  }
+
+  .lg-scrollbar[data-orientation='vertical'] {
+    width: 10px;
+  }
+
+  .lg-scrollbar[data-orientation='horizontal'] {
+    flex-direction: column;
+    height: 10px;
+  }
+
+  .lg-scrollbar:hover {
+    padding: 2px;
+  }
+
+  .lg-scrollbar[data-state='visible'] {
+    animation: lg-scrollbar-in 160ms var(--lg-ease-out);
+  }
+
+  .lg-scrollbar[data-state='hidden'] {
+    animation: lg-scrollbar-out 240ms ease-in forwards;
+  }
+
+  /* A sliver of clear glass: a faint tint of the text colour, a lit rim and a
+     blur of what scrolls beneath it. */
+  .lg-scrollbar-thumb {
+    position: relative;
+    flex: 1;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--lg-foreground) 24%, transparent);
+    box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.24);
+    -webkit-backdrop-filter: blur(6px) saturate(1.6);
+    backdrop-filter: blur(6px) saturate(1.6);
+    transition: background-color 160ms var(--lg-ease-out);
+  }
+
+  [data-lg-theme='light'] .lg-scrollbar-thumb {
+    box-shadow:
+      inset 0 0 0 0.5px rgb(255 255 255 / 0.7),
+      0 0 0 0.5px rgb(0 0 0 / 0.06);
+  }
+
+  /* The pointer can catch more than the sliver it sees. */
+  .lg-scrollbar-thumb::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    min-width: 24px;
+    min-height: 24px;
+    transform: translate(-50%, -50%);
+  }
+
+  .lg-scrollbar:hover .lg-scrollbar-thumb {
+    background: color-mix(in srgb, var(--lg-foreground) 40%, transparent);
+  }
+
+  @keyframes lg-scrollbar-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes lg-scrollbar-out {
+    to {
+      opacity: 0;
+    }
+  }
+
+  [data-lg-reduce-transparency='1'] .lg-scrollbar-thumb {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: color-mix(in srgb, var(--lg-foreground) 55%, var(--lg-bg));
+  }
+
+  @media (prefers-contrast: more) {
+    .lg-scrollbar-thumb {
+      background: color-mix(in srgb, var(--lg-foreground) 70%, transparent);
+    }
+  }
+
+  @media (forced-colors: active) {
+    .lg-scrollbar-thumb {
+      forced-color-adjust: none;
+      background: CanvasText;
+      box-shadow: none;
+    }
+  }
+
+  /* ============================================
      Command: a search field over a list that filters as you type. The
      highlighted row is the menu's, and the list resizes with its results.
      ============================================ */
