@@ -25,6 +25,13 @@ const checks = [];
 
 const privateMarker = 'PRIVATE_SENTINEL_email@example.test_checkout_token';
 
+// A JSON string is a safe script literal once characters that can end a script or line are escaped.
+const scriptString = (value) =>
+  JSON.stringify(value).replace(
+    /[<>\u2028\u2029]/g,
+    (character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`,
+  );
+
 async function session({ accepted = false, gpc = false, dnt = false } = {}) {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
@@ -74,7 +81,7 @@ async function session({ accepted = false, gpc = false, dnt = false } = {}) {
     } else if (url.pathname === '/_next/static/error-proof.js') {
       await route.fulfill({
         contentType: 'application/javascript',
-        body: `setTimeout(() => { throw new TypeError(${JSON.stringify(privateMarker)}); }, 0);`,
+        body: `setTimeout(() => { throw new TypeError(${scriptString(privateMarker)}); }, 0);`,
       });
     } else if (url.origin === base.origin) {
       await route.continue();
