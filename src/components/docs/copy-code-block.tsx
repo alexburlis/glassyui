@@ -1,7 +1,15 @@
 'use client';
 
-import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+
+/**
+ * Code longer than this many lines rests at the collapsed height in globals.css (360px, about 15
+ * lines), so a long example never pushes the rest of the page away. Code does not wrap, so the
+ * line count alone decides it on the server and nothing shifts when the page hydrates. The margin
+ * over 15 lines keeps the toggle from hiding only a line or two.
+ */
+const COLLAPSE_AFTER_LINES = 20;
 
 type CodeLanguage = 'json' | 'shell' | 'tsx' | 'plain';
 
@@ -130,8 +138,40 @@ export function CopyCodeBlock({
   // Reset in this render while retaining the header controls and their keyboard focus.
   if (changed) setResult({ code, label, state: 'idle', request: null });
   const codeRef = useRef<HTMLElement>(null);
+  const preRef = useRef<HTMLPreElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const toggleTop = useRef<number | null>(null);
   const generatedId = useId();
   const codeId = `${generatedId}-code`;
+  const preId = `${generatedId}-pre`;
+  const collapsible = !command && !file && code.split('\n').length > COLLAPSE_AFTER_LINES;
+  const [open, setOpen] = useState(false);
+  const collapsed = collapsible && !open;
+
+  // Collapsing shortens the page above the toggle, so keep the toggle where it was on screen
+  // rather than leaving the reader far below the code they just closed.
+  useLayoutEffect(() => {
+    const before = toggleTop.current;
+    toggleTop.current = null;
+
+    if (before === null || !toggleRef.current) return;
+    const drift = toggleRef.current.getBoundingClientRect().top - before;
+
+    if (Math.abs(drift) > 1) window.scrollBy({ top: drift, behavior: 'instant' });
+  }, [open]);
+
+  function toggleOpen() {
+    const pre = preRef.current;
+
+    if (!open && pre) {
+      // Expanding grows from the resting height to the code's full height.
+      pre.style.setProperty('--docs-code-full', `${pre.scrollHeight}px`);
+    }
+
+    if (open && toggleRef.current)
+      toggleTop.current = toggleRef.current.getBoundingClientRect().top;
+    setOpen(!open);
+  }
 
   const highlighted = useMemo(
     () => (expanded ? (command ? wrappedCommand(code) : highlight(code, language)) : null),
@@ -186,6 +226,8 @@ export function CopyCodeBlock({
   return (
     <div
       className={`docs-code-block${command ? ' docs-command-block' : ''}${file ? ' docs-install-file' : ''}`}
+      data-collapsible={collapsible || undefined}
+      data-collapsed={collapsed || undefined}
       data-language={language}
       data-target={target}
       role="region"
@@ -214,6 +256,7 @@ export function CopyCodeBlock({
         {feedback}
       </p>
       <div
+        className="docs-code-body"
         id={viewerId}
         hidden={!expanded}
         role={file ? 'region' : undefined}
@@ -222,7 +265,17 @@ export function CopyCodeBlock({
         {emptyMessage ? (
           <p className="docs-file-state">{emptyMessage}</p>
         ) : (
-          <pre tabIndex={0}>
+          <pre
+            id={collapsible ? preId : undefined}
+            ref={preRef}
+            tabIndex={0}
+            onTransitionEnd={(event) => {
+              // Once grown, let the code size itself, so a later resize never clips it.
+              if (open && event.propertyName === 'max-height') {
+                event.currentTarget.style.removeProperty('--docs-code-full');
+              }
+            }}
+          >
             {command ? (
               <span className="docs-command-prompt" aria-hidden="true">
                 ${' '}
@@ -233,6 +286,31 @@ export function CopyCodeBlock({
             </code>
           </pre>
         )}
+        {collapsible && !emptyMessage ? (
+          <div className="docs-code-fold">
+            <button
+              type="button"
+              className="docs-code-toggle"
+              ref={toggleRef}
+              aria-controls={preId}
+              aria-expanded={open}
+              aria-label={`${open ? 'Collapse' : 'Expand'} ${label}`}
+              onClick={toggleOpen}
+            >
+              {open ? 'Collapse' : 'Expand'}
+              <svg aria-hidden="true" viewBox="0 0 12 12" width="12" height="12">
+                <path
+                  d="M3 4.5 6 7.5l3-3"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.5"
+                />
+              </svg>
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

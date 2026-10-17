@@ -2697,7 +2697,9 @@ main :focus {
 
 .docs-code-block {
   margin-top: 16px;
-  overflow: hidden;
+  /* Clip rather than hide, so the block is not a scroll container and its Collapse button can
+     stay pinned to the bottom of the screen while the open code scrolls past. */
+  overflow: clip;
   border: 1px solid var(--site-hairline);
   border-radius: 16px;
   background: var(--site-tile);
@@ -2768,6 +2770,116 @@ main :focus {
 
 .docs-code-block code {
   font: inherit;
+}
+
+/* Long code rests at 360px, the height of an installation file, about fifteen lines: enough to
+   read the imports and the shape of the example while the next section stays on screen. */
+.docs-code-body {
+  position: relative;
+}
+
+.docs-code-block[data-collapsible] pre {
+  max-height: var(--docs-code-full, none);
+  overflow-y: hidden;
+  transition: max-height 420ms var(--lg-ease-out);
+}
+
+.docs-code-block[data-collapsed] pre {
+  max-height: 360px;
+}
+
+.docs-code-fold {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  padding: 20px 12px 12px;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--site-tile) 0%, transparent),
+    var(--site-tile) 55%
+  );
+}
+
+/* Collapsed, the code fades out under the toggle instead of stopping at a hard edge. */
+.docs-code-block[data-collapsed] .docs-code-fold {
+  position: absolute;
+  inset: auto 0 0;
+  align-items: flex-end;
+  height: 112px;
+  padding-bottom: 14px;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--site-tile) 0%, transparent),
+    color-mix(in srgb, var(--site-tile) 88%, transparent) 62%,
+    var(--site-tile)
+  );
+  pointer-events: none;
+}
+
+.docs-code-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px 0 14px;
+  border: 1px solid var(--site-hairline);
+  border-radius: 999px;
+  background: var(--site-tile);
+  box-shadow: 0 6px 18px -10px rgb(0 0 0 / 0.35);
+  color: var(--site-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.docs-code-toggle:hover {
+  border-color: color-mix(in srgb, var(--site-text) 22%, transparent);
+  background: color-mix(in srgb, var(--site-tile) 92%, var(--site-text));
+}
+
+.docs-code-toggle:focus-visible {
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: 2px;
+}
+
+.docs-code-toggle svg {
+  color: var(--site-text-2);
+  transition: transform 200ms var(--lg-ease-out);
+}
+
+.docs-code-toggle[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .docs-code-block[data-collapsible]:not([data-collapsed]) pre {
+    max-height: none;
+  }
+
+  .docs-code-block[data-collapsible] pre,
+  .docs-code-toggle svg {
+    transition: none;
+  }
+}
+
+:root[data-lg-reduce-motion='1'] .docs-code-block[data-collapsible]:not([data-collapsed]) pre {
+  max-height: none;
+}
+
+:root[data-lg-reduce-motion='1']
+  :is(.docs-code-block[data-collapsible] pre, .docs-code-toggle svg) {
+  transition: none;
+}
+
+@media (forced-colors: active) {
+  .docs-code-toggle {
+    border-color: ButtonText;
+  }
 }
 
 .docs-copy-status[data-failed] {
