@@ -240,24 +240,18 @@ function ShadcnThemeGuide() {
           </figure>
         ))}
         <p>
-          Buttons rest like thick slabs of glass just above the page: their edges catch the light,
-          with a faint split into colour, and they cast a long, soft shadow. A pointer lowers one
-          and a press sets it down, so its shadow draws in; nothing scales. Cards and alerts frost
-          what lies behind them and light their rims. Inputs, textareas and select triggers become
-          recessed wells. Switches and sliders get glass knobs that spring. The selected tab sits on
-          a pill of glass that slides to the tab you pick.
+          Buttons become raised glass with a soft shadow and set down when pressed. Cards and alerts
+          frost what lies behind them and light their rims. Inputs, textareas and select triggers
+          become recessed fields. Switches, sliders and tabs get glass knobs and a glass indicator.
         </p>
         <p>
-          The glass takes your palette&rsquo;s colour. Coloured buttons are deep glass that casts a
-          shadow in its own colour, and cards, alerts, menus and dialogs carry a little of your
-          primary colour as light; a grey palette keeps the glass clear.
+          The glass takes its colour from your palette&rsquo;s <code>--primary</code>; a grey
+          palette keeps it clear.
         </p>
         <p>
-          In Chrome, Edge and other Chromium browsers, cards, alerts and outline, secondary and
-          ghost buttons carry the lens of Glassy UI&rsquo;s own components: a lighter frost that
-          bends the page along the rim, split into colour on cards and alerts. Coloured buttons hide
-          the page behind their tint, so they frost it without the bend. Safari and Firefox cannot
-          draw that bend, so they show the frost alone.
+          In Chromium browsers, cards, alerts and outline, secondary and ghost buttons also bend the
+          page along their rims, using the lens of Glassy UI&rsquo;s own components. Coloured
+          buttons, Safari and Firefox show the frost without the bend.
         </p>
       </section>
       <section className="docs-section">
@@ -432,10 +426,7 @@ function AccessibilityGuide() {
           }
           label="A settings action inside GlassProvider"
         />
-        <p>
-          Use this inside a provider and alongside your existing settings. It is an example of
-          updating preferences, not a complete settings screen.
-        </p>
+        <p>Call it inside a GlassProvider, next to your existing settings.</p>
       </section>
       <section className="docs-section">
         <h2>Keep text and controls legible</h2>
@@ -467,10 +458,6 @@ function AccessibilityGuide() {
           Check scrolling and input while the effects run, then repeat with reduced preferences. Use
           the library’s quality preferences for dense screens and reserve strong refraction for the
           surfaces that benefit from it.
-        </p>
-        <p>
-          The <Link href="/components">component examples</Link> are useful starting points. Your
-          final content and devices are the acceptance surface.
         </p>
       </section>
     </>
@@ -636,8 +623,8 @@ function ExpoGuide() {
           <Link href="/components/glass-picker">Picker</Link> uses SwiftUI on iOS and Compose on
           Android. <Link href="/components/glass-swipe-row">Swipe Row</Link> and{' '}
           <Link href="/components/glass-card-stack">Card Stack</Link> follow touch gestures and
-          settle with springs. Wrap the app in <code>GestureHandlerRootView</code>, above{' '}
-          <code>GlassProvider</code>, for the gesture components.
+          settle with springs. Wrap the app in <code>GestureHandlerRootView</code> for the gesture
+          components.
         </p>
       </section>
       <section className="docs-section">

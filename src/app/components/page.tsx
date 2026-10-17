@@ -56,8 +56,8 @@ export default function ComponentsPage() {
       <header className="docs-page-header">
         <h1>Components</h1>
         <p>
-          {componentDocs.length} components, one glass. Every demo on this page is live, and each
-          one installs as source with a single command.
+          {componentDocs.length} accessible React components. Each one installs as source with one
+          command.
         </p>
       </header>
       <ReleaseFeedbackProvider>

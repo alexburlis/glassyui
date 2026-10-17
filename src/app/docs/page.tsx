@@ -58,7 +58,7 @@ export default function DocsPage() {
         <div className="docs-page-header">
           <p className="docs-eyebrow">Getting Started</p>
           <h1>Add Glassy UI to your app</h1>
-          <p>Browse a component, preview it, then install it with the CLI or copy its source.</p>
+          <p>Install components with the shadcn CLI, or copy their source into your app.</p>
         </div>
 
         <section className="docs-section" id="installation">
@@ -75,9 +75,9 @@ export default function DocsPage() {
             language="shell"
           />
           <p>
-            Each <Link href="/components">component page</Link> offers npm, pnpm, yarn and bun
-            commands, plus Manual installation with every required file. The Yarn command uses
-            modern Yarn with <code>dlx</code>.
+            Each <Link href="/components">component page</Link> has npm, pnpm, yarn and bun
+            commands, and a manual install with every file. Yarn commands need modern Yarn for{' '}
+            <code>dlx</code>.
           </p>
           <p>
             Building with Expo? See <Link href="/guides/expo">Add Glassy UI to an Expo app</Link>.
@@ -85,9 +85,8 @@ export default function DocsPage() {
           <details>
             <summary>Optional registry shorthand</summary>
             <p>
-              Existing namespace commands still work. Merge this mapping into your{' '}
-              <code>components.json</code> to use <code>@glassyui/glass-button</code> instead of the
-              full URL.
+              Merge this mapping into your <code>components.json</code> to install with{' '}
+              <code>@glassyui/glass-button</code> instead of the full URL.
             </p>
             <CopyCodeBlock
               code={publicRegistryMapping}
@@ -96,8 +95,8 @@ export default function DocsPage() {
             />
           </details>
           <p>
-            Already have stock shadcn/ui components? The Glassy UI theme restyles them without code
-            changes; see{' '}
+            Already using shadcn/ui components? The Glassy UI theme restyles them without code
+            changes:{' '}
             <Link href="/guides/shadcn-theme">Make a shadcn/ui app glassy with one command</Link>.
           </p>
         </section>
@@ -105,35 +104,31 @@ export default function DocsPage() {
         <section className="docs-section" id="usage">
           <h2>Usage</h2>
           <p>
-            Set <code>data-lg-theme="light"</code> on your root element for a light page, or{' '}
-            <code>data-lg-theme="dark"</code> for a dark page. Update this attribute with your
-            app&rsquo;s theme switch so glass labels stay readable.
+            Set <code>data-lg-theme="light"</code> or <code>data-lg-theme="dark"</code> on your root
+            element, and update it with your app&rsquo;s theme switch so glass labels stay readable.
           </p>
           <CopyCodeBlock code={glassThemeRoot} label="Root element in a light app" />
           <p>
-            Every component imports <code>styles/liquid.css</code>, either directly or through the
-            provider module it depends on, so this example needs no separate CSS import or provider
-            wrapper.
+            Components import <code>styles/liquid.css</code> themselves, so you need no CSS import
+            or provider:
           </p>
           <CopyCodeBlock code={minimalUsage} label="Minimal usage" />
           <p>
-            Wrap an app or preview area in <code>GlassProvider</code> only when its children need
-            synchronized theme, quality, motion, and transparency preferences. Match{' '}
-            <code>defaultTheme</code> to the app&rsquo;s initial theme.
+            Add <code>GlassProvider</code> when components should share theme, quality, motion and
+            transparency preferences. Match <code>defaultTheme</code> to the app&rsquo;s initial
+            theme.
           </p>
           <CopyCodeBlock code={optionalProviderUsage} label="Optional preferences provider" />
           <p>
-            Render <code>LiquidFilters</code> only when legacy or global CSS refers to the shared{' '}
-            <code>#lg-liquid-refraction</code> SVG filter. Supplied-background surface refraction
-            creates its own filter.
+            Render <code>LiquidFilters</code> only if your own CSS refers to the{' '}
+            <code>#lg-liquid-refraction</code> SVG filter. No Glassy UI component needs it.
           </p>
         </section>
 
         <section className="docs-section" id="next-steps">
           <h2>Next steps</h2>
           <p>
-            Browse all <Link href="/components">{componentDocs.length} components</Link>. Each page
-            offers CLI and Manual installation with every required file.
+            Browse all <Link href="/components">{componentDocs.length} components</Link>.
           </p>
           <p>
             Follow the <Link href="/guides/shadcn">step-by-step installation guide</Link>, or start
