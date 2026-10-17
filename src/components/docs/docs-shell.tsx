@@ -1,11 +1,11 @@
-import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { SiteFooter } from '@/components/site/site-footer';
 import { SiteNav } from '@/components/site/site-nav';
 import { PRO_ORIGIN, GITHUB, newIssueUrl, sourceUrl } from '@/lib/site-links';
 import { nativeComponentDocs, getNativeComponentDoc } from '@/lib/native-component-docs';
 import { componentCategories, componentDocs } from './component-docs-data';
-import { DocsMobileNav, type DocsMobileNavGroup } from './docs-mobile-nav';
+import { DocsMobileNav, DocsNavLink, type DocsMobileNavGroup } from './docs-mobile-nav';
+import { DocsSidebarCurrent } from './docs-sidebar-current';
 
 type DocsShellProps = {
   children: ReactNode;
@@ -38,20 +38,41 @@ categoryGroups.push({
   })),
 });
 
-const mobileNavGroups: DocsMobileNavGroup[] = [
+const documentationGroup: DocsMobileNavGroup = {
+  label: 'Documentation',
+  links: [
+    { href: '/docs', label: 'Getting Started' },
+    { href: '/components', label: 'All components' },
+    { href: '/mobile', label: 'React Native' },
+    { href: '/guides', label: 'Guides' },
+    { href: PRO_ORIGIN, label: 'Templates', external: true },
+    { href: GITHUB.repository, label: 'GitHub', external: true },
+  ],
+};
+
+const sidebarGroups: DocsMobileNavGroup[] = [
   {
-    label: 'Documentation',
-    links: [
-      { href: '/docs', label: 'Getting Started' },
-      { href: '/components', label: 'Components' },
-      { href: '/mobile', label: 'React Native' },
-      { href: PRO_ORIGIN, label: 'Templates' },
-      { href: '/guides', label: 'Guides' },
-      { href: GITHUB.repository, label: 'GitHub' },
-    ],
+    ...documentationGroup,
+    links: [...documentationGroup.links, { href: '/r/registry.json', label: 'Registry JSON' }],
   },
   ...categoryGroups,
 ];
+
+// The menu's summary names the current page, so the gallery reads as Components there.
+const mobileNavGroups: DocsMobileNavGroup[] = [
+  {
+    ...documentationGroup,
+    links: documentationGroup.links.map((link) =>
+      link.href === '/components' ? { ...link, label: 'Components' } : link,
+    ),
+  },
+  ...categoryGroups,
+];
+
+/** The sidebar marks Guides current on every guide, and each other page on its own route. */
+function isCurrent(href: string, current: string) {
+  return href === '/guides' ? current.startsWith('/guides') : href === current;
+}
 
 export function DocsShell({ children, contribute, current, rail, toc = [] }: DocsShellProps) {
   const hasToc = toc.length > 0;
@@ -64,34 +85,17 @@ export function DocsShell({ children, contribute, current, rail, toc = [] }: Doc
 
       <div className={`docs-layout${hasToc || hasRail ? '' : ' docs-layout--no-toc'}`}>
         <aside className="docs-sidebar" aria-label="Documentation">
-          <div className="docs-sidebar-section">
-            <p>Documentation</p>
-            <Link aria-current={current === '/docs' ? 'page' : undefined} href="/docs">
-              Getting Started
-            </Link>
-            <Link aria-current={current === '/components' ? 'page' : undefined} href="/components">
-              All components
-            </Link>
-            <Link href="/mobile">React Native</Link>
-            <a href={PRO_ORIGIN}>Templates</a>
-            <Link aria-current={current.startsWith('/guides') ? 'page' : undefined} href="/guides">
-              Guides
-            </Link>
-            <a href={GITHUB.repository}>GitHub</a>
-            <a href="/r/registry.json">Registry JSON</a>
-          </div>
-          {categoryGroups.map((group) => (
+          <DocsSidebarCurrent current={current} />
+          {sidebarGroups.map((group) => (
             <div className="docs-sidebar-section" key={group.label}>
-              <p>{group.label}</p>
-              {group.links.map((link) => (
-                <Link
-                  aria-current={link.href === current ? 'page' : undefined}
-                  href={link.href}
-                  key={link.href}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              <p className="docs-sidebar-label">{group.label}</p>
+              <ul role="list">
+                {group.links.map((link) => (
+                  <li key={link.href}>
+                    <DocsNavLink current={isCurrent(link.href, current)} link={link} />
+                  </li>
+                ))}
+              </ul>
             </div>
           ))}
         </aside>

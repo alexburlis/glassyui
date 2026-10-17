@@ -2471,36 +2471,51 @@ main :focus {
   display: grid;
   align-self: start;
   align-content: start;
-  gap: 24px;
+  gap: 28px;
   max-height: calc(100vh - 108px);
   overflow-y: auto;
-  padding-bottom: 24px;
+  padding: 4px 4px 32px 0;
+  overscroll-behavior: contain;
   scrollbar-width: thin;
+  scrollbar-color: var(--site-fill-strong) transparent;
 }
 
+/* A group reads as a label over its links: small, semibold and tertiary above links in the
+   primary colour, with more space above each label than between its links. */
 .docs-sidebar-section {
   display: grid;
-  gap: 2px;
+  gap: 6px;
 }
 
-.docs-sidebar-section > p,
+.docs-sidebar-label,
 .docs-toc > p {
-  margin-bottom: 6px;
   color: var(--site-text-3);
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
 }
 
-.docs-sidebar-section > p {
+.docs-sidebar-label {
   padding: 0 10px;
 }
 
-.docs-sidebar a {
-  display: block;
+.docs-sidebar-section ul {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.docs-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
   padding: 6px 10px;
-  border-radius: 8px;
-  color: var(--site-text-2);
+  border-radius: 9px;
+  color: color-mix(in srgb, var(--site-text) 88%, var(--site-bg));
   font-size: 14px;
   line-height: 1.3;
   transition:
@@ -2508,15 +2523,35 @@ main :focus {
     color 150ms ease;
 }
 
-.docs-sidebar a:hover {
+.docs-nav-link:hover {
   background: var(--site-fill);
   color: var(--site-text);
 }
 
-.docs-sidebar a[aria-current='page'] {
-  background: var(--site-fill);
+:is(.docs-sidebar, .docs-mobile-nav) .docs-nav-link:focus-visible {
+  outline: 2px solid var(--lg-focus-ring);
+  /* Inside the edge: the sidebar scrolls, so an outer ring would be clipped. */
+  outline-offset: -2px;
+}
+
+.docs-nav-link[aria-current='page'] {
+  background: var(--site-fill-strong);
   color: var(--site-text);
   font-weight: 600;
+}
+
+.docs-nav-external {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  color: var(--site-text-3);
+}
+
+@media (forced-colors: active) {
+  .docs-nav-link[aria-current='page'] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
 }
 
 .docs-main {
@@ -3423,32 +3458,25 @@ main :focus {
   }
 
   .docs-mobile-nav nav {
+    position: relative;
     display: grid;
-    gap: 16px;
-    padding: 4px 16px 16px;
+    gap: 24px;
+    max-height: min(64vh, 560px);
+    overflow-y: auto;
+    padding: 8px 8px 16px;
+    border-top: 1px solid var(--site-hairline);
+    overscroll-behavior: contain;
   }
 
-  .docs-mobile-nav nav > div {
-    display: grid;
-    gap: 2px;
+  .docs-mobile-nav .docs-nav-link {
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-size: 16px;
   }
 
-  .docs-mobile-nav nav p {
-    margin-bottom: 4px;
-    color: var(--site-text-3);
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  .docs-mobile-nav a {
-    padding: 6px 0;
-    color: var(--site-text-2);
-    font-size: 15px;
-  }
-
-  .docs-mobile-nav a[aria-current='page'] {
-    color: var(--site-text);
-    font-weight: 600;
+  .docs-mobile-nav .docs-sidebar-label {
+    padding: 0 12px;
   }
 
   .docs-sidebar {
