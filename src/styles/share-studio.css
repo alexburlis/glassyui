@@ -5,7 +5,7 @@
 
 /* The studio photographs the card alone, and overlays it opened by keyboard without their
    focus rings. */
-section.analytics-consent,
+.analytics-consent,
 nextjs-portal {
   display: none !important;
 }
