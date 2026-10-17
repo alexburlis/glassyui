@@ -1,6 +1,6 @@
 'use client';
 
-import { PreferencesProvider } from '@/components/liquid';
+import { PreferencesProvider } from '@/components/liquid/provider';
 import { AnalyticsConsent } from '@/components/site/analytics-consent';
 import type { GlassyUiTheme } from '@/lib/liquid/preferences';
 

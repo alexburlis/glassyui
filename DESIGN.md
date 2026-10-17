@@ -249,8 +249,8 @@ progress, spinners, skeletons and the Pro card's art.
   slightly as they appear.
 - **Answers, not decoration.** Buttons set down under a press, a link's arrow
   leans the way it goes, copying confirms with a small pop, and the theme switch
-  turns its sun into a moon while the page crossfades. A Light and Dark control
-  changes the theme immediately while its bubble moves on the live page.
+  changes the whole page at once, including its first use. A Light and Dark
+  control changes the theme immediately while its bubble moves on the live page.
 - **One quiet loop.** The Pro card beside the components gallery shows a Pro
   site in a glass window over a pale turning ribbon. The ribbon sways a few
   pixels over 16 seconds and the window floats over 7, so the card feels alive

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { chromium, firefox, webkit } from 'playwright';
 
 // Site motion is one entrance on the home page, a rise into place as sections scroll in,
-// answers to the pointer (the menus grow out of their triggers and the theme crossfades) and
+// answers to the pointer (the menus grow out of their triggers and the theme switches at once) and
 // the Pro card's slow drift beside the gallery. With JavaScript and motion allowed, the home
 // page's keynote is its entrance instead (scripts/check-keynote.mjs checks it), and the ordinary
 // page begins once the keynote's opener has landed. Every way it can fail:
@@ -27,8 +27,8 @@ import { chromium, firefox, webkit } from 'playwright';
 //    entrance delay instead of appearing, or the View trigger cannot reopen its closing menu.
 // 8. Floating layers grow from the wrong place: an open menu does not take Radix's transform
 //    origin, so it scales from its centre instead of its trigger.
-// 9. Changing the theme stalls: the toggle does not switch the theme within 600 ms, or a
-//    crossfade runs under reduced motion.
+// 9. Changing the theme stalls: the first toggle waits for a crossfade or cold artwork, or
+//    individual surfaces keep transitioning their colours after the theme changes.
 // 10. A lazy demo moves the page: ordinary wheel scrolling jumps when the command palette
 //     mounts below the viewport. Its results must still scroll during keyboard navigation.
 // 11. The header keeps one shape: at the top of the page it is not the open bar (wider than the
@@ -1147,42 +1147,119 @@ async function checkButtonLight(browser, name) {
 }
 
 async function checkTheme(browser, name) {
-  // 9: the toggle switches at once with motion and without it.
-  for (const [mode, options] of [
-    ['motion', {}],
-    ['reduced', { reducedMotion: 'reduce' }],
-  ]) {
-    await check(`${name} theme change (${mode})`, async () => {
-      const { context, page } = await open(browser, options);
+  // Each context starts cold. Observe the real click before its first paint, then the frames
+  // after it: waiting for the theme attribute alone used to miss the visible stagger.
+  for (const width of [1280, 390]) {
+    for (const [mode, options] of [
+      ['motion', {}],
+      ['reduced', { reducedMotion: 'reduce' }],
+    ]) {
+      await check(`${name} theme change (${mode}, ${width})`, async () => {
+        const { context, page } = await open(browser, { ...options, width });
+        const artwork = new Set();
 
-      await page.goto(new URL('/', baseUrl).href, { waitUntil: 'networkidle' });
-      await landHome(page);
-      const started = Date.now();
-      await page.getByRole('button', { name: 'Change appearance' }).first().click();
-      await page.waitForFunction(
-        () => document.documentElement.getAttribute('data-lg-theme') === 'dark',
-        null,
-        {
-          timeout: 600,
-        },
-      );
-      const elapsed = Date.now() - started;
+        page.on('request', (request) => {
+          const pathname = new URL(request.url()).pathname;
 
-      const transitions = await page.evaluate(
-        () =>
-          document
-            .getAnimations()
-            .filter((animation) =>
-              String(animation.effect?.pseudoElement ?? '').startsWith('::view-transition'),
-            ).length,
-      );
+          if (
+            pathname.startsWith('/wallpapers/') ||
+            pathname.startsWith('/keynote/phone-wallpaper-')
+          )
+            artwork.add(pathname);
+        });
 
-      if (mode === 'reduced')
-        assert.equal(transitions, 0, 'reduced motion must not crossfade the theme');
+        await page.goto(new URL('/', baseUrl).href, { waitUntil: 'networkidle' });
+        await landHome(page);
+        await page.waitForFunction(
+          () =>
+            document.querySelector('.desk-screen')?.getAttribute('data-lg-scene-backdrop') ===
+            'ready',
+        );
+        const loadedArtwork = [...artwork];
+        const results = [];
+        const result = { results };
 
-      manifest.engines[name] = { ...manifest.engines[name], [`theme-${mode}-ms`]: elapsed };
-      await context.close();
-    });
+        manifest.engines[name] = {
+          ...manifest.engines[name],
+          [`theme-${mode}-${width}`]: result,
+        };
+
+        for (const theme of ['dark', 'light', 'dark']) {
+          await page.evaluate(() => {
+            window.themeFrames = new Promise((resolve) => {
+              document.addEventListener(
+                'click',
+                () => {
+                  queueMicrotask(() => {
+                    const samples = [];
+                    const start = performance.now();
+
+                    const sample = () => {
+                      samples.push({
+                        theme: document.documentElement.getAttribute('data-lg-theme'),
+                        background: getComputedStyle(document.body).backgroundColor,
+                        backdrop: document
+                          .querySelector('.desk-screen')
+                          ?.getAttribute('data-lg-scene-backdrop'),
+                        transitions: document
+                          .getAnimations()
+                          .filter(
+                            (animation) =>
+                              String(animation.effect?.pseudoElement ?? '').startsWith(
+                                '::view-transition',
+                              ) ||
+                              ('transitionProperty' in animation &&
+                                /color|background|border|shadow|filter|fill|stroke/.test(
+                                  animation.transitionProperty,
+                                )),
+                          ).length,
+                      });
+
+                      if (performance.now() - start < 350) requestAnimationFrame(sample);
+                      else resolve(samples);
+                    };
+
+                    sample();
+                  });
+                },
+                { once: true },
+              );
+            });
+          });
+          await page.getByRole('button', { name: 'Change appearance' }).first().click();
+          const frames = await page.evaluate(() => window.themeFrames);
+
+          results.push({ theme, frames });
+
+          assert.ok(
+            frames.every((frame) => frame.theme === theme),
+            'the theme must change during the click, including the first toggle',
+          );
+          assert.ok(
+            frames.every((frame) => frame.transitions === 0),
+            'the page must not crossfade or transition individual theme colours',
+          );
+          assert.ok(
+            frames.every((frame) => frame.background === frames.at(-1).background),
+            'the first frame must paint the final page colour',
+          );
+          assert.ok(
+            frames.slice(1).every((frame) => frame.backdrop === 'ready'),
+            'the glass must draw the new wallpaper by the first animation frame',
+          );
+          assert.deepEqual(
+            [...artwork],
+            loadedArtwork,
+            'switching theme must not wait for previously unloaded artwork',
+          );
+        }
+
+        const screenshot = `${name}-theme-${mode}-${width}.png`;
+        await page.screenshot({ path: path.join(artifactDirectory, screenshot) });
+        result.screenshot = screenshot;
+        await context.close();
+      });
+    }
   }
 }
 

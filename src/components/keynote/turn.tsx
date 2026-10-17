@@ -353,6 +353,7 @@ export function Turn({ active, desk, deskFace, nativeCount, onDeskFrame, theme }
               body={reflectionBody}
               face="desk"
               strength={active ? reflectionShown * (1 - back) : 0}
+              visible={!facing}
             />,
             deskFace,
           )
@@ -400,7 +401,7 @@ export function Turn({ active, desk, deskFace, nativeCount, onDeskFrame, theme }
             visibility: facing ? undefined : 'hidden',
           }}
         >
-          <PhoneFront body={body}>
+          <PhoneFront body={body} visible={active && facing}>
             <div
               style={{
                 position: 'absolute',

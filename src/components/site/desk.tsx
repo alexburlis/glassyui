@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { preload } from 'react-dom';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { CSSProperties, MouseEvent, ReactNode, RefObject } from 'react';
 import {
@@ -620,6 +621,15 @@ function MenuBar({
  * refracts the wallpaper.
  */
 export function Desk() {
+  // Glass and the page need the same wallpaper on the first theme change, for every choice.
+  for (const { value } of WALLPAPERS) {
+    for (const theme of ['light', 'dark']) {
+      preload(`/wallpapers/${value === 'vermilion' ? 'vermilion-desk' : value}-${theme}.svg`, {
+        as: 'image',
+      });
+    }
+  }
+
   const { preferences } = usePreferences();
   const [brightness, setBrightness] = useState(100);
   const [playing, setPlaying] = useState(false);

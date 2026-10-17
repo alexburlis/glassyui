@@ -117,13 +117,16 @@ Files:
 - `registry/glassyui/glass-switch.tsx`
 - `registry/glassyui/lib/merge-refs.ts`
 - `registry/glassyui/lib/liquid-motion.ts`
+- `registry/glassyui/lib/refraction-map.ts`
+- `registry/glassyui/lib/slab-optics.ts`
+- `registry/glassyui/lib/use-refraction-filter.tsx`
 
 Package dependencies: `@radix-ui/react-switch`, `clsx`.
 
 Registry dependencies: `@glassyui/glass-provider`.
 
-Purpose: on/off switch whose thumb turns to clear glass and stretches while it
-travels.
+Purpose: on/off switch whose thumb turns to thick, clear glass and stretches
+while it travels, with the Chromium edge lens bending the track under it.
 
 ### `glass-slider`
 

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { preload } from 'react-dom';
 import { componentDocs } from '@/components/docs/component-docs-data';
 import { HOME_CARD, shareMetadata } from '@/lib/share';
 import { siteDescription as describeSite } from '@/lib/site-description';
@@ -38,6 +39,11 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Both appearances must be available before the visitor first changes the theme.
+  for (const theme of ['light', 'dark']) {
+    preload(`/wallpapers/vermilion-${theme}.svg`, { as: 'image' });
+  }
+
   return (
     <html lang="en" data-lg-theme={DEFAULT_THEME} data-lg-mode="clear" suppressHydrationWarning>
       <head>

@@ -2,7 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { GlassButton, GlassPanel } from '@/components/liquid';
+import { GlassButton } from '@/components/liquid/button';
+import { GlassPanel } from '@/components/liquid/panel';
 import { parseAnalyticsConfig, type AnalyticsConfig } from '@/lib/analytics/config';
 import {
   capturePage,
