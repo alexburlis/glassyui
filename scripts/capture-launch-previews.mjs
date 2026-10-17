@@ -9,7 +9,7 @@ if (!baseUrl || !['127.0.0.1', 'localhost'].includes(new URL(baseUrl).hostname))
 }
 
 // The launch guides show these three at full quality, as PNG. Link-preview cards come from
-// scripts/capture-share-cards.mjs.
+// scripts/capture-share-cards.mjs, and the README's artwork from scripts/build-readme-art.mjs.
 const LAUNCH_EXAMPLES = ['glass-scene', 'glass-lens', 'glass-dock'];
 
 await fs.mkdir('public/previews', { recursive: true });
@@ -51,14 +51,6 @@ const full = await browser.newContext({
 
 await full.addInitScript(preferences);
 
-const small = await browser.newContext({
-  viewport: { width: 1440, height: 1000 },
-  deviceScaleFactor: 1.5,
-  colorScheme: 'dark',
-});
-
-await small.addInitScript(preferences);
-
 try {
   for (const slug of LAUNCH_EXAMPLES) {
     const page = await open(full, `/components/${slug}`);
@@ -80,37 +72,8 @@ try {
 
     await page.close();
   }
-
-  // The desk the README opens with.
-  const home = await open(small, '/');
-  const desk = home.locator('.desk-screen');
-
-  // The keynote's opener covers the desk until it lands; a key press moves it on.
-  if (await home.evaluate(() => document.documentElement.hasAttribute('data-keynote-intro'))) {
-    await home.keyboard.press('Escape');
-  }
-
-  await home.waitForFunction(() => !document.documentElement.hasAttribute('data-keynote-intro'));
-  await desk.scrollIntoViewIfNeeded();
-  // A desk drawn without WebGL is not the desk the README promises, so this fails rather than
-  // captures whatever is there.
-  await desk.locator('xpath=..').locator('[data-lg-scene-renderer="webgl"]').waitFor();
-  await home.mouse.move(2, 2);
-  await home.waitForTimeout(800);
-  assert.equal(
-    await home.getByRole('region', { name: 'Analytics privacy settings' }).isVisible(),
-    false,
-    'the home preview must not show the privacy panel',
-  );
-  await desk.screenshot({
-    path: 'public/previews/desk.jpg',
-    animations: 'disabled',
-    quality: 86,
-    type: 'jpeg',
-  });
-  await home.close();
 } finally {
   await browser.close();
 }
 
-console.log(`Captured ${LAUNCH_EXAMPLES.length} launch previews and the desk in public/previews.`);
+console.log(`Captured ${LAUNCH_EXAMPLES.length} launch previews in public/previews.`);
