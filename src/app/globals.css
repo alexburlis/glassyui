@@ -2453,6 +2453,10 @@ main :focus {
 /* ------------------------------------------------------------------ docs */
 
 .docs-layout {
+  /* The article column: the width a page with an on-this-page list gets at full size. Text, code,
+     tables and figures share it, so their edges line up on every docs page. */
+  --docs-measure: 684px;
+
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr) 200px;
   gap: 56px;
@@ -2463,6 +2467,10 @@ main :focus {
 
 .docs-layout--no-toc {
   grid-template-columns: 220px minmax(0, 1fr);
+}
+
+.docs-layout--no-toc .docs-main {
+  max-width: var(--docs-measure);
 }
 
 .docs-sidebar {
@@ -2656,7 +2664,7 @@ main :focus {
 }
 
 .docs-page-header > p:not(.docs-eyebrow) {
-  max-width: 680px;
+  max-width: var(--docs-measure);
   color: var(--site-text-2);
   font-size: 19px;
   line-height: 1.42;
@@ -2706,11 +2714,21 @@ main :focus {
 }
 
 :is(.docs-section, .docs-platform-pane) > p {
-  max-width: 700px;
+  max-width: var(--docs-measure);
   margin-top: 12px;
   color: var(--site-text-2);
   line-height: 1.6;
   text-wrap: pretty;
+}
+
+/* Body text sets justified to the column, hyphenating where a long word would open a gap. A
+   phone's column is too narrow to justify evenly, so it stays ragged. */
+@media (min-width: 768px) {
+  :is(.docs-section, .docs-platform-pane) > p {
+    text-align: justify;
+    -webkit-hyphens: auto;
+    hyphens: auto;
+  }
 }
 
 /* Links in running text need a cue besides colour, so they keep a quiet underline. */
@@ -3344,7 +3362,7 @@ main :focus {
   grid-template-columns: auto minmax(0, 1fr);
   gap: 12px;
   justify-self: start;
-  max-width: 680px;
+  max-width: var(--docs-measure);
   margin-top: 2px;
   padding: 9px 14px;
   border: 1px solid var(--site-hairline);
@@ -3377,7 +3395,7 @@ main :focus {
 }
 
 .docs-api-part > p {
-  max-width: 700px;
+  max-width: var(--docs-measure);
   margin-top: 6px;
   color: var(--site-text-2);
   font-size: 15px;
