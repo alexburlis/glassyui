@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-command",
   "title": "Glass Command",
-  "description": "A searchable command list that filters as you type, alone or in a launcher dialog.",
+  "description": "A searchable command list that filters as you type, alone or in a dialog.",
   "dependencies": [
     "clsx",
     "@radix-ui/react-dialog",

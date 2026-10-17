@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-popover",
   "title": "Glass Popover",
-  "description": "Floating glass content anchored to the control that opens it.",
+  "description": "A glass popover anchored to the control that opens it.",
   "dependencies": [
     "clsx",
     "@radix-ui/react-popover"

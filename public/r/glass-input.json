@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-input",
   "title": "Glass Input",
-  "description": "A recessed glass text field with a label and an optional hint.",
+  "description": "A recessed glass text field with an optional label and hint.",
   "dependencies": [
     "clsx"
   ],

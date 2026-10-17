@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-checkbox",
   "title": "Glass Checkbox",
-  "description": "A glass checkbox whose mark draws itself in and out, with an indeterminate state.",
+  "description": "A glass checkbox with an optional label, description and indeterminate state.",
   "dependencies": [
     "@radix-ui/react-checkbox",
     "clsx"

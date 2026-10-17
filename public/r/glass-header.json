@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-header",
   "title": "Glass Header",
-  "description": "A floating glass capsule with a brand, navigation links and actions.",
+  "description": "A floating glass header with a brand, navigation links, actions and a compact menu.",
   "dependencies": [
     "clsx"
   ],

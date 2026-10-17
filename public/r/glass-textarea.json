@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-textarea",
   "title": "Glass Textarea",
-  "description": "A recessed glass field for longer text that can grow as you type.",
+  "description": "A recessed glass text area that can grow with its text.",
   "dependencies": [
     "clsx"
   ],

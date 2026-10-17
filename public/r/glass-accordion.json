@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-accordion",
   "title": "Glass Accordion",
-  "description": "Sections that expand and collapse on glass, one at a time or several.",
+  "description": "Collapsible glass sections that open one at a time or several at once.",
   "dependencies": [
     "clsx",
     "@radix-ui/react-accordion"

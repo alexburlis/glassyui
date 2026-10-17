@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-skeleton",
   "title": "Glass Skeleton",
-  "description": "A quiet glass placeholder with a slow sheen, shaped like what will replace it.",
+  "description": "A glass placeholder block, circle or set of text lines shown while content loads.",
   "dependencies": [
     "clsx"
   ],

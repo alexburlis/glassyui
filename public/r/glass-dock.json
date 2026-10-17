@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-dock",
   "title": "Glass Dock",
-  "description": "A row of app icons on a glass shelf that name themselves on hover.",
+  "description": "A row of app icons on a glass shelf, with labels on hover and focus.",
   "dependencies": [
     "clsx",
     "@radix-ui/react-slot"

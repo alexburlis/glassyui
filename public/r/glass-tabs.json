@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-tabs",
   "title": "Glass Tabs",
-  "description": "Tabs whose glass bubble stretches like a drop on its way to the selected tab.",
+  "description": "Tabs on a glass pill, with one indicator that moves to the selected tab.",
   "dependencies": [
     "clsx",
     "@radix-ui/react-tabs"

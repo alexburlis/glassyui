@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-laptop",
   "title": "Glass Laptop",
-  "description": "A CSS 3D laptop mockup whose lid opens onto your screenshot or React screen.",
+  "description": "A CSS 3D laptop mockup whose screen shows your screenshot or React content.",
   "dependencies": [
     "clsx"
   ],

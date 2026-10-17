@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-menu",
   "title": "Glass Menu",
-  "description": "A dropdown menu on glass with shortcuts, checkbox and radio items, and submenus.",
+  "description": "A glass dropdown menu with shortcuts, checkbox and radio items, and submenus.",
   "dependencies": [
     "clsx",
     "@radix-ui/react-dropdown-menu"

@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-scene",
   "title": "Glass Scene",
-  "description": "Draws the glass inside it as real bevelled glass that bends its backdrop and melts together.",
+  "description": "A WebGL2 canvas that refracts a backdrop image through the glass components inside it.",
   "dependencies": [
     "clsx"
   ],

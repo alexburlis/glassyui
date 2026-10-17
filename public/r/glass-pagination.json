@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-pagination",
   "title": "Glass Pagination",
-  "description": "Numbered pages with previous and next, folding long runs into an ellipsis.",
+  "description": "Numbered page buttons with previous and next, folding long runs into an ellipsis.",
   "dependencies": [
     "clsx"
   ],

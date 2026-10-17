@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-kbd",
   "title": "Glass Kbd",
-  "description": "A keycap with a lit top edge, for shortcuts in menus, hints and docs.",
+  "description": "A keycap for showing keyboard shortcuts in menus, hints and docs.",
   "dependencies": [
     "clsx"
   ],

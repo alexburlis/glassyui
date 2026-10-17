@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-dialog",
   "title": "Glass Dialog",
-  "description": "A modal on raised glass that holds focus until it closes.",
+  "description": "A modal glass dialog with an overlay, a focus trap and a close button.",
   "dependencies": [
     "clsx",
     "@radix-ui/react-dialog"

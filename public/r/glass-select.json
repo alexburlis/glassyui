@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-select",
   "title": "Glass Select",
-  "description": "A recessed trigger that opens a slab of glass to choose from.",
+  "description": "A select field whose options open on a raised glass panel.",
   "dependencies": [
     "clsx",
     "@radix-ui/react-select"

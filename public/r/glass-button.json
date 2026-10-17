@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-button",
   "title": "Glass Button",
-  "description": "A slab of glass resting just above the page that sets down when pressed and lights up where you press.",
+  "description": "A glass button with four variants, three sizes and an asChild mode for links.",
   "dependencies": [
     "@radix-ui/react-slot",
     "clsx"

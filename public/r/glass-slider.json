@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-slider",
   "title": "Glass Slider",
-  "description": "A slider whose glass thumb stretches with your drag, for one value or a range.",
+  "description": "A glass slider for one value or a range, with one named thumb per value.",
   "dependencies": [
     "@radix-ui/react-slider",
     "clsx"

@@ -7,7 +7,7 @@
       "name": "glass-provider",
       "type": "registry:ui",
       "title": "Glass Provider",
-      "description": "Sets the theme and the accessibility preferences every glass component follows.",
+      "description": "Sets the theme and accessibility preferences that every Glassy UI component follows.",
       "meta": {
         "sourceModules": ["provider", "liquid-filters"]
       },
@@ -38,7 +38,7 @@
       "name": "glass-surface",
       "type": "registry:ui",
       "title": "Glass Surface",
-      "description": "The glass material on its own: frost, rim light and refraction for your own components.",
+      "description": "The glass material as a plain div, for building your own glass components.",
       "meta": {
         "sourceModules": ["surface"]
       },
@@ -81,7 +81,7 @@
       "name": "glass-button",
       "type": "registry:ui",
       "title": "Glass Button",
-      "description": "A slab of glass resting just above the page that sets down when pressed and lights up where you press.",
+      "description": "A glass button with four variants, three sizes and an asChild mode for links.",
       "meta": {
         "sourceModules": ["button"]
       },
@@ -124,7 +124,7 @@
       "name": "glass-panel",
       "type": "registry:ui",
       "title": "Glass Panel",
-      "description": "Glass cards, panels and pills for anything that floats above your content.",
+      "description": "A glass container in a panel, card or pill shape.",
       "meta": {
         "sourceModules": ["panel"]
       },
@@ -142,7 +142,7 @@
       "name": "glass-header",
       "type": "registry:ui",
       "title": "Glass Header",
-      "description": "A floating glass capsule with a brand, navigation links and actions.",
+      "description": "A floating glass header with a brand, navigation links, actions and a compact menu.",
       "meta": {
         "sourceModules": ["header"]
       },
@@ -175,7 +175,7 @@
       "name": "glass-input",
       "type": "registry:ui",
       "title": "Glass Input",
-      "description": "A recessed glass text field with a label and an optional hint.",
+      "description": "A recessed glass text field with an optional label and hint.",
       "meta": {
         "sourceModules": ["input"]
       },
@@ -193,7 +193,7 @@
       "name": "glass-checkbox",
       "type": "registry:ui",
       "title": "Glass Checkbox",
-      "description": "A glass checkbox whose mark draws itself in and out, with an indeterminate state.",
+      "description": "A glass checkbox with an optional label, description and indeterminate state.",
       "meta": {
         "sourceModules": ["checkbox"]
       },
@@ -211,7 +211,7 @@
       "name": "glass-radio-group",
       "type": "registry:ui",
       "title": "Glass Radio Group",
-      "description": "Options where exactly one is chosen, with a dot that pops in and shrinks away.",
+      "description": "A group of glass radio buttons where exactly one option is chosen.",
       "meta": {
         "sourceModules": ["radio-group"]
       },
@@ -229,7 +229,7 @@
       "name": "glass-textarea",
       "type": "registry:ui",
       "title": "Glass Textarea",
-      "description": "A recessed glass field for longer text that can grow as you type.",
+      "description": "A recessed glass text area that can grow with its text.",
       "meta": {
         "sourceModules": ["textarea"]
       },
@@ -252,7 +252,7 @@
       "name": "glass-select",
       "type": "registry:ui",
       "title": "Glass Select",
-      "description": "A recessed trigger that opens a slab of glass to choose from.",
+      "description": "A select field whose options open on a raised glass panel.",
       "meta": {
         "sourceModules": ["select"]
       },
@@ -270,7 +270,7 @@
       "name": "glass-tabs",
       "type": "registry:ui",
       "title": "Glass Tabs",
-      "description": "Tabs whose glass bubble stretches like a drop on its way to the selected tab.",
+      "description": "Tabs on a glass pill, with one indicator that moves to the selected tab.",
       "meta": {
         "sourceModules": ["tabs"]
       },
@@ -293,7 +293,7 @@
       "name": "glass-dialog",
       "type": "registry:ui",
       "title": "Glass Dialog",
-      "description": "A modal on raised glass that holds focus until it closes.",
+      "description": "A modal glass dialog with an overlay, a focus trap and a close button.",
       "meta": {
         "sourceModules": ["dialog"]
       },
@@ -311,7 +311,7 @@
       "name": "glass-popover",
       "type": "registry:ui",
       "title": "Glass Popover",
-      "description": "Floating glass content anchored to the control that opens it.",
+      "description": "A glass popover anchored to the control that opens it.",
       "meta": {
         "sourceModules": ["popover"]
       },
@@ -347,7 +347,7 @@
       "name": "glass-toast",
       "type": "registry:ui",
       "title": "Glass Toast",
-      "description": "A glass notification for brief updates, announced to screen readers.",
+      "description": "A glass notification for brief updates that screen readers announce.",
       "meta": {
         "sourceModules": ["toast"]
       },
@@ -365,7 +365,7 @@
       "name": "glass-accordion",
       "type": "registry:ui",
       "title": "Glass Accordion",
-      "description": "Sections that expand and collapse on glass, one at a time or several.",
+      "description": "Collapsible glass sections that open one at a time or several at once.",
       "meta": {
         "sourceModules": ["accordion"]
       },
@@ -383,7 +383,7 @@
       "name": "glass-switch",
       "type": "registry:ui",
       "title": "Glass Switch",
-      "description": "An on/off switch whose knob turns to glass and stretches as it slides.",
+      "description": "A glass on/off switch in two sizes.",
       "meta": {
         "sourceModules": ["switch"]
       },
@@ -411,7 +411,7 @@
       "name": "glass-slider",
       "type": "registry:ui",
       "title": "Glass Slider",
-      "description": "A slider whose glass thumb stretches with your drag, for one value or a range.",
+      "description": "A glass slider for one value or a range, with one named thumb per value.",
       "meta": {
         "sourceModules": ["slider"]
       },
@@ -439,7 +439,7 @@
       "name": "glass-segmented-control",
       "type": "registry:ui",
       "title": "Glass Segmented Control",
-      "description": "A single-choice control whose glass bubble stretches between options and can be dragged.",
+      "description": "A single-choice glass control for two to six options, with a draggable selection.",
       "meta": {
         "sourceModules": ["segmented-control"]
       },
@@ -485,7 +485,7 @@
       "name": "glass-progress",
       "type": "registry:ui",
       "title": "Glass Progress",
-      "description": "A glass track with a fill that slides to its value, or sweeps when the length is unknown.",
+      "description": "A glass progress bar for known values, with a sweeping state for unknown lengths.",
       "meta": {
         "sourceModules": ["progress"]
       },
@@ -503,7 +503,7 @@
       "name": "glass-spinner",
       "type": "registry:ui",
       "title": "Glass Spinner",
-      "description": "A ring with a fading tail, for waiting on something short.",
+      "description": "A small spinning ring that tells screen readers something is loading.",
       "meta": {
         "sourceModules": ["spinner"]
       },
@@ -521,7 +521,7 @@
       "name": "glass-skeleton",
       "type": "registry:ui",
       "title": "Glass Skeleton",
-      "description": "A quiet glass placeholder with a slow sheen, shaped like what will replace it.",
+      "description": "A glass placeholder block, circle or set of text lines shown while content loads.",
       "meta": {
         "sourceModules": ["skeleton"]
       },
@@ -539,7 +539,7 @@
       "name": "glass-alert",
       "type": "registry:ui",
       "title": "Glass Alert",
-      "description": "A short message set in tinted glass, with four tones and an optional dismiss.",
+      "description": "A tinted glass message with four tones, an icon and an optional dismiss button.",
       "meta": {
         "sourceModules": ["alert"]
       },
@@ -557,7 +557,7 @@
       "name": "glass-avatar",
       "type": "registry:ui",
       "title": "Glass Avatar",
-      "description": "A round photo that falls back to coloured initials, with a presence dot and stacked groups.",
+      "description": "A round photo that falls back to initials, with a presence dot and stacked groups.",
       "meta": {
         "sourceModules": ["avatar"]
       },
@@ -575,7 +575,7 @@
       "name": "glass-kbd",
       "type": "registry:ui",
       "title": "Glass Kbd",
-      "description": "A keycap with a lit top edge, for shortcuts in menus, hints and docs.",
+      "description": "A keycap for showing keyboard shortcuts in menus, hints and docs.",
       "meta": {
         "sourceModules": ["kbd"]
       },
@@ -611,7 +611,7 @@
       "name": "glass-breadcrumb",
       "type": "registry:ui",
       "title": "Glass Breadcrumb",
-      "description": "The trail to the current page, with links that lift on hover and folded steps in a menu.",
+      "description": "A breadcrumb trail to the current page, with an ellipsis for folded steps.",
       "meta": {
         "sourceModules": ["breadcrumb"]
       },
@@ -629,7 +629,7 @@
       "name": "glass-pagination",
       "type": "registry:ui",
       "title": "Glass Pagination",
-      "description": "Numbered pages with previous and next, folding long runs into an ellipsis.",
+      "description": "Numbered page buttons with previous and next, folding long runs into an ellipsis.",
       "meta": {
         "sourceModules": ["pagination"]
       },
@@ -647,7 +647,7 @@
       "name": "glass-sheet",
       "type": "registry:ui",
       "title": "Glass Sheet",
-      "description": "A glass panel that slides in from an edge. Bottom sheets drag down to dismiss.",
+      "description": "A modal glass panel that slides in from a screen edge; bottom sheets drag down to close.",
       "meta": {
         "sourceModules": ["sheet"]
       },
@@ -665,7 +665,7 @@
       "name": "glass-menu",
       "type": "registry:ui",
       "title": "Glass Menu",
-      "description": "A dropdown menu on glass with shortcuts, checkbox and radio items, and submenus.",
+      "description": "A glass dropdown menu with shortcuts, checkbox and radio items, and submenus.",
       "meta": {
         "sourceModules": ["menu"]
       },
@@ -683,7 +683,7 @@
       "name": "glass-command",
       "type": "registry:ui",
       "title": "Glass Command",
-      "description": "A searchable command list that filters as you type, alone or in a launcher dialog.",
+      "description": "A searchable command list that filters as you type, alone or in a dialog.",
       "meta": {
         "sourceModules": ["command"]
       },
@@ -701,7 +701,7 @@
       "name": "glass-lens",
       "type": "registry:ui",
       "title": "Glass Lens",
-      "description": "A draggable magnifier whose glass rim bends the content beneath it.",
+      "description": "A draggable magnifier with a glass rim that bends the content beneath it.",
       "meta": {
         "sourceModules": ["lens"]
       },
@@ -719,7 +719,7 @@
       "name": "glass-scene",
       "type": "registry:ui",
       "title": "Glass Scene",
-      "description": "Draws the glass inside it as real bevelled glass that bends its backdrop and melts together.",
+      "description": "A WebGL2 canvas that refracts a backdrop image through the glass components inside it.",
       "meta": {
         "sourceModules": ["scene"]
       },
@@ -762,7 +762,7 @@
       "name": "glass-laptop",
       "type": "registry:ui",
       "title": "Glass Laptop",
-      "description": "A CSS 3D laptop mockup whose lid opens onto your screenshot or React screen.",
+      "description": "A CSS 3D laptop mockup whose screen shows your screenshot or React content.",
       "meta": {
         "sourceModules": ["laptop"]
       },
@@ -784,7 +784,7 @@
       "name": "glass-phone-duo",
       "type": "registry:ui",
       "title": "Glass Phone Duo",
-      "description": "A folding glass phone with flat screen content, an outer display, and a smooth titanium frame.",
+      "description": "A WebGL2 folding phone mockup with your screenshots on both displays.",
       "meta": {
         "sourceModules": ["phone-duo"]
       },

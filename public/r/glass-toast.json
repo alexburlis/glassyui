@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-toast",
   "title": "Glass Toast",
-  "description": "A glass notification for brief updates, announced to screen readers.",
+  "description": "A glass notification for brief updates that screen readers announce.",
   "dependencies": [
     "clsx",
     "@radix-ui/react-toast"

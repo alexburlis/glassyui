@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-lens",
   "title": "Glass Lens",
-  "description": "A draggable magnifier whose glass rim bends the content beneath it.",
+  "description": "A draggable magnifier with a glass rim that bends the content beneath it.",
   "dependencies": [
     "clsx"
   ],

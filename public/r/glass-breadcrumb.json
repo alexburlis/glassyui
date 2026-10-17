@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-breadcrumb",
   "title": "Glass Breadcrumb",
-  "description": "The trail to the current page, with links that lift on hover and folded steps in a menu.",
+  "description": "A breadcrumb trail to the current page, with an ellipsis for folded steps.",
   "dependencies": [
     "@radix-ui/react-slot",
     "clsx"

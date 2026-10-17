@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-segmented-control",
   "title": "Glass Segmented Control",
-  "description": "A single-choice control whose glass bubble stretches between options and can be dragged.",
+  "description": "A single-choice glass control for two to six options, with a draggable selection.",
   "dependencies": [
     "clsx",
     "@radix-ui/react-radio-group"

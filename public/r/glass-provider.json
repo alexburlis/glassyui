@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-provider",
   "title": "Glass Provider",
-  "description": "Sets the theme and the accessibility preferences every glass component follows.",
+  "description": "Sets the theme and accessibility preferences that every Glassy UI component follows.",
   "files": [
     {
       "path": "registry/glassyui/glass-provider.tsx",

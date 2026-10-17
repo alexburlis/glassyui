@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-surface",
   "title": "Glass Surface",
-  "description": "The glass material on its own: frost, rim light and refraction for your own components.",
+  "description": "The glass material as a plain div, for building your own glass components.",
   "dependencies": [
     "clsx"
   ],

@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-radio-group",
   "title": "Glass Radio Group",
-  "description": "Options where exactly one is chosen, with a dot that pops in and shrinks away.",
+  "description": "A group of glass radio buttons where exactly one option is chosen.",
   "dependencies": [
     "@radix-ui/react-radio-group",
     "clsx"

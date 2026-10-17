@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-switch",
   "title": "Glass Switch",
-  "description": "An on/off switch whose knob turns to glass and stretches as it slides.",
+  "description": "A glass on/off switch in two sizes.",
   "dependencies": [
     "@radix-ui/react-switch",
     "clsx"

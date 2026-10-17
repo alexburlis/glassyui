@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-panel",
   "title": "Glass Panel",
-  "description": "Glass cards, panels and pills for anything that floats above your content.",
+  "description": "A glass container in a panel, card or pill shape.",
   "dependencies": [
     "clsx"
   ],

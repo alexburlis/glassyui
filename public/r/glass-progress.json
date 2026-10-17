@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-progress",
   "title": "Glass Progress",
-  "description": "A glass track with a fill that slides to its value, or sweeps when the length is unknown.",
+  "description": "A glass progress bar for known values, with a sweeping state for unknown lengths.",
   "dependencies": [
     "clsx"
   ],

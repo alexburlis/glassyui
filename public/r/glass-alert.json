@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-alert",
   "title": "Glass Alert",
-  "description": "A short message set in tinted glass, with four tones and an optional dismiss.",
+  "description": "A tinted glass message with four tones, an icon and an optional dismiss button.",
   "dependencies": [
     "clsx"
   ],
