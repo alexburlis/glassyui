@@ -26,7 +26,7 @@ if (!baseUrl) {
 
 const engines = (process.env.GLASS_ENGINES ?? 'chromium,webkit,firefox').split(',');
 
-// The WebGL scene, liquid control motion, or the preference switch's own motion.
+// The WebGL scene, backdrop loading, liquid control motion, or the preference switch's own motion.
 const suites = new Set((process.env.GLASS_SUITES ?? 'scene,motion').split(','));
 
 const supportedSuites = new Set(['scene', 'contracts', 'preferences', 'motion']);
@@ -2156,47 +2156,64 @@ async function checkReduceMotionSwitch(engine, browser, results) {
     const page = await context.newPage();
     const knob = '.bento-tile--settings .bento-switch:last-child [role="switch"]';
 
+    // The knob slides when a translate transition runs on it to its end, so the flip records
+    // the knob's own transition events instead of its position each frame: a headless engine
+    // can paint too few frames to sample a short slide. The record opens before the click and
+    // closes once the slide has ended, however long the click takes to land.
     const flip = async () => {
-      const sampling = page.evaluate(
-        (target) =>
-          new Promise((resolve) => {
-            const root = document.querySelector(target);
-            const thumb = root.querySelector('.lg-switch-thumb');
-            const positions = [];
-            const start = performance.now();
+      await page.evaluate((target) => {
+        const root = document.querySelector(target);
+        const thumb = root.querySelector('.lg-switch-thumb');
 
-            const tick = (now) => {
-              const box = thumb.getBoundingClientRect();
-              const track = root.getBoundingClientRect();
+        // Translation, independent of the knob's symmetrical stretch (covered by L6). Its
+        // left edge moves even when its centre is still.
+        const offset = () => {
+          const box = thumb.getBoundingClientRect();
+          const track = root.getBoundingClientRect();
 
-              // Track translation, independent of the knob's symmetrical stretch
-              // (covered by L6). Its left edge moves even when its centre is still.
-              positions.push(box.left + box.width / 2 - (track.left + track.width / 2));
+          return box.left + box.width / 2 - (track.left + track.width / 2);
+        };
 
-              if (now - start < 700) requestAnimationFrame(tick);
-              else resolve(positions);
+        const from = offset();
+        const slides = [];
+        let cancelled = 0;
+
+        const onEnd = (event) => {
+          if (event.target === thumb && event.propertyName === 'translate')
+            slides.push(Math.round(event.elapsedTime * 1000));
+        };
+
+        const onCancel = (event) => {
+          if (event.target === thumb && event.propertyName === 'translate') cancelled += 1;
+        };
+
+        thumb.addEventListener('transitionend', onEnd);
+        thumb.addEventListener('transitioncancel', onCancel);
+
+        window.__knobFlip = {
+          settled: () => slides.length + cancelled > 0,
+          finish: () => {
+            thumb.removeEventListener('transitionend', onEnd);
+            thumb.removeEventListener('transitioncancel', onCancel);
+
+            return {
+              travel: Math.abs(offset() - from),
+              slides,
+              cancelled,
+              sameKnob: root.querySelector('.lg-switch-thumb') === thumb,
             };
+          },
+        };
+      }, knob);
 
-            requestAnimationFrame(tick);
-          }),
-        knob,
-      );
-
-      await page.waitForTimeout(60);
       await page.locator(knob).click();
 
-      const positions = await sampling;
-      const travel = Math.max(...positions) - Math.min(...positions);
+      // A knob that snaps never settles, so the wait ends on its own and the record shows it.
+      await page
+        .waitForFunction(() => window.__knobFlip.settled(), null, { polling: 50, timeout: 3_000 })
+        .catch(() => {});
 
-      const jump = Math.max(
-        ...positions.slice(1).map((x, index) => Math.abs(x - positions[index])),
-      );
-
-      const steps = positions.filter(
-        (x, index) => index > 0 && Math.abs(x - positions[index - 1]) > 0.3,
-      );
-
-      return { travel, jump, steps: steps.length };
+      return page.evaluate(() => window.__knobFlip.finish());
     };
 
     await run(engine, 'L11 the Reduce motion switch animates both ways', results, async () => {
@@ -2235,7 +2252,11 @@ async function checkReduceMotionSwitch(engine, browser, results) {
           `the knob must travel turning motion ${direction} (${JSON.stringify(outcome)})`,
         );
         assert.ok(
-          outcome.steps >= 4 && outcome.jump < outcome.travel * 0.6,
+          outcome.sameKnob,
+          `the knob must stay mounted turning motion ${direction} (${JSON.stringify(outcome)})`,
+        );
+        assert.ok(
+          outcome.cancelled === 0 && outcome.slides.some((duration) => duration >= 100),
           `the knob must slide, not snap, turning motion ${direction} (${JSON.stringify(outcome)})`,
         );
       }
@@ -3039,6 +3060,9 @@ try {
 
     try {
       if (suites.has('scene')) await checkScene(engine, browser, statsPage, results);
+
+      if (suites.has('backdrops') && !suites.has('scene'))
+        await checkBackdropRequests(engine, browser, results);
 
       if (suites.has('scene') || suites.has('contracts'))
         await checkAlphaContract(engine, browser, statsPage, results);

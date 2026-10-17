@@ -13,12 +13,11 @@ import {
   GlassCommandList,
   GlassCommandSeparator,
   GlassCommandShortcut,
-  GlassKbd,
-  GlassKbdGroup,
-  usePreferences,
-} from '@/components/liquid';
+} from '@/components/liquid/command';
+import { GlassKbd, GlassKbdGroup } from '@/components/liquid/kbd';
+import { usePreferences } from '@/components/liquid/provider';
 import { PRO_ORIGIN, REPOSITORY } from '@/lib/site-links';
-import { crossfadeTheme } from '@/lib/crossfade-theme';
+import { changeTheme } from '@/lib/change-theme';
 
 type Entry = { category?: string; description: string; href: string; title: string };
 
@@ -244,7 +243,7 @@ export function SiteSearch() {
                 keywords={['appearance', 'dark', 'light', 'mode']}
                 onSelect={() => {
                   setOpen(false);
-                  crossfadeTheme(() => setPreferences({ theme: light ? 'dark' : 'light' }));
+                  changeTheme(() => setPreferences({ theme: light ? 'dark' : 'light' }));
                 }}
                 value="Switch appearance action"
               >

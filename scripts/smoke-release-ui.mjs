@@ -2726,7 +2726,7 @@ async function assertDefaultTheme() {
 
           // Choosing dark with the header toggle sticks, including before scripts run after a reload.
           await landHome(page);
-          // With motion the page crossfades into the new theme, which lands on the next frame.
+          // The chosen theme also paints before a reload's scripts run.
           await chooseTheme('dark');
           assert.equal(await theme(), 'dark', `${label}: the toggle must switch to dark`);
           assert.deepEqual(
@@ -2740,7 +2740,7 @@ async function assertDefaultTheme() {
           assert.equal(await theme(), 'dark', `${label}: hydration must keep a saved dark`);
 
           await landHome(page);
-          // With motion the page crossfades into the new theme, which lands on the next frame.
+          // Switching back preserves the same immediate theme contract.
           await chooseTheme('light');
           assert.equal(await theme(), 'light', `${label}: the toggle must switch back to light`);
         } finally {

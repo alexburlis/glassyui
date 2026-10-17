@@ -53,10 +53,11 @@ export type PhoneBody = {
 type PhoneFrontProps = {
   body: PhoneBody;
   children: ReactNode;
+  visible: boolean;
 };
 
 /** The phone's front at any size: the black border and the screen, inside the body's rim. */
-export function PhoneFront({ body, children }: PhoneFrontProps) {
+export function PhoneFront({ body, children, visible }: PhoneFrontProps) {
   const edge = body.width * EDGE;
   const inset = screenInset(body.width);
 
@@ -82,7 +83,7 @@ export function PhoneFront({ body, children }: PhoneFrontProps) {
       >
         {children}
       </div>
-      <ScreenReflection body={body} face="phone" inset={edge} />
+      <ScreenReflection body={body} face="phone" inset={edge} visible={visible} />
     </div>
   );
 }

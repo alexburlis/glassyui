@@ -75,6 +75,14 @@
   --site-syntax-attr: #a44122;
 }
 
+/* Theme colours commit together; hover transitions resume as soon as the change is painted. */
+:root[data-site-theme-changing],
+:root[data-site-theme-changing] *,
+:root[data-site-theme-changing] *::before,
+:root[data-site-theme-changing] *::after {
+  transition: none !important;
+}
+
 /* ------------------------------------------------------------------ base */
 
 /* Scrollbars stay thin and quiet: a faint thumb on a clear track. The docs sidebar draws the
@@ -4525,13 +4533,6 @@ main :focus {
 
   :root:not([data-lg-reduce-motion='1']) .docs-code-header button[data-state='copied'] {
     animation: site-confirm 420ms var(--lg-spring);
-  }
-
-  /* The page crossfades into a new theme. */
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
-    animation-duration: 280ms;
-    animation-timing-function: ease-out;
   }
 }
 

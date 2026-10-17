@@ -1080,6 +1080,21 @@
           "path": "registry/glassyui/lib/liquid-motion.ts",
           "type": "registry:lib",
           "target": "components/glassyui/lib/liquid-motion.ts"
+        },
+        {
+          "path": "registry/glassyui/lib/refraction-map.ts",
+          "type": "registry:lib",
+          "target": "components/glassyui/lib/refraction-map.ts"
+        },
+        {
+          "path": "registry/glassyui/lib/slab-optics.ts",
+          "type": "registry:lib",
+          "target": "components/glassyui/lib/slab-optics.ts"
+        },
+        {
+          "path": "registry/glassyui/lib/use-refraction-filter.tsx",
+          "type": "registry:hook",
+          "target": "components/glassyui/lib/use-refraction-filter.tsx"
         }
       ],
       "meta": {

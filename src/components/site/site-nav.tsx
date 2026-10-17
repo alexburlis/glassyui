@@ -3,12 +3,14 @@
 import clsx from 'clsx';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { GlassButton, GlassHeader, usePreferences } from '@/components/liquid';
+import { GlassButton } from '@/components/liquid/button';
+import { GlassHeader } from '@/components/liquid/header';
+import { usePreferences } from '@/components/liquid/provider';
 import { PRO_ORIGIN, GITHUB } from '@/lib/site-links';
 import { BrandMark } from './app-icons';
 import { GithubMark } from './github-mark';
 import { SiteSearch } from './site-search';
-import { crossfadeTheme } from '@/lib/crossfade-theme';
+import { changeTheme } from '@/lib/change-theme';
 
 const NAV_LINKS = [
   { href: '/components', label: 'Components' },
@@ -50,7 +52,7 @@ function ThemeToggle({ className }: { className?: string }) {
   const toggleTheme = () => {
     const light = document.documentElement.getAttribute('data-lg-theme') === 'light';
 
-    crossfadeTheme(() => setPreferences({ theme: light ? 'dark' : 'light' }));
+    changeTheme(() => setPreferences({ theme: light ? 'dark' : 'light' }));
   };
 
   return (

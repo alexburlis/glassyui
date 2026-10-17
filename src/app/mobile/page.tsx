@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { CopyCodeBlock } from '@/components/docs/copy-code-block';
 import { expoComponentsJson } from '@/components/docs/expo-setup';
-import { GlassButton } from '@/components/liquid';
+import { GlassButton } from '@/components/liquid/button';
 import { GithubMark } from '@/components/site/github-mark';
 import { installCommand } from '@/lib/install-command';
 import { MobilePhones } from '@/components/site/mobile-phones';
