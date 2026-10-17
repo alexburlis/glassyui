@@ -1384,7 +1384,8 @@
     .lg-button__distortion,
     .lg-input,
     .lg-accordion-trigger,
-    .lg-dialog-overlay {
+    .lg-dialog-overlay,
+    .lg-switch-thumb {
       -webkit-backdrop-filter: none !important;
       backdrop-filter: none !important;
     }
@@ -3868,6 +3869,9 @@
   }
 
   .lg-switch-thumb {
+    /* The held knob's lens is clear glass, with no frost of its own. */
+    --lg-lens-blur: 0;
+
     display: block;
     flex: none;
     width: var(--lg-switch-thumb-width);
@@ -3877,11 +3881,14 @@
     box-shadow: var(--lg-knob-shadow);
     pointer-events: none;
     translate: 0 0;
+    /* The lens stays until the face has turned white again. */
     transition:
       translate 420ms var(--lg-spring),
       scale 320ms var(--lg-spring),
       background-color 180ms ease,
-      box-shadow 180ms ease;
+      box-shadow 180ms ease,
+      backdrop-filter 0s 180ms;
+    transition-behavior: allow-discrete;
   }
 
   .lg-switch[data-state='checked'] .lg-switch-thumb {
@@ -3892,18 +3899,29 @@
       0;
   }
 
-  /* Held, the knob swells into a clear lens over the track. After a flip it
-     stays glass while it slides, stretching like a drop and landing with a
+  /* Held, the knob swells into a clear lens of thick glass over the track: a
+     dark line where its edge turns the light aside, a broad bevel catching it
+     on the lit side and a fainter one on the far side. After a flip it stays
+     glass while it slides, stretching like a drop and landing with a
      squash. */
   .lg-switch:is(:active, [data-lg-moving]):not([data-disabled]) .lg-switch-thumb {
     background: rgb(255 255 255 / 0.16);
     box-shadow:
-      inset 0 0 0 0.5px rgb(255 255 255 / 0.55),
-      inset 1.5px 2px 1px -1px rgb(255 255 255 / 0.9),
-      inset -1.5px -2px 1px -1px rgb(255 255 255 / 0.55),
-      inset 0 0 8px rgb(255 255 255 / 0.28),
-      0 4px 14px rgb(0 0 0 / 0.2);
+      inset 0 0 0 0.5px rgb(255 255 255 / 0.75),
+      inset 0 0 0 1.5px rgb(0 0 0 / 0.1),
+      inset 3px 4px 2.5px -2px rgb(255 255 255 / 0.9),
+      inset -3px -4px 2.5px -2px rgb(255 255 255 / 0.55),
+      inset 0 0 14px rgb(255 255 255 / 0.32),
+      0 6px 16px rgb(0 0 0 / 0.22),
+      0 1px 3px rgb(0 0 0 / 0.12);
     scale: 1.3 1.4;
+    transition-delay: 0s;
+  }
+
+  /* In Chromium the glass is a lens that bends the track under its rim. */
+  .lg-switch:is(:active, [data-lg-moving]):not([data-disabled])
+    .lg-switch-thumb[data-lg-lens='active'] {
+    backdrop-filter: var(--lg-lens-filter);
   }
 
   .lg-switch[data-lg-moving]:not([data-disabled]) .lg-switch-thumb {
