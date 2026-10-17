@@ -2576,6 +2576,27 @@ main :focus {
   color: var(--site-text);
 }
 
+/* A hairline rail runs beside the sections; the one being read is marked on it. */
+.docs-toc-links {
+  display: grid;
+  border-left: 1px solid var(--site-hairline);
+}
+
+.docs-toc-links a {
+  margin-left: -1px;
+  padding: 4px 0 4px 12px;
+  border-left: 1px solid transparent;
+  transition:
+    color 150ms ease,
+    border-color 150ms ease;
+}
+
+.docs-toc-links a[aria-current='location'] {
+  border-left-color: var(--site-text);
+  color: var(--site-text);
+  font-weight: 500;
+}
+
 /* Ways to help, under the table of contents: each one opens a prefilled GitHub form. */
 .docs-contribute {
   display: grid;
@@ -3581,20 +3602,41 @@ main :focus {
 }
 
 .docs-pagination {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   margin-top: 72px;
-  padding-top: 24px;
-  border-top: 1px solid var(--site-hairline);
 }
 
+/* Each neighbour is a card: a small label over the component's name. */
 .docs-pagination a {
-  color: var(--site-link);
+  display: grid;
+  gap: 2px;
+  padding: 14px 18px;
+  border: 1px solid var(--site-hairline);
+  border-radius: 14px;
+  color: var(--site-text);
+  font-size: 15px;
+  font-weight: 600;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.docs-pagination a[rel='next'] {
+  grid-column: 2;
+  text-align: right;
 }
 
 .docs-pagination a:hover {
-  text-decoration: underline;
+  border-color: color-mix(in srgb, var(--site-text) 20%, transparent);
+  background: var(--site-fill);
+}
+
+.docs-pagination a > span {
+  color: var(--site-text-3);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .docs-mobile-nav {

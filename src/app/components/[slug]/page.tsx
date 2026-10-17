@@ -296,14 +296,18 @@ export default async function ComponentPage({ params }: ComponentPageProps) {
 
         <nav className="docs-pagination" aria-label="Component pagination">
           {adjacent.previous ? (
-            <Link href={adjacent.previous.route ?? '/components'}>
-              Previous: {adjacent.previous.name}
+            <Link href={adjacent.previous.route ?? '/components'} rel="prev">
+              <span>Previous</span>
+              {adjacent.previous.name}
             </Link>
           ) : (
             <span />
           )}
           {adjacent.next ? (
-            <Link href={adjacent.next.route ?? '/components'}>Next: {adjacent.next.name}</Link>
+            <Link href={adjacent.next.route ?? '/components'} rel="next">
+              <span>Next</span>
+              {adjacent.next.name}
+            </Link>
           ) : (
             <span />
           )}

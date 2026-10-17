@@ -6,6 +6,7 @@ import { nativeComponentDocs, getNativeComponentDoc } from '@/lib/native-compone
 import { componentCategories, componentDocs } from './component-docs-data';
 import { DocsMobileNav, DocsNavLink, type DocsMobileNavGroup } from './docs-mobile-nav';
 import { DocsSidebarCurrent } from './docs-sidebar-current';
+import { DocsTocLinks } from './docs-toc-links';
 
 type DocsShellProps = {
   children: ReactNode;
@@ -107,11 +108,7 @@ export function DocsShell({ children, contribute, current, rail, toc = [] }: Doc
         {hasToc ? (
           <aside className="docs-toc" aria-label="On this page">
             <p>On this page</p>
-            {toc.map((item) => (
-              <a href={item.href} key={item.href}>
-                {item.title}
-              </a>
-            ))}
+            <DocsTocLinks items={toc} />
             {contribute ? (
               <div className="docs-contribute">
                 <p>Contribute</p>
