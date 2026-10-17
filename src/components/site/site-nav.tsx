@@ -3,7 +3,9 @@
 import clsx from 'clsx';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { GlassButton, GlassHeader, usePreferences } from '@/components/liquid';
+import { GlassButton } from '@/components/liquid/button';
+import { GlassHeader } from '@/components/liquid/header';
+import { usePreferences } from '@/components/liquid/provider';
 import { PRO_ORIGIN, GITHUB } from '@/lib/site-links';
 import { BrandMark } from './app-icons';
 import { GithubMark } from './github-mark';

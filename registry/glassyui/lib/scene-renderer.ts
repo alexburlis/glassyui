@@ -848,6 +848,9 @@ export function createSceneRenderer({
   // Cell vertices, reused between frames: a corner as two floats, then a mask.
   let cellFloats = new Float32Array(0);
   let cellMasks = new Uint32Array(0);
+  let cellVertices = 0;
+  let cellsReady = false;
+  let uniformsReady = false;
 
   // Backdrop image, from the CSS value to the texture on the GPU.
   let requestedUrl: string | null | undefined;
@@ -1545,9 +1548,34 @@ export function createSceneRenderer({
     return vertices;
   };
 
-  const sameFrame = () => {
-    for (let index = 0; index < FRAME_LENGTH; index += 1) {
+  const sameValues = (offset: number, length: number) => {
+    for (let index = offset; index < offset + length; index += 1) {
       if (frame[index] !== previous[index]) return false;
+    }
+
+    return true;
+  };
+
+  const changed = (offset: number, length = 1) => !uniformsReady || !sameValues(offset, length);
+
+  // Time, tint, frost and press change the material without changing a cell.
+  // Compare every input buildCells reads before reusing its partition and buffer.
+  const sameCells = () => {
+    if (
+      !cellsReady ||
+      frame[COUNT] !== previous[COUNT] ||
+      !sameValues(SIZE, 4) ||
+      frame[LOOK + 2] !== previous[LOOK + 2]
+    )
+      return false;
+
+    for (let index = 0; index < drawn.length; index += 1) {
+      if (
+        !sameValues(RECT + index * 4, 4) ||
+        frame[RADII + index * 4 + 1] !== previous[RADII + index * 4 + 1] ||
+        frame[EXTRA + index * 4] !== previous[EXTRA + index * 4]
+      )
+        return false;
     }
 
     return true;
@@ -1577,38 +1605,65 @@ export function createSceneRenderer({
 
     pack(backingWidth / box.width, backingWidth, backingHeight);
 
-    if (!dirty && sameFrame()) return;
+    if (!dirty && sameValues(0, FRAME_LENGTH)) return;
 
     const { uniforms } = gpu;
-    const vertices = buildCells(backingWidth, backingHeight);
+    const updateCells = !sameCells();
+
+    if (updateCells) {
+      cellVertices = buildCells(backingWidth, backingHeight);
+      cellsReady = true;
+    }
 
     gl.viewport(0, 0, backingWidth, backingHeight);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    if (vertices > 0) {
+    if (cellVertices > 0) {
       gl.useProgram(gpu.program);
       gl.bindVertexArray(gpu.vao);
-      gl.bindBuffer(gl.ARRAY_BUFFER, gpu.cells);
-      gl.bufferData(gl.ARRAY_BUFFER, cellFloats.subarray(0, vertices * 3), gl.DYNAMIC_DRAW);
+
+      if (updateCells) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, gpu.cells);
+        gl.bufferData(gl.ARRAY_BUFFER, cellFloats.subarray(0, cellVertices * 3), gl.DYNAMIC_DRAW);
+      }
+
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, gpu.texture);
-      gl.uniform1i(uniforms.u_backdrop, 0);
-      gl.uniform2f(uniforms.u_size, frame[SIZE], frame[SIZE + 1]);
-      gl.uniform2f(uniforms.u_backing, frame[BACKING], frame[BACKING + 1]);
-      gl.uniform4fv(uniforms.u_texMap, frame, TEX_MAP, 4);
-      gl.uniform1f(uniforms.u_baseLod, frame[BASE_LOD]);
-      gl.uniform1f(uniforms.u_density, frame[DENSITY]);
-      gl.uniform4fv(uniforms.u_rect, frame, RECT, MAX_PANES * 4);
-      gl.uniform4fv(uniforms.u_radii, frame, RADII, MAX_PANES * 4);
-      gl.uniform4fv(uniforms.u_tint, frame, TINT, MAX_PANES * 4);
-      gl.uniform4fv(uniforms.u_extra, frame, EXTRA, MAX_PANES * 4);
-      gl.uniform2fv(uniforms.u_face, frame, FACE, MAX_PANES * 2);
-      gl.uniform4fv(uniforms.u_optics, frame, OPTICS, 4);
-      gl.uniform4fv(uniforms.u_look, frame, LOOK, 4);
-      gl.uniform1f(uniforms.u_time, frame[TIME]);
-      gl.drawArrays(gl.TRIANGLES, 0, vertices);
-    }
+
+      if (!uniformsReady) gl.uniform1i(uniforms.u_backdrop, 0);
+
+      if (changed(SIZE, 2)) gl.uniform2f(uniforms.u_size, frame[SIZE], frame[SIZE + 1]);
+
+      if (changed(BACKING, 2)) gl.uniform2f(uniforms.u_backing, frame[BACKING], frame[BACKING + 1]);
+
+      if (changed(TEX_MAP, 4)) gl.uniform4fv(uniforms.u_texMap, frame, TEX_MAP, 4);
+
+      if (changed(BASE_LOD)) gl.uniform1f(uniforms.u_baseLod, frame[BASE_LOD]);
+
+      if (changed(DENSITY)) gl.uniform1f(uniforms.u_density, frame[DENSITY]);
+
+      if (changed(RECT, MAX_PANES * 4)) gl.uniform4fv(uniforms.u_rect, frame, RECT, MAX_PANES * 4);
+
+      if (changed(RADII, MAX_PANES * 4))
+        gl.uniform4fv(uniforms.u_radii, frame, RADII, MAX_PANES * 4);
+
+      if (changed(TINT, MAX_PANES * 4)) gl.uniform4fv(uniforms.u_tint, frame, TINT, MAX_PANES * 4);
+
+      if (changed(EXTRA, MAX_PANES * 4))
+        gl.uniform4fv(uniforms.u_extra, frame, EXTRA, MAX_PANES * 4);
+
+      if (changed(FACE, MAX_PANES * 2)) gl.uniform2fv(uniforms.u_face, frame, FACE, MAX_PANES * 2);
+
+      if (changed(OPTICS, 4)) gl.uniform4fv(uniforms.u_optics, frame, OPTICS, 4);
+
+      if (changed(LOOK, 4)) gl.uniform4fv(uniforms.u_look, frame, LOOK, 4);
+
+      if (changed(TIME)) gl.uniform1f(uniforms.u_time, frame[TIME]);
+
+      gl.drawArrays(gl.TRIANGLES, 0, cellVertices);
+      uniformsReady = true;
+    } else uniformsReady = false;
 
     previous.set(frame);
     dirty = false;
@@ -1897,6 +1952,8 @@ export function createSceneRenderer({
 
   const start = () => {
     gpu = build();
+    cellsReady = false;
+    uniformsReady = false;
 
     if (!gpu) {
       if (!gl.isContextLost()) {

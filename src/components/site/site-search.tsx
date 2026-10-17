@@ -13,10 +13,9 @@ import {
   GlassCommandList,
   GlassCommandSeparator,
   GlassCommandShortcut,
-  GlassKbd,
-  GlassKbdGroup,
-  usePreferences,
-} from '@/components/liquid';
+} from '@/components/liquid/command';
+import { GlassKbd, GlassKbdGroup } from '@/components/liquid/kbd';
+import { usePreferences } from '@/components/liquid/provider';
 import { PRO_ORIGIN, REPOSITORY } from '@/lib/site-links';
 import { changeTheme } from '@/lib/change-theme';
 

@@ -84,6 +84,7 @@ type ScreenReflectionProps = {
   face: Face;
   inset?: number;
   strength?: number;
+  visible: boolean;
 };
 
 function compile(gl: WebGL2RenderingContext, type: number, source: string) {
@@ -172,9 +173,16 @@ function createRenderer(canvas: HTMLCanvasElement) {
 }
 
 /** The same studio on either side of the turning slab, without a blur or a moving stripe. */
-export function ScreenReflection({ body, face, inset = 0, strength = 1 }: ScreenReflectionProps) {
+export function ScreenReflection({
+  body,
+  face,
+  inset = 0,
+  strength = 1,
+  visible,
+}: ScreenReflectionProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<ReturnType<typeof createRenderer> | null>(null);
+  const shown = visible && strength > 0;
 
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
@@ -192,8 +200,10 @@ export function ScreenReflection({ body, face, inset = 0, strength = 1 }: Screen
   }, []);
 
   useLayoutEffect(() => {
-    rendererRef.current?.draw(body, face, inset, strength);
-  }, [body, face, inset, strength]);
+    // The opposite face is already hidden; zero strength draws only transparent pixels.
+    // Keep its renderer, and refresh a returning face before the browser paints it.
+    if (shown) rendererRef.current?.draw(body, face, inset, strength);
+  }, [body, face, inset, shown, strength]);
 
   return (
     <canvas
@@ -207,6 +217,7 @@ export function ScreenReflection({ body, face, inset = 0, strength = 1 }: Screen
         height: body.height - inset * 2,
         borderRadius: Math.max(body.radius - inset, 0),
         pointerEvents: 'none',
+        visibility: shown ? undefined : 'hidden',
       }}
       width={256}
     />

@@ -371,6 +371,9 @@ const lensMapCache = new Map<string, LensMapBuildResult>();
 
 const maxCachedLensMaps = 32;
 
+// Native byte order keeps the neutral RGBA pixel identical on every platform.
+const FLAT_LENS_PIXEL = new Uint32Array(new Uint8Array([128, 128, 0, 255]).buffer)[0];
+
 /**
  * How far inward a view ray lands on the backdrop after it crosses a slab of glass
  * whose top curves down into a rim, s pixels in from the edge. The top follows
@@ -537,12 +540,28 @@ export function buildLensMapDataUrl(options: LensMapOptions): LensMapBuildResult
 
   const litFrom = litTo * LENS_RIM_LIGHT_FALLOFF;
   const data = new Uint8ClampedArray(mapWidth * mapHeight * 4);
+  const pixels = new Uint32Array(data.buffer);
   const edge: Edge = { distance: 0, normalX: 0, normalY: 0 };
+  // Beyond every corner and the bevel, the map is exactly neutral. Keep a full
+  // texel inside that rectangle so fractional dimensions cannot round a rim in.
+  const flatInset = Math.max(bevel, ...options.radii);
+  const flatLeft = Math.min(mapWidth, Math.ceil((flatInset / width) * mapWidth + 0.5));
+  const flatRight = Math.max(flatLeft, Math.floor(((width - flatInset) / width) * mapWidth - 0.5));
+  const flatTop = Math.ceil((bevel / height) * mapHeight + 0.5);
+  const flatBottom = Math.floor(((height - bevel) / height) * mapHeight - 0.5);
 
   for (let yIndex = 0; yIndex < mapHeight; yIndex += 1) {
     const y = ((yIndex + 0.5) / mapHeight) * height;
+    const flatRow = yIndex >= flatTop && yIndex < flatBottom;
 
     for (let xIndex = 0; xIndex < mapWidth; xIndex += 1) {
+      if (flatRow && xIndex === flatLeft && flatRight > flatLeft) {
+        pixels.fill(FLAT_LENS_PIXEL, yIndex * mapWidth + flatLeft, yIndex * mapWidth + flatRight);
+        xIndex = flatRight - 1;
+
+        continue;
+      }
+
       const x = ((xIndex + 0.5) / mapWidth) * width;
       const index = (yIndex * mapWidth + xIndex) * 4;
       roundedBoxEdge(x, y, width, height, options.radii, edge);

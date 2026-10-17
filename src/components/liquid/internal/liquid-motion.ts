@@ -436,7 +436,12 @@ export function useLiquidIndicator(
       const frame = frameOf();
       const target = root.querySelector<HTMLElement>(selected);
 
-      items = Array.from(root.querySelectorAll<HTMLElement>(item));
+      // Only a drag needs every item's centre; ordinary tabs measure their selected item.
+      items = draggable
+        ? Array.from(root.querySelectorAll<HTMLElement>(item))
+        : target
+          ? [target]
+          : [];
 
       const boxes = items.map((element) => boxWithin(element, frame));
 
