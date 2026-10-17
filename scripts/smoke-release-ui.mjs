@@ -44,6 +44,7 @@ const components = [
   'glass-alert',
   'glass-avatar',
   'glass-kbd',
+  'glass-scroll-area',
   'glass-command',
   'glass-breadcrumb',
   'glass-pagination',
@@ -1791,6 +1792,35 @@ async function assertKbdState(page, audit) {
   await audit('glass-kbd');
 }
 
+async function assertScrollAreaState(page, audit, capture) {
+  const root = demo(page, 'glass-scroll-area');
+
+  const viewport = await exactlyOne(
+    root.getByRole('region', { name: 'Release notes' }),
+    'scroll area viewport',
+  );
+
+  assert.ok(
+    await viewport.evaluate((node) => node.scrollHeight > node.clientHeight),
+    'the release notes overflow, so the area scrolls',
+  );
+  assert.equal(
+    await root.locator('.lg-scrollbar-thumb').count(),
+    1,
+    'an overflowing area shows one glass thumb',
+  );
+  await viewport.focus();
+  await page.keyboard.press('End');
+  await page.waitForFunction((node) => node.scrollTop > 0, await viewport.elementHandle(), {
+    timeout: 2_000,
+  });
+  await audit('glass-scroll-area');
+  await capture('glass-scroll-area');
+  await viewport.evaluate((node) => {
+    node.scrollTop = 0;
+  });
+}
+
 async function assertCommandState(page, audit, capture) {
   const root = demo(page, 'glass-command');
 
@@ -1952,6 +1982,7 @@ async function assertComponentStates(page, mode, audit, capture) {
   await assertAlertState(page, audit, capture);
   await assertAvatarState(page, audit, capture);
   await assertKbdState(page, audit);
+  await assertScrollAreaState(page, audit, capture);
   await assertDockState(page, audit, capture);
   await assertSheetState(page, audit, capture);
   await assertMenuState(page, audit, capture);

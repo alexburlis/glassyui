@@ -2395,6 +2395,88 @@ export function SearchHint() {
     pageToc: standardToc,
   },
   {
+    id: 'glass-scroll-area',
+    name: 'Glass Scroll Area',
+    category: 'Surfaces',
+    isNew: true,
+    status: 'ready',
+    route: '/components/glass-scroll-area',
+    description:
+      'A scroll container with a thin glass scrollbar that shows on hover and while scrolling.',
+    accessibility:
+      'When the content holds no links or controls, pass tabIndex={0}, role="region" and an aria-label in viewportProps so keyboard users can scroll it.',
+    usage: `import { GlassScrollArea } from "@/components/glassyui/glass-scroll-area";
+
+export function ReleaseNotes({ notes }: { notes: string[] }) {
+  return (
+    <GlassScrollArea
+      className="h-64"
+      viewportProps={{ "aria-label": "Release notes", role: "region", tabIndex: 0 }}
+    >
+      <ul className="space-y-3 p-4">
+        {notes.map((note) => (
+          <li key={note}>{note}</li>
+        ))}
+      </ul>
+    </GlassScrollArea>
+  );
+}`,
+    examples: [
+      {
+        title: 'Grow to a maximum height',
+        code: `<GlassScrollArea className="max-h-80">{children}</GlassScrollArea>`,
+      },
+      {
+        title: 'Scroll sideways',
+        code: `<GlassScrollArea scrollbars="horizontal">
+  <div className="flex w-max gap-3">{cards}</div>
+</GlassScrollArea>`,
+      },
+      {
+        title: 'Show the scrollbar whenever the content overflows',
+        code: `<GlassScrollArea type="auto" className="h-64">{children}</GlassScrollArea>`,
+      },
+    ],
+    api: [
+      {
+        name: 'GlassScrollArea',
+        description:
+          "A div whose viewport scrolls natively, with glass scrollbars in place of the system's.",
+        extends: 'HTML div attributes',
+        props: [
+          {
+            name: 'scrollbars',
+            type: "'vertical' | 'horizontal' | 'both'",
+            default: "'vertical'",
+            description: 'Which scrollbars to draw.',
+          },
+          {
+            name: 'type',
+            type: "'hover' | 'scroll' | 'auto' | 'always'",
+            default: "'hover'",
+            description:
+              'When a scrollbar shows: on hover and while scrolling, only while scrolling, whenever the content overflows, or always.',
+          },
+          {
+            name: 'scrollHideDelay',
+            type: 'number',
+            default: '600',
+            description:
+              'Milliseconds a scrollbar stays after the pointer leaves or scrolling stops.',
+          },
+          {
+            name: 'viewportProps',
+            type: 'ScrollAreaViewportProps',
+            default: '—',
+            description: 'Props for the element that scrolls, such as a ref, role or aria-label.',
+          },
+        ],
+      },
+    ],
+    types: ['GlassScrollAreaProps'],
+    pageToc: standardToc,
+  },
+  {
     id: 'glass-dock',
     name: 'Glass Dock',
     category: 'Navigation',

@@ -22,6 +22,8 @@ export * from './avatar';
 
 export * from './kbd';
 
+export * from './scroll-area';
+
 export * from './command';
 
 export * from './breadcrumb';

@@ -63,6 +63,7 @@ import {
   GlassProgress,
   GlassRadioGroup,
   GlassRadioGroupItem,
+  GlassScrollArea,
   GlassSegmentedControl,
   GlassSegmentedControlItem,
   GlassSelect,
@@ -948,6 +949,38 @@ function KbdDemo() {
   );
 }
 
+const RELEASE_NOTES = [
+  { title: 'Version 2.6', detail: 'Search finds files by their contents.' },
+  { title: 'Version 2.5', detail: 'Shared folders sync in the background.' },
+  { title: 'Version 2.4', detail: 'Pin a project to keep it at the top.' },
+  { title: 'Version 2.3', detail: 'Undo now reaches back a whole day.' },
+  { title: 'Version 2.2', detail: 'Export a board as a single image.' },
+  { title: 'Version 2.1', detail: 'Comments show who has read them.' },
+];
+
+// The notes overflow the card, so the bar shows whenever the area can scroll ("auto") and the
+// preview and its share card both show the glass thumb; the component's own default is "hover".
+function ScrollAreaDemo() {
+  return (
+    <GlassPanel className="cpreview-scroll" variant="card">
+      <GlassScrollArea
+        className="cpreview-scroll-area"
+        type="auto"
+        viewportProps={{ 'aria-label': 'Release notes', role: 'region', tabIndex: 0 }}
+      >
+        <ul className="cpreview-scroll-list" role="list">
+          {RELEASE_NOTES.map((note) => (
+            <li key={note.title}>
+              <strong>{note.title}</strong>
+              <span>{note.detail}</span>
+            </li>
+          ))}
+        </ul>
+      </GlassScrollArea>
+    </GlassPanel>
+  );
+}
+
 const COMMAND_GROUPS = [
   {
     commands: [
@@ -1113,6 +1146,7 @@ const DEMOS = {
   'glass-provider': ProviderDemo,
   'glass-radio-group': RadioGroupDemo,
   'glass-scene': SceneDemo,
+  'glass-scroll-area': ScrollAreaDemo,
   'glass-segmented-control': SegmentedControlDemo,
   'glass-select': SelectDemo,
   'glass-sheet': SheetDemo,

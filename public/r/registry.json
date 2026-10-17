@@ -1512,9 +1512,51 @@
       "type": "registry:ui"
     },
     {
+      "name": "glass-scroll-area",
+      "title": "Glass Scroll Area",
+      "description": "A scroll container with a thin glass scrollbar that shows on hover and while scrolling.",
+      "dependencies": [
+        "@radix-ui/react-scroll-area",
+        "clsx"
+      ],
+      "files": [
+        {
+          "path": "registry/glassyui/glass-provider.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-provider.tsx"
+        },
+        {
+          "path": "registry/glassyui/liquid-filters.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/liquid-filters.tsx"
+        },
+        {
+          "path": "registry/glassyui/lib/preferences.ts",
+          "type": "registry:lib",
+          "target": "components/glassyui/lib/preferences.ts"
+        },
+        {
+          "path": "registry/glassyui/styles/liquid.css",
+          "type": "registry:file",
+          "target": "components/glassyui/styles/liquid.css"
+        },
+        {
+          "path": "registry/glassyui/glass-scroll-area.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-scroll-area.tsx"
+        }
+      ],
+      "meta": {
+        "sourceModules": [
+          "scroll-area"
+        ]
+      },
+      "type": "registry:ui"
+    },
+    {
       "name": "glass-dock",
       "title": "Glass Dock",
-      "description": "A row of app icons on a glass shelf that name themselves on hover.",
+      "description": "A row of app icons on a glass shelf, with labels on hover and focus.",
       "dependencies": [
         "clsx",
         "@radix-ui/react-slot"

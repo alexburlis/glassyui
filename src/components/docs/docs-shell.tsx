@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { GlassScrollArea } from '@/components/liquid/scroll-area';
 import { SiteFooter } from '@/components/site/site-footer';
 import { SiteNav } from '@/components/site/site-nav';
 import { PRO_ORIGIN, GITHUB, newIssueUrl, sourceUrl } from '@/lib/site-links';
@@ -86,19 +87,23 @@ export function DocsShell({ children, contribute, current, rail, toc = [] }: Doc
 
       <div className={`docs-layout${hasToc || hasRail ? '' : ' docs-layout--no-toc'}`}>
         <aside className="docs-sidebar" aria-label="Documentation">
-          <DocsSidebarCurrent current={current} />
-          {sidebarGroups.map((group) => (
-            <div className="docs-sidebar-section" key={group.label}>
-              <p className="docs-sidebar-label">{group.label}</p>
-              <ul role="list">
-                {group.links.map((link) => (
-                  <li key={link.href}>
-                    <DocsNavLink current={isCurrent(link.href, current)} link={link} />
-                  </li>
-                ))}
-              </ul>
+          <GlassScrollArea className="docs-sidebar-scroll">
+            <div className="docs-sidebar-groups">
+              <DocsSidebarCurrent current={current} />
+              {sidebarGroups.map((group) => (
+                <div className="docs-sidebar-section" key={group.label}>
+                  <p className="docs-sidebar-label">{group.label}</p>
+                  <ul role="list">
+                    {group.links.map((link) => (
+                      <li key={link.href}>
+                        <DocsNavLink current={isCurrent(link.href, current)} link={link} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </div>
-          ))}
+          </GlassScrollArea>
         </aside>
 
         <main className="docs-main" id="main-content">

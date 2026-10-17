@@ -130,6 +130,7 @@ preference-guard and dialog/menu/sheet checks.
 - `glass-alert`
 - `glass-avatar`
 - `glass-kbd`
+- `glass-scroll-area`
 - `glass-command`
 - `glass-breadcrumb`
 - `glass-pagination`

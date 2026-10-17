@@ -10,15 +10,15 @@ export function DocsSidebarCurrent({ current }: { current: string }) {
   const marker = useRef<HTMLSpanElement>(null);
 
   useLayoutEffect(() => {
-    const sidebar = marker.current?.closest<HTMLElement>('.docs-sidebar');
-    const item = sidebar?.querySelector<HTMLElement>('[aria-current="page"]');
+    const viewport = marker.current?.closest<HTMLElement>('.lg-scroll-area-viewport');
+    const item = viewport?.querySelector<HTMLElement>('[aria-current="page"]');
 
-    if (!sidebar || !item) return;
-    const frame = sidebar.getBoundingClientRect();
+    if (!viewport || !item) return;
+    const frame = viewport.getBoundingClientRect();
     const link = item.getBoundingClientRect();
 
     if (link.top >= frame.top + 24 && link.bottom <= frame.bottom - 24) return;
-    sidebar.scrollTop += link.top - frame.top - (frame.height - link.height) / 2;
+    viewport.scrollTop += link.top - frame.top - (frame.height - link.height) / 2;
   }, [current]);
 
   return <span hidden ref={marker} />;

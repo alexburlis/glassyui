@@ -445,6 +445,19 @@ Registry dependencies: `@glassyui/glass-provider`.
 
 Purpose: keycap for shortcuts in menus, hints and docs.
 
+### `glass-scroll-area`
+
+Files:
+
+- `registry/glassyui/glass-scroll-area.tsx`
+
+Package dependencies: `@radix-ui/react-scroll-area`, `clsx`.
+
+Registry dependencies: `@glassyui/glass-provider`.
+
+Purpose: scroll container whose thin glass scrollbar shows on hover and while
+scrolling.
+
 ### `glass-breadcrumb`
 
 Files:

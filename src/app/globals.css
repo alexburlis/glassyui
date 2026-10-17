@@ -77,6 +77,17 @@
 
 /* ------------------------------------------------------------------ base */
 
+/* Scrollbars stay thin and quiet: a faint thumb on a clear track. The docs sidebar draws the
+   library's glass scrollbar instead. */
+html {
+  scrollbar-color: color-mix(in srgb, var(--site-text) 22%, transparent) transparent;
+}
+
+html,
+html * {
+  scrollbar-width: thin;
+}
+
 body {
   min-height: 100vh;
   background: var(--site-bg);
@@ -2158,6 +2169,42 @@ main :focus {
   user-select: none;
 }
 
+/* The scroll area demo: release notes that overflow a short card. */
+.cpreview-scroll {
+  width: min(100%, 300px);
+  padding: 4px 4px 4px 16px;
+}
+
+.cpreview-scroll-area {
+  height: 216px;
+}
+
+.cpreview-scroll-list {
+  display: grid;
+  padding-right: 14px;
+}
+
+.cpreview-scroll-list li {
+  display: grid;
+  gap: 2px;
+  padding: 12px 0;
+}
+
+.cpreview-scroll-list li + li {
+  box-shadow: inset 0 0.5px 0 var(--lg-border);
+}
+
+.cpreview-scroll-list strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.cpreview-scroll-list span {
+  color: var(--lg-muted-foreground);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
 .cpreview-slider {
   display: flex;
   align-items: center;
@@ -2476,16 +2523,24 @@ main :focus {
 .docs-sidebar {
   position: sticky;
   top: 84px;
-  display: grid;
   align-self: start;
+}
+
+/* The sidebar scrolls on its own under the library's glass scrollbar, which shows only on hover
+   and while scrolling. The right padding keeps the bar off the links. */
+.docs-sidebar-scroll {
+  max-height: calc(100vh - 108px);
+}
+
+.docs-sidebar-scroll .lg-scroll-area-viewport {
+  overscroll-behavior: contain;
+}
+
+.docs-sidebar-groups {
+  display: grid;
   align-content: start;
   gap: 28px;
-  max-height: calc(100vh - 108px);
-  overflow-y: auto;
-  padding: 4px 4px 32px 0;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: var(--site-fill-strong) transparent;
+  padding: 4px 14px 32px 0;
 }
 
 /* A group reads as a label over its links: small, semibold and tertiary above links in the
