@@ -164,8 +164,19 @@ function inlineLensFilters(cssText) {
 
       if (!filter) throw new Error(`glassy-lens.svg has no filter with the id ${id}`);
 
-      const data = `<svg xmlns="http://www.w3.org/2000/svg">${filter[0]}</svg>`
-        .replace(/<!--[\s\S]*?-->/g, '')
+      let data = `<svg xmlns="http://www.w3.org/2000/svg">${filter[0]}</svg>`;
+      let previous;
+
+      // Dropping one comment can join the text around it into another, so repeat until none is left.
+      do {
+        previous = data;
+        data = data.replace(/<!--[\s\S]*?-->/g, '');
+      } while (data !== previous);
+
+      if (data.includes('<!--'))
+        throw new Error(`glassy-lens.svg has an unclosed comment in ${id}`);
+
+      data = data
         .replace(/>\s+</g, '><')
         .replace(/\s+/g, ' ')
         .replaceAll('"', "'")

@@ -19,7 +19,14 @@ export async function GET(request: NextRequest) {
 
   // Fetch only this server. External redirects, including Pro, pass back to the caller.
   const origin = `http://127.0.0.1:${process.env.PORT ?? '3000'}`;
-  const url = new URL(pathname, origin);
+
+  // Each segment is encoded, so the client's path can only name a page on this server.
+  const page = pathname
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
+
+  const url = new URL(page, origin);
 
   if (url.origin !== origin) return new Response('Invalid page path.', { status: 400 });
 
