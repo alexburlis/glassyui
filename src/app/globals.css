@@ -2705,7 +2705,7 @@ main :focus {
   text-decoration-color: currentColor;
 }
 
-:is(.docs-section > p, .docs-platform-pane > p, .docs-registry-facts, .docs-note-grid) code,
+:is(.docs-section > p, .docs-platform-pane > p, .docs-registry-facts, .docs-api-part > p) code,
 .docs-registry-facts li > code {
   padding: 0.12em 0.4em;
   border-radius: 6px;
@@ -3315,64 +3315,269 @@ main :focus {
   overflow-wrap: anywhere;
 }
 
-.docs-api-list {
-  margin-top: 16px;
-  overflow: hidden;
-  border-radius: 18px;
-  background: var(--site-tile);
-}
+/* ------------------------------------------------------- API reference */
 
-.docs-api-list > div {
+/* A hard requirement sits under the description as one quiet, labelled line. */
+.docs-page-header > p.docs-requirement {
   display: grid;
-  grid-template-columns: minmax(140px, 220px) minmax(0, 1fr);
-  gap: 16px;
-  padding: 14px 20px;
-}
-
-.docs-api-list > div + div {
-  border-top: 1px solid var(--site-hairline);
-}
-
-.docs-api-list code {
-  color: var(--site-text);
-  font-family: var(--site-font-mono);
-  font-size: 13px;
-  letter-spacing: 0;
-  overflow-wrap: anywhere;
-}
-
-.docs-api-list p {
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  justify-self: start;
+  max-width: 680px;
+  margin-top: 2px;
+  padding: 9px 14px;
+  border: 1px solid var(--site-hairline);
+  border-radius: 12px;
+  background: var(--site-tile);
   color: var(--site-text-2);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.5;
 }
 
-.docs-note-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
-  gap: 16px;
+.docs-requirement > span {
+  color: var(--site-text);
+  font-weight: 600;
+}
+
+.docs-api-part {
+  margin-top: 36px;
+}
+
+.docs-api-part:first-child {
   margin-top: 20px;
 }
 
-.docs-note-grid > div {
-  display: grid;
-  align-content: start;
-  gap: 8px;
-  padding: 20px;
-  border-radius: 18px;
+.docs-api-part > h3 {
+  scroll-margin-top: 96px;
+  font-family: var(--site-font-mono);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.docs-api-part > p {
+  max-width: 700px;
+  margin-top: 6px;
+  color: var(--site-text-2);
+  font-size: 15px;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.docs-api-part > .docs-api-extends {
+  margin-top: 10px;
+  color: var(--site-text-3);
+  font-size: 13px;
+}
+
+.docs-props {
+  margin-top: 14px;
+  overflow-x: auto;
+  border: 1px solid var(--site-hairline);
+  border-radius: 16px;
   background: var(--site-tile);
 }
 
-.docs-note-grid h3 {
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+.docs-props table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-.docs-note-grid p {
+.docs-props thead th {
+  padding: 11px 16px 10px;
+  border-bottom: 1px solid var(--site-hairline);
+  color: var(--site-text-3);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.docs-props tbody :is(th, td) {
+  padding: 13px 16px;
+  vertical-align: top;
+  text-align: left;
+}
+
+.docs-props tbody tr + tr :is(th, td) {
+  border-top: 1px solid var(--site-hairline);
+}
+
+.docs-props tbody th {
+  font-weight: 400;
+}
+
+@media (min-width: 640px) {
+  .docs-props tbody th {
+    width: 21%;
+  }
+
+  .docs-props tbody td:nth-child(2) {
+    width: 23%;
+  }
+
+  .docs-props tbody td:nth-child(3) {
+    width: 15%;
+  }
+}
+
+.docs-props tbody td:last-child {
+  color: var(--site-text-2);
+  text-wrap: pretty;
+}
+
+.docs-props code {
+  font-family: var(--site-font-mono);
+  font-size: 12.5px;
+  letter-spacing: 0;
+}
+
+.docs-props tbody th code {
+  color: var(--site-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Types wrap between members of a union rather than pushing the table sideways. */
+.docs-props td[data-label='Type'] code {
+  color: var(--site-syntax-tag);
+  overflow-wrap: break-word;
+}
+
+.docs-props td[data-label='Default'] {
+  color: var(--site-text-2);
+  font-size: 13px;
+}
+
+.docs-props td[data-label='Default'] code {
+  color: var(--site-text);
+}
+
+.docs-prop-none {
+  color: var(--site-text-3);
+}
+
+.docs-prop-required {
+  display: block;
+  margin-top: 2px;
+  color: var(--site-text-3);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Types and the accessibility line close the reference, under a hairline. */
+.docs-api-facts {
+  display: grid;
+  gap: 14px;
+  margin-top: 36px;
+  padding-top: 20px;
+  border-top: 1px solid var(--site-hairline);
+}
+
+.docs-api-facts > div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.docs-api-facts dt {
+  padding-top: 2px;
+  color: var(--site-text-3);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.docs-api-facts dd {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 640px;
+  margin: 0;
   color: var(--site-text-2);
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.55;
+}
+
+.docs-api-facts dd code {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--site-fill);
+  color: var(--site-text);
+  font-family: var(--site-font-mono);
+  font-size: 12.5px;
+}
+
+/* On a phone each prop becomes a short card: its name, then its type, default and use. */
+@media (max-width: 639px) {
+  .docs-props thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .docs-props :is(table, tbody, tr, th, td) {
+    display: block;
+    width: auto;
+  }
+
+  .docs-props tbody tr {
+    padding: 14px 16px;
+  }
+
+  .docs-props tbody tr + tr {
+    border-top: 1px solid var(--site-hairline);
+  }
+
+  .docs-props tbody :is(th, td),
+  .docs-props tbody tr + tr :is(th, td) {
+    width: auto;
+    padding: 0;
+    border-top: 0;
+  }
+
+  .docs-props tbody th {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .docs-prop-required {
+    display: inline;
+    margin: 0;
+  }
+
+  .docs-props tbody td {
+    margin-top: 6px;
+  }
+
+  .docs-props tbody td[data-label] {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    align-items: baseline;
+  }
+
+  .docs-props td[data-label]::before {
+    content: attr(data-label);
+    color: var(--site-text-3);
+    font-family: var(--site-font);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .docs-props tbody td:last-child {
+    margin-top: 8px;
+  }
+
+  .docs-api-facts > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
 }
 
 .docs-pagination {
@@ -3491,11 +3696,6 @@ main :focus {
 }
 
 @media (max-width: 639px) {
-  .docs-api-list > div {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 4px;
-  }
-
   .docs-preview {
     padding: 40px 16px;
     border-radius: 22px;

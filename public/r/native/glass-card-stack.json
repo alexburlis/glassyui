@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-card-stack",
   "title": "Glass Card Stack",
-  "description": "A stack of cards that follows your finger and settles with a velocity-aware spring, with navigation controls and selection haptics.",
+  "description": "A swipeable card deck with Previous and Next buttons, for iOS, Android and the web.",
   "dependencies": [
     "expo-blur",
     "expo-glass-effect",

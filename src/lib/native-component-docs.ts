@@ -1,75 +1,198 @@
 import nativeRegistry from '../../registry-native.json';
+import type { ComponentApiPart } from '@/components/docs/component-docs-data';
 
-export const nativeComponentDocs = [
+type NativeComponentDetail = {
+  id: string;
+  api: ComponentApiPart[];
+  types?: string[];
+  requires?: string;
+  accessibility?: string;
+};
+
+export const nativeComponentDocs: NativeComponentDetail[] = [
   {
     id: 'glass-picker',
-    notes: [
-      'The picker uses SwiftUI on iOS, Jetpack Compose on Android, and a labelled browser select on the web. The wrapper uses GlassSurface.',
-      'The wheel appearance is available on iOS. Android and the web use their standard dropdown.',
-      'Keep value controlled and matched to one option. Each option needs a unique value.',
-    ],
     api: [
-      { prop: 'label', type: 'string', description: 'Visible and accessible field label.' },
       {
-        prop: 'options',
-        type: '{ label: string; value: string }[]',
-        description: 'The available choices.',
+        name: 'GlassPicker',
+        description: 'The platform picker on a glass surface; generic over T extends string.',
+        props: [
+          {
+            name: 'label',
+            type: 'string',
+            default: '—',
+            description: 'Visible label and accessible name.',
+            required: true,
+          },
+          {
+            name: 'options',
+            type: 'readonly { label: string; value: T }[]',
+            default: '—',
+            description: 'The choices; each value must be unique.',
+            required: true,
+          },
+          {
+            name: 'value / onValueChange',
+            type: 'T / (value: T) => void',
+            default: '—',
+            description:
+              'The selected value and its change handler; value must match an option, or the picker throws.',
+            required: true,
+          },
+          {
+            name: 'appearance',
+            type: "'menu' | 'wheel'",
+            default: "'menu'",
+            description:
+              'wheel shows an inline wheel on iOS; Android and the web always use a dropdown.',
+          },
+          {
+            name: 'disabled',
+            type: 'boolean',
+            default: 'false',
+            description: 'Prevents selection changes.',
+          },
+          {
+            name: 'style',
+            type: 'StyleProp<ViewStyle>',
+            default: '—',
+            description: 'Applies to the glass surface.',
+          },
+          {
+            name: 'testID',
+            type: 'string',
+            default: '—',
+            description: 'Passed to the native picker, or as data-testid on the web select.',
+          },
+        ],
       },
-      {
-        prop: 'value / onValueChange',
-        type: 'string / (value: string) => void',
-        description: 'The selected value and its change handler.',
-      },
-      { prop: 'appearance', type: "'menu' | 'wheel'", description: 'Defaults to menu.' },
-      { prop: 'disabled', type: 'boolean', description: 'Prevents selection changes.' },
     ],
+    types: ['GlassPickerProps'],
   },
   {
     id: 'glass-swipe-row',
-    notes: [
-      'Swipe left to reveal actions. The action button provides the same choices without a swipe. Swiping never invokes an action by itself.',
-      'Wrap the app in GestureHandlerRootView, above GlassProvider. In a native Modal, wrap its contents too.',
-      'Reduce Motion removes spring settling. Selection haptics run on iOS and Android when the action panel opens; haptics={false} disables them.',
-    ],
     api: [
-      { prop: 'label', type: 'string', description: 'Names the row in the action button.' },
-      { prop: 'children', type: 'ReactNode', description: 'The row content.' },
       {
-        prop: 'actions',
-        type: 'GlassSwipeAction[]',
-        description: 'Each action has id, label, onPress, and optional destructive.',
+        name: 'GlassSwipeRow',
+        description:
+          'A glass row with an Actions button; swiping or the button reveals the actions.',
+        props: [
+          {
+            name: 'children',
+            type: 'ReactNode',
+            default: '—',
+            description: 'The row content.',
+            required: true,
+          },
+          {
+            name: 'label',
+            type: 'string',
+            default: '—',
+            description: "Names the row in the Actions button's accessible name.",
+            required: true,
+          },
+          {
+            name: 'actions',
+            type: 'readonly GlassSwipeAction[]',
+            default: '—',
+            description:
+              'Revealed buttons, each { id, label, onPress, destructive? }; an empty array turns swiping off.',
+            required: true,
+          },
+          {
+            name: 'haptics',
+            type: 'boolean',
+            default: 'true',
+            description: 'Plays a selection haptic when the actions open, on iOS and Android.',
+          },
+          {
+            name: 'style',
+            type: 'StyleProp<ViewStyle>',
+            default: '—',
+            description: 'Applies to the outer view.',
+          },
+          {
+            name: 'testID',
+            type: 'string',
+            default: '—',
+            description: 'Set on the outer view.',
+          },
+        ],
       },
-      { prop: 'haptics', type: 'boolean', description: 'Defaults to true on native platforms.' },
     ],
+    types: ['GlassSwipeRowProps', 'GlassSwipeAction'],
+    requires:
+      'GestureHandlerRootView from react-native-gesture-handler around your app, and around the contents of any native Modal.',
+    accessibility:
+      'Closed actions are hidden from assistive technology, and the Actions button opens them without a swipe.',
   },
   {
     id: 'glass-card-stack',
-    notes: [
-      'Drag left for the next card or right for the previous card. A short drag returns to the current card. Release velocity affects spring settling.',
-      'Wrap the app in GestureHandlerRootView, above GlassProvider. Vertical drags remain available to the parent scroll view.',
-      'Keep activeIndex controlled. Cards need unique, stable ids. Only the current card accepts input; Previous and Next provide accessible navigation.',
-      'Reduce Motion keeps selection and navigation but removes drag animation, tilt, and spring travel. Selection haptics run on native platforms unless disabled.',
-    ],
     api: [
       {
-        prop: 'items',
-        type: 'T[] where T extends { id: string }',
-        description: 'The ordered cards.',
+        name: 'GlassCardStack',
+        description:
+          'A controlled deck, generic over T extends { id: string }, with a position count between Previous and Next.',
+        props: [
+          {
+            name: 'items',
+            type: 'readonly T[]',
+            default: '—',
+            description: 'The cards in order; each id must be unique and stable.',
+            required: true,
+          },
+          {
+            name: 'activeIndex / onIndexChange',
+            type: 'number / (index: number) => void',
+            default: '—',
+            description: 'The current card, clamped to the items, and its change handler.',
+            required: true,
+          },
+          {
+            name: 'renderCard',
+            type: '(item: T, index: number) => ReactNode',
+            default: '—',
+            description: 'Card contents; only the previous, current and next two cards render.',
+            required: true,
+          },
+          {
+            name: 'label',
+            type: 'string',
+            default: '—',
+            description: "Names the deck in the Previous and Next buttons' accessible names.",
+            required: true,
+          },
+          {
+            name: 'height',
+            type: 'number',
+            default: '220',
+            description: 'Card height in points; the deck adds 24 for the stacked edges.',
+          },
+          {
+            name: 'haptics',
+            type: 'boolean',
+            default: 'true',
+            description: 'Plays a selection haptic on each card change, on iOS and Android.',
+          },
+          {
+            name: 'style',
+            type: 'StyleProp<ViewStyle>',
+            default: '—',
+            description: 'Applies to the outer view.',
+          },
+          {
+            name: 'testID',
+            type: 'string',
+            default: '—',
+            description: 'Set on the swipeable deck, not the outer view.',
+          },
+        ],
       },
-      {
-        prop: 'activeIndex / onIndexChange',
-        type: 'number / (index: number) => void',
-        description: 'The selected card and its change handler.',
-      },
-      {
-        prop: 'renderCard',
-        type: '(item: T, index: number) => ReactNode',
-        description: 'The contents of each card.',
-      },
-      { prop: 'label', type: 'string', description: 'Names the deck in its navigation controls.' },
-      { prop: 'height', type: 'number', description: 'Card height in points; defaults to 220.' },
-      { prop: 'haptics', type: 'boolean', description: 'Defaults to true on native platforms.' },
     ],
+    types: ['GlassCardStackProps'],
+    requires: 'GestureHandlerRootView from react-native-gesture-handler around your app.',
+    accessibility:
+      'Only the current card is exposed and takes input; Previous, Next and a polite live position count give accessible navigation.',
   },
 ];
 

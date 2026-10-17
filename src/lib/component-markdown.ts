@@ -1,9 +1,23 @@
-import type { ComponentDoc } from '@/components/docs/component-docs-data';
+import type { ComponentDoc, ComponentProp } from '@/components/docs/component-docs-data';
 import { SITE_URL } from './site-links';
 import { dependencyCommand, registryItemUrl } from './install-command';
 import { getNativeUsage } from './native-usage-source';
 
 const fence = (code: string, language = 'tsx') => `\`\`\`${language}\n${code.trim()}\n\`\`\``;
+
+/** A table cell: pipes would end the cell early, so they are escaped. */
+const cell = (text: string) => text.replaceAll('|', '\\|');
+
+function propsTable(props: ComponentProp[]) {
+  return [
+    '| Prop | Type | Default | Description |',
+    '| --- | --- | --- | --- |',
+    ...props.map(
+      (prop) =>
+        `| \`${cell(prop.name)}\`${prop.required ? ' (required)' : ''} | \`${cell(prop.type)}\` | ${cell(prop.default)} | ${cell(prop.description)} |`,
+    ),
+  ].join('\n');
+}
 
 /**
  * One component's page as plain markdown: what it is, how to install and use it, and its API.
@@ -12,6 +26,8 @@ const fence = (code: string, language = 'tsx') => `\`\`\`${language}\n${code.tri
 export function componentMarkdown(component: ComponentDoc, headingLevel = 2) {
   const heading = (level: number, text: string) => `${'#'.repeat(headingLevel + level)} ${text}`;
   const sections = [`${'#'.repeat(headingLevel)} ${component.name}`, component.description];
+
+  if (component.requires) sections.push(`Requires ${component.requires}`);
 
   sections.push(`Page: ${SITE_URL}${component.route ?? '/components'}`);
   sections.push(heading(1, 'Install'), fence(component.install, 'bash'));
@@ -34,14 +50,22 @@ export function componentMarkdown(component: ComponentDoc, headingLevel = 2) {
   }
 
   if (component.api.length > 0) {
-    sections.push(
-      heading(1, 'API'),
-      component.api.map((entry) => `- \`${entry.name}\`: ${entry.description}`).join('\n'),
-    );
-  }
+    sections.push(heading(1, 'API reference'));
 
-  for (const note of component.notes ?? []) {
-    sections.push(heading(1, note.title), note.body);
+    for (const part of component.api) {
+      sections.push(
+        heading(2, `\`${part.name}\``),
+        ...(part.description ? [part.description] : []),
+        ...(part.props.length > 0 ? [propsTable(part.props)] : []),
+        ...(part.extends ? [`Also accepts ${part.extends}.`] : []),
+      );
+    }
+
+    if (component.types?.length) {
+      sections.push(`Types: ${component.types.map((type) => `\`${type}\``).join(', ')}`);
+    }
+
+    if (component.accessibility) sections.push(`Accessibility: ${component.accessibility}`);
   }
 
   const native = getNativeUsage(component.registryItem);

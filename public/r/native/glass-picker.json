@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-picker",
   "title": "Glass Picker",
-  "description": "A labelled system picker on glass, with a wheel on iOS and native dropdowns on Android and the web.",
+  "description": "A labelled glass picker: a native menu or wheel on iOS, a dropdown on Android and a select on the web.",
   "dependencies": [
     "expo-blur",
     "expo-glass-effect",

@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "glass-swipe-row",
   "title": "Glass Swipe Row",
-  "description": "A row whose actions follow a swipe and spring into place, with a labelled action button and selection haptics.",
+  "description": "A row that reveals action buttons on swipe, for iOS, Android and the web.",
   "dependencies": [
     "expo-blur",
     "expo-glass-effect",
