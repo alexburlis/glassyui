@@ -125,10 +125,10 @@ Package dependencies: `@radix-ui/react-switch`, `clsx`.
 
 Registry dependencies: `@glassyui/glass-provider`.
 
-Purpose: on/off switch whose thumb swells into a lens of clear glass and
-stretches while it travels: it shows the track and the colour behind it a little
-smaller, bends them at a rim in the track's colour and splits them into colour
-there, in every engine.
+Purpose: on/off switch whose thumb swells into a lens of clear glass while it is
+pressed and while it travels: it shows the track and the colour behind it a
+little smaller, bends them at a rim in the track's colour and splits them into
+colour there, in every engine.
 
 ### `glass-slider`
 
