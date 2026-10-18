@@ -528,7 +528,7 @@
     transition-duration: 160ms !important;
   }
 
-  [data-lg-reduce-motion='1'] :is(.lg-switch-thumb, .lg-switch-lens-track) {
+  [data-lg-reduce-motion='1'] :is(.lg-switch-thumb, .lg-switch-lens-scene, .lg-switch-lens-track) {
     transition-duration: 160ms !important;
     transition-property: translate !important;
     transition-timing-function: ease-out !important;
@@ -611,6 +611,7 @@
     }
 
     .lg-switch-thumb,
+    .lg-switch-lens-scene,
     .lg-switch-lens-track {
       transition-duration: 160ms !important;
       transition-property: translate !important;
@@ -3836,6 +3837,12 @@
     --lg-switch-thumb-height: 1.5rem;
     --lg-switch-inset: 0.125rem;
     --lg-switch-direction: 1;
+    /* Held, the knob swells past the track, and the lens shows what lies under it at
+       this share of its size. */
+    --lg-switch-swell: 1.57;
+    --lg-switch-minify: 0.85;
+    /* The colour of the track under the knob, which its rim and glow pick up. */
+    --lg-switch-lens-tint: var(--lg-track);
 
     position: relative;
     display: inline-flex;
@@ -3868,6 +3875,8 @@
   }
 
   .lg-switch[data-state='checked'] {
+    --lg-switch-lens-tint: var(--lg-switch-on);
+
     background: var(--lg-switch-on);
   }
 
@@ -3907,18 +3916,19 @@
       0;
   }
 
-  /* Held, the knob swells into a lens of thick, clear glass. Inside it a copy of the
-     track, magnified by the swell, bends into the rim and splits into colour there;
-     over it lie a faint face and the bevel: a dark line where the edge turns the light
-     aside, a broad bright one on the lit side and a fainter one on the far side. After
-     a flip it stays glass while it slides, stretching like a drop and landing with a
-     squash. */
+  /* Held, the knob swells past the track into a lens of clear glass. Through it the
+     track and what lies around it show a little smaller, and they bend at the rim. Lit
+     from the top left, the rim takes the track's colour, heavier along the bottom and
+     right where the light leaves the glass, and glints on the left. A soft glow in the
+     same colour lies around it. After a flip it stays glass while it slides, stretching
+     like a drop and landing with a squash. */
   .lg-switch:is(:active, [data-lg-moving]):not([data-disabled]) .lg-switch-thumb {
     background: rgb(255 255 255 / 0);
     box-shadow:
-      0 6px 16px rgb(0 0 0 / 0.22),
-      0 1px 3px rgb(0 0 0 / 0.12);
-    scale: 1.3 1.4;
+      0.4px 0.8px 0.8px rgb(0 0 0 / 0.14),
+      0 2px 5px rgb(0 0 0 / 0.06),
+      0 0 12px 3px color-mix(in srgb, var(--lg-switch-lens-tint) 18%, transparent);
+    scale: var(--lg-switch-swell);
   }
 
   .lg-switch-thumb::after {
@@ -3929,14 +3939,31 @@
     border-radius: inherit;
     pointer-events: none;
     opacity: 0;
-    background: rgb(255 255 255 / 0.03);
+    /* Gradients and unblurred shadows only: WebKit draws a blurred inset shadow at low
+       resolution, which the swell would show as blocks. */
+    background:
+      radial-gradient(19% 7% at 15% 20%, rgb(255 255 255 / 0.95), rgb(255 255 255 / 0)),
+      radial-gradient(19% 7% at 15% 80%, rgb(255 255 255 / 0.85), rgb(255 255 255 / 0)),
+      linear-gradient(
+        to top,
+        color-mix(in srgb, var(--lg-switch-lens-tint) 18%, transparent),
+        transparent 32%
+      ),
+      linear-gradient(rgb(0 0 0 / 0.05), transparent 14%),
+      linear-gradient(rgb(255 255 255 / 0.07), rgb(255 255 255 / 0.02));
     box-shadow:
-      inset 0 0 0 0.5px rgb(255 255 255 / 0.75),
-      inset 0 0 0 1.5px rgb(0 0 0 / 0.1),
-      inset 3px 4px 2.5px -2px rgb(255 255 255 / 0.9),
-      inset -3px -4px 2.5px -2px rgb(255 255 255 / 0.55),
-      inset 0 0 10px rgb(255 255 255 / 0.16);
-    transition: opacity 180ms ease;
+      inset 0.35px 0.6px color-mix(in srgb, var(--lg-switch-lens-tint) 80%, black),
+      inset 0 0 0 0.4px var(--lg-switch-lens-tint),
+      inset -0.6px -1.4px oklch(from var(--lg-switch-lens-tint) calc(l + 0.1) c h),
+      inset -0.9px -2.2px
+        color-mix(
+          in srgb,
+          oklch(from var(--lg-switch-lens-tint) calc(l + 0.18) c h) 45%,
+          transparent
+        );
+    transition:
+      opacity 180ms ease,
+      box-shadow 250ms ease;
   }
 
   .lg-switch:is(:active, [data-lg-moving]):not([data-disabled]) .lg-switch-thumb::after {
@@ -3966,7 +3993,9 @@
   /* The view is laid out at --lg-switch-lens-scale times the lens and scaled back down on
      its own layer, so engines that filter at layout resolution bend it smoothly too.
      WebKit draws a filtered layer from its overflow origin, so the view clips its own
-     overflow on a composited layer. */
+     overflow on a composited layer. It is filled with the colour behind the switch,
+     which the component reads when the knob is pressed, so the real track under the
+     knob stays hidden. */
   .lg-switch-lens-view {
     position: absolute;
     top: 0;
@@ -3974,6 +4003,7 @@
     width: calc(100% * var(--lg-switch-lens-scale, 1));
     height: calc(100% * var(--lg-switch-lens-scale, 1));
     overflow: hidden;
+    background: var(--lg-switch-lens-backdrop, var(--lg-bg));
     transform-origin: 0 0;
     transform: translateZ(0) scale(calc(1 / var(--lg-switch-lens-scale, 1)));
   }
@@ -3984,8 +4014,22 @@
     transition-delay: 0s;
   }
 
+  /* The scene under the lens, around the knob's centre. It undoes the knob's swell and
+     stretch with the same timing, and shows what lies under the knob at
+     --lg-switch-minify of its size. */
+  .lg-switch-lens-scene {
+    position: absolute;
+    inset: 0;
+    scale: var(--lg-switch-minify);
+    transition: scale 320ms var(--lg-spring);
+  }
+
+  .lg-switch:is(:active, [data-lg-moving]):not([data-disabled]) .lg-switch-lens-scene {
+    scale: calc(var(--lg-switch-minify) / var(--lg-switch-swell));
+  }
+
   /* The track as it lies under the knob, at the lens's scale: the knob's slide is undone
-     with the same timing, so the copy stays put while the swell magnifies it. */
+     with the same timing, so the copy stays put while the knob passes over it. */
   .lg-switch-lens-track {
     position: absolute;
     inset-inline-start: calc(
@@ -4021,13 +4065,29 @@
     animation: lg-switch-travel 420ms var(--lg-ease-out);
   }
 
+  .lg-switch[data-lg-moving]:not([data-disabled]) .lg-switch-lens-scene {
+    animation: lg-switch-lens-travel 420ms var(--lg-ease-out);
+  }
+
   @keyframes lg-switch-travel {
     30% {
-      scale: 1.62 1.18;
+      scale: calc(var(--lg-switch-swell) * 1.14) calc(var(--lg-switch-swell) * 0.86);
     }
 
     64% {
-      scale: 1.2 1.48;
+      scale: calc(var(--lg-switch-swell) * 0.93) calc(var(--lg-switch-swell) * 1.05);
+    }
+  }
+
+  @keyframes lg-switch-lens-travel {
+    30% {
+      scale: calc(var(--lg-switch-minify) / var(--lg-switch-swell) / 1.14)
+        calc(var(--lg-switch-minify) / var(--lg-switch-swell) / 0.86);
+    }
+
+    64% {
+      scale: calc(var(--lg-switch-minify) / var(--lg-switch-swell) / 0.93)
+        calc(var(--lg-switch-minify) / var(--lg-switch-swell) / 1.05);
     }
   }
 
