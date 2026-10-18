@@ -6,7 +6,7 @@ import { forwardRef, useEffect, useMemo, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import { motionReduced } from './internal/liquid-motion';
 import { mergeRefs } from './internal/merge-refs';
-import { useLensFilter } from './internal/use-refraction-filter';
+import { useCapsuleMagnifierFilter } from './internal/use-refraction-filter';
 import { useOptionalPreferences } from './provider';
 
 export type GlassSwitchProps = React.ComponentPropsWithoutRef<typeof SwitchPrimitive.Root> & {
@@ -16,9 +16,18 @@ export type GlassSwitchProps = React.ComponentPropsWithoutRef<typeof SwitchPrimi
 // How long the knob stays glass after a flip, a little longer than its slide.
 const TRAVEL_MS = 460;
 
+// The colour split at the knob's rim. A lens this small, drawn only while the knob is
+// touched or sliding, costs little, so it splits colour at every quality but low.
+const KNOB_DISPERSION = 0.45;
+
+// The lens's copy is laid out at three times the knob's size and scaled back down, so
+// engines that filter at layout resolution still bend it smoothly.
+const LENS_SUPERSAMPLE = 3;
+
 // The knob turns to thick glass while pressed and stays glass, stretching like
-// a drop, while it slides to its new side; see .lg-switch in liquid.css. In
-// Chromium the glass is a lens that bends the track under its rim.
+// a drop, while it slides to its new side; see .lg-switch in liquid.css. The glass
+// is a magnifier over a copy of the track, which bends into the rim and splits into
+// colour there in every engine.
 export const GlassSwitch = forwardRef<HTMLButtonElement, GlassSwitchProps>(
   ({ className, disabled, size = 'md', onCheckedChange, ...props }, forwardedRef) => {
     const { preferences } = useOptionalPreferences();
@@ -27,9 +36,11 @@ export const GlassSwitch = forwardRef<HTMLButtonElement, GlassSwitchProps>(
     const travel = useRef(0);
     const ref = useMemo(() => mergeRefs(rootRef, forwardedRef), [forwardedRef]);
 
-    const lensFilter = useLensFilter(thumbRef, {
-      enabled: !disabled && !preferences.reduceTransparency,
-      signature: `${preferences.theme}:${preferences.mode}:${preferences.quality}:${preferences.thickness}`,
+    const lens = useCapsuleMagnifierFilter(thumbRef, {
+      dispersion: KNOB_DISPERSION,
+      enabled: !disabled && !preferences.reduceTransparency && preferences.quality !== 'low',
+      signature: `${preferences.theme}:${preferences.quality}:${preferences.thickness}`,
+      supersample: LENS_SUPERSAMPLE,
     });
 
     useEffect(() => () => window.clearTimeout(travel.current), []);
@@ -55,18 +66,28 @@ export const GlassSwitch = forwardRef<HTMLButtonElement, GlassSwitchProps>(
         onCheckedChange={handleCheckedChange}
         {...props}
       >
-        {lensFilter.filterElement}
+        {lens.filterElement}
         <SwitchPrimitive.Thumb
           ref={thumbRef}
           className="lg-switch-thumb"
-          data-lg-lens={lensFilter.active ? 'active' : undefined}
           style={
-            // SAFETY: CSSProperties has no custom-property index; this adds one string-valued property.
-            lensFilter.filterStyle
-              ? ({ '--lg-lens-filter': lensFilter.filterStyle } as CSSProperties)
+            // SAFETY: CSSProperties has no custom-property index; this adds two custom properties.
+            lens.active
+              ? ({
+                  '--lg-switch-lens-margin': `${lens.margin}px`,
+                  '--lg-switch-lens-scale': lens.supersample,
+                } as CSSProperties)
               : undefined
           }
-        />
+        >
+          {lens.active ? (
+            <span aria-hidden className="lg-switch-lens">
+              <span className="lg-switch-lens-view" style={{ filter: lens.filterStyle }}>
+                <span className="lg-switch-lens-track" />
+              </span>
+            </span>
+          ) : null}
+        </SwitchPrimitive.Thumb>
       </SwitchPrimitive.Root>
     );
   },

@@ -126,7 +126,8 @@ Package dependencies: `@radix-ui/react-switch`, `clsx`.
 Registry dependencies: `@glassyui/glass-provider`.
 
 Purpose: on/off switch whose thumb turns to thick, clear glass and stretches
-while it travels, with the Chromium edge lens bending the track under it.
+while it travels: a magnifier over a copy of the track that bends it into the
+rim and splits it into colour, in every engine.
 
 ### `glass-slider`
 

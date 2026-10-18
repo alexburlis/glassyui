@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type RefObject } from 'react';
 import {
+  buildCapsuleMagnifierMapDataUrl,
   buildLensMapDataUrl,
   buildMagnifierMapDataUrl,
   buildRefractionMapDataUrl,
   clamp,
   computeMagnifierMapMetrics,
   MAX_LENS_SURFACE_AREA,
+  type CapsuleMagnifierMapBuildResult,
   type GeneratedRefractionStrength,
   type LensMapMetrics,
   type LensRadii,
@@ -943,5 +945,157 @@ export function useMagnifierFilter(
     filterElement,
     filterStyle: map ? `url(#${filterId})` : undefined,
     margin,
+  };
+}
+
+type CapsuleMagnifierFilterOptions = LensFilterOptions & {
+  /** Colour split at the rim for regular glass; --lg-glass-thickness scales it. */
+  dispersion: number;
+  /**
+   * How many times the capsule's size the filtered copy is laid out at before it is scaled
+   * back down. WebKit filters at layout resolution, so a small lens bends in steps without it.
+   */
+  supersample?: number;
+};
+
+type CapsuleMagnifierState = CapsuleMagnifierMapBuildResult & { dispersion: number };
+
+/**
+ * Magnifier refraction for a capsule, such as a switch knob, applied with `filter` to a copy
+ * of what lies under it. Every engine with SVG filters on HTML runs it. Near the rim each
+ * pixel samples the copy from further out, so it bends into the edge like a bead of glass
+ * and splits into colour there; --lg-glass-thickness deepens both. The copy must reach
+ * `margin` past the capsule on every side so the rim has content to sample, and the filter
+ * region reaches one margin further, as the round magnifier's does.
+ */
+export function useCapsuleMagnifierFilter(
+  surfaceRef: RefObject<HTMLElement | null>,
+  { dispersion, enabled, signature, supersample = 1 }: CapsuleMagnifierFilterOptions,
+) {
+  const rawId = useId().replaceAll(':', '');
+  const filterId = `lg-capsule-${rawId}`;
+  const [map, setMap] = useState<CapsuleMagnifierState | null>(null);
+
+  useEffect(() => {
+    const el = surfaceRef.current;
+
+    if (!enabled || !el) {
+      queueMicrotask(() => setMap(null));
+
+      return;
+    }
+
+    let frame = 0;
+    let disposed = false;
+
+    const measure = () => {
+      frame = 0;
+
+      if (disposed) return;
+
+      const width = el.clientWidth;
+      const height = el.clientHeight;
+
+      if (!width || !height) {
+        setMap(null);
+
+        return;
+      }
+
+      const thickness = clamp(
+        readTokenOr(window.getComputedStyle(el), '--lg-glass-thickness', 1),
+        0.1,
+        4,
+      );
+
+      const next = {
+        // A supersampled copy already has the resolution the map needs.
+        ...buildCapsuleMagnifierMapDataUrl({
+          devicePixelRatio: supersample > 1 ? 1 : window.devicePixelRatio || 1,
+          height: height * supersample,
+          thickness,
+          width: width * supersample,
+        }),
+        dispersion: clamp(dispersion * thickness, 0, 1),
+      };
+
+      setMap((previous) =>
+        previous &&
+        previous.href === next.href &&
+        previous.metrics.depth === next.metrics.depth &&
+        previous.dispersion === next.dispersion
+          ? previous
+          : next,
+      );
+    };
+
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(measure);
+    };
+
+    const observer = new ResizeObserver(schedule);
+    observer.observe(el);
+    schedule();
+
+    return () => {
+      disposed = true;
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [dispersion, enabled, signature, supersample, surfaceRef]);
+
+  // Blue reaches furthest; leave enough content beyond the rim for it and the blur. The
+  // filter works in the copy's supersampled pixels; the margin is returned in CSS pixels,
+  // rounded up to a whole one so the scaled copy lands on the knob without a sliver.
+  const blur = MAGNIFIER_BLUR * supersample;
+
+  const scaledMargin = map
+    ? Math.ceil(
+        (map.metrics.depth * (1 + map.dispersion / 2) + blur * 3 + 2 * supersample) / supersample,
+      ) * supersample
+    : 0;
+
+  const filterElement = useMemo(() => {
+    if (!map) return null;
+
+    const { depth, height, width } = map.metrics;
+    const margin = scaledMargin;
+
+    return (
+      <svg aria-hidden="true" className="lg-refraction-filter" focusable="false" viewBox="0 0 0 0">
+        <defs>
+          <filter
+            id={filterId}
+            x={-margin}
+            y={-margin}
+            width={width + margin * 4}
+            height={height + margin * 4}
+            filterUnits="userSpaceOnUse"
+            primitiveUnits="userSpaceOnUse"
+            colorInterpolationFilters="sRGB"
+          >
+            <feGaussianBlur in="SourceGraphic" stdDeviation={blur} result="soft" />
+            <feImage
+              href={map.href}
+              x={margin}
+              y={margin}
+              width={width}
+              height={height}
+              preserveAspectRatio="none"
+              result="bend"
+            />
+            {refractColours('soft', 'bend', depth * 2, map.dispersion)}
+          </filter>
+        </defs>
+      </svg>
+    );
+  }, [blur, filterId, map, scaledMargin]);
+
+  return {
+    active: map !== null,
+    filterElement,
+    filterStyle: map ? `url(#${filterId})` : undefined,
+    margin: scaledMargin / supersample,
+    supersample,
   };
 }
