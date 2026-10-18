@@ -698,3 +698,126 @@ export function buildMagnifierMapDataUrl(options: MagnifierMapOptions): Magnifie
 
   return { href, metrics };
 }
+
+export type CapsuleMagnifierMapOptions = {
+  devicePixelRatio?: number;
+  height: number;
+  /** Multiple of regular glass: a thicker capsule bends further at its rim. */
+  thickness?: number;
+  width: number;
+};
+
+type CapsuleMagnifierMapMetrics = {
+  /** Width of the band inside the rim that bends, in CSS pixels. */
+  band: number;
+  cacheKey: string;
+  /** Outward offset at the rim, in CSS pixels. */
+  depth: number;
+  height: number;
+  mapHeight: number;
+  mapWidth: number;
+  width: number;
+};
+
+export type CapsuleMagnifierMapBuildResult = {
+  href: string;
+  metrics: CapsuleMagnifierMapMetrics;
+};
+
+// A knob is small, so most of it bends: the band reaches two thirds of the way in.
+const CAPSULE_BAND = 0.66;
+
+const CAPSULE_DEPTH = 0.55;
+
+const capsuleMagnifierMapCache = new Map<string, string>();
+
+const maxCachedCapsuleMagnifierMaps = 8;
+
+function computeCapsuleMagnifierMapMetrics(
+  options: CapsuleMagnifierMapOptions,
+): CapsuleMagnifierMapMetrics {
+  const width = Math.max(1, options.width);
+  const height = Math.max(1, options.height);
+  const radius = Math.min(width, height) / 2;
+  const thickness = clamp(options.thickness ?? 1, 0.1, 4);
+  // The map is drawn at twice the device scale, so the bend stays smooth on a small knob.
+  const scale = clamp(options.devicePixelRatio ?? 1, 1, 2) * 2;
+  const mapWidth = clamp(Math.round(width * scale), 32, 400);
+  const mapHeight = clamp(Math.round(height * scale), 32, 400);
+  const band = radius * CAPSULE_BAND;
+  const depth = radius * CAPSULE_DEPTH * thickness;
+
+  return {
+    band,
+    cacheKey: [mapWidth, mapHeight, Math.round(width * 10), Math.round(height * 10)].join(':'),
+    depth,
+    height,
+    mapHeight,
+    mapWidth,
+    width,
+  };
+}
+
+/**
+ * The magnifier's field for a capsule, such as a switch knob: R/G = 0.5 + 0.5 * the outward
+ * offset as a share of `depth`, along the outward normal of the nearest rim. It is flat in
+ * the middle and grows cubically through the band, so each pixel samples a little further
+ * out than its inner neighbour: the view compresses into the rim like thick glass and never
+ * folds back on itself. The ends and the straight sides meet without a crease.
+ */
+export function buildCapsuleMagnifierMapDataUrl(
+  options: CapsuleMagnifierMapOptions,
+): CapsuleMagnifierMapBuildResult {
+  const metrics = computeCapsuleMagnifierMapMetrics(options);
+  const cached = capsuleMagnifierMapCache.get(metrics.cacheKey);
+
+  if (cached) return { href: cached, metrics };
+
+  if (typeof document === 'undefined') {
+    throw new Error('Magnifier maps require a browser document');
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = metrics.mapWidth;
+  canvas.height = metrics.mapHeight;
+
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) {
+    throw new Error('Canvas 2D context unavailable');
+  }
+
+  const { band, height, mapHeight, mapWidth, width } = metrics;
+  const radius = Math.min(width, height) / 2;
+  const radii: LensRadii = [radius, radius, radius, radius];
+  const data = new Uint8ClampedArray(mapWidth * mapHeight * 4);
+  const edge: Edge = { distance: 0, normalX: 0, normalY: 0 };
+
+  for (let yIndex = 0; yIndex < mapHeight; yIndex += 1) {
+    const y = ((yIndex + 0.5) / mapHeight) * height;
+
+    for (let xIndex = 0; xIndex < mapWidth; xIndex += 1) {
+      const x = ((xIndex + 0.5) / mapWidth) * width;
+      const index = (yIndex * mapWidth + xIndex) * 4;
+      roundedBoxEdge(x, y, width, height, radii, edge);
+      const rim = clamp((band + edge.distance) / band, 0, 1) ** 3;
+
+      data[index] = Math.round((0.5 + 0.5 * rim * edge.normalX) * 255);
+      data[index + 1] = Math.round((0.5 + 0.5 * rim * edge.normalY) * 255);
+      data[index + 2] = 128;
+      data[index + 3] = 255;
+    }
+  }
+
+  ctx.putImageData(new ImageData(data, mapWidth, mapHeight), 0, 0);
+  const href = canvas.toDataURL('image/png');
+  capsuleMagnifierMapCache.set(metrics.cacheKey, href);
+
+  if (capsuleMagnifierMapCache.size > maxCachedCapsuleMagnifierMaps) {
+    const oldestKey = capsuleMagnifierMapCache.keys().next().value;
+
+    if (oldestKey) capsuleMagnifierMapCache.delete(oldestKey);
+  }
+
+  return { href, metrics };
+}
