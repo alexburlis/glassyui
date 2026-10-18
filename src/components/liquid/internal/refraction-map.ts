@@ -699,7 +699,7 @@ export function buildMagnifierMapDataUrl(options: MagnifierMapOptions): Magnifie
   return { href, metrics };
 }
 
-export type CapsuleMagnifierMapOptions = {
+export type CapsuleLensMapOptions = {
   devicePixelRatio?: number;
   height: number;
   /** Multiple of regular glass: a thicker capsule bends further at its rim. */
@@ -707,7 +707,7 @@ export type CapsuleMagnifierMapOptions = {
   width: number;
 };
 
-type CapsuleMagnifierMapMetrics = {
+type CapsuleLensMapMetrics = {
   /** Width of the band inside the rim that bends, in CSS pixels. */
   band: number;
   cacheKey: string;
@@ -719,23 +719,21 @@ type CapsuleMagnifierMapMetrics = {
   width: number;
 };
 
-export type CapsuleMagnifierMapBuildResult = {
+export type CapsuleLensMapBuildResult = {
   href: string;
-  metrics: CapsuleMagnifierMapMetrics;
+  metrics: CapsuleLensMapMetrics;
 };
 
-// A knob is small, so most of it bends: the band reaches two thirds of the way in.
-const CAPSULE_BAND = 0.66;
+// The lens itself shows its scene evenly, a little smaller; only a thin band at the rim bends.
+const CAPSULE_BAND = 0.3;
 
-const CAPSULE_DEPTH = 0.55;
+const CAPSULE_DEPTH = 0.25;
 
-const capsuleMagnifierMapCache = new Map<string, string>();
+const capsuleLensMapCache = new Map<string, string>();
 
-const maxCachedCapsuleMagnifierMaps = 8;
+const maxCachedCapsuleLensMaps = 8;
 
-function computeCapsuleMagnifierMapMetrics(
-  options: CapsuleMagnifierMapOptions,
-): CapsuleMagnifierMapMetrics {
+function computeCapsuleLensMapMetrics(options: CapsuleLensMapOptions): CapsuleLensMapMetrics {
   const width = Math.max(1, options.width);
   const height = Math.max(1, options.height);
   const radius = Math.min(width, height) / 2;
@@ -759,22 +757,24 @@ function computeCapsuleMagnifierMapMetrics(
 }
 
 /**
- * The magnifier's field for a capsule, such as a switch knob: R/G = 0.5 + 0.5 * the outward
+ * The rim's field for a capsule lens, such as a switch knob: R/G = 0.5 + 0.5 * the outward
  * offset as a share of `depth`, along the outward normal of the nearest rim. It is flat in
- * the middle and grows cubically through the band, so each pixel samples a little further
- * out than its inner neighbour: the view compresses into the rim like thick glass and never
- * folds back on itself. The ends and the straight sides meet without a crease.
+ * the middle and grows cubically through a thin band, so each pixel there samples a little
+ * further out than its inner neighbour: the view compresses into the rim like thick glass
+ * and never folds back on itself. The ends and the straight sides meet without a crease.
+ * B rises through the band, so the filter softens only the scene the rim bends and the
+ * middle stays sharp.
  */
-export function buildCapsuleMagnifierMapDataUrl(
-  options: CapsuleMagnifierMapOptions,
-): CapsuleMagnifierMapBuildResult {
-  const metrics = computeCapsuleMagnifierMapMetrics(options);
-  const cached = capsuleMagnifierMapCache.get(metrics.cacheKey);
+export function buildCapsuleLensMapDataUrl(
+  options: CapsuleLensMapOptions,
+): CapsuleLensMapBuildResult {
+  const metrics = computeCapsuleLensMapMetrics(options);
+  const cached = capsuleLensMapCache.get(metrics.cacheKey);
 
   if (cached) return { href: cached, metrics };
 
   if (typeof document === 'undefined') {
-    throw new Error('Magnifier maps require a browser document');
+    throw new Error('Lens maps require a browser document');
   }
 
   const canvas = document.createElement('canvas');
@@ -800,23 +800,24 @@ export function buildCapsuleMagnifierMapDataUrl(
       const x = ((xIndex + 0.5) / mapWidth) * width;
       const index = (yIndex * mapWidth + xIndex) * 4;
       roundedBoxEdge(x, y, width, height, radii, edge);
-      const rim = clamp((band + edge.distance) / band, 0, 1) ** 3;
+      const inBand = clamp((band + edge.distance) / band, 0, 1);
+      const rim = inBand ** 3;
 
       data[index] = Math.round((0.5 + 0.5 * rim * edge.normalX) * 255);
       data[index + 1] = Math.round((0.5 + 0.5 * rim * edge.normalY) * 255);
-      data[index + 2] = 128;
+      data[index + 2] = Math.round(inBand * 255);
       data[index + 3] = 255;
     }
   }
 
   ctx.putImageData(new ImageData(data, mapWidth, mapHeight), 0, 0);
   const href = canvas.toDataURL('image/png');
-  capsuleMagnifierMapCache.set(metrics.cacheKey, href);
+  capsuleLensMapCache.set(metrics.cacheKey, href);
 
-  if (capsuleMagnifierMapCache.size > maxCachedCapsuleMagnifierMaps) {
-    const oldestKey = capsuleMagnifierMapCache.keys().next().value;
+  if (capsuleLensMapCache.size > maxCachedCapsuleLensMaps) {
+    const oldestKey = capsuleLensMapCache.keys().next().value;
 
-    if (oldestKey) capsuleMagnifierMapCache.delete(oldestKey);
+    if (oldestKey) capsuleLensMapCache.delete(oldestKey);
   }
 
   return { href, metrics };

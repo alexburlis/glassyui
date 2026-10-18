@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type RefObject } from 'react';
 import {
-  buildCapsuleMagnifierMapDataUrl,
+  buildCapsuleLensMapDataUrl,
   buildLensMapDataUrl,
   buildMagnifierMapDataUrl,
   buildRefractionMapDataUrl,
   clamp,
   computeMagnifierMapMetrics,
   MAX_LENS_SURFACE_AREA,
-  type CapsuleMagnifierMapBuildResult,
+  type CapsuleLensMapBuildResult,
   type GeneratedRefractionStrength,
   type LensMapMetrics,
   type LensRadii,
@@ -948,7 +948,7 @@ export function useMagnifierFilter(
   };
 }
 
-type CapsuleMagnifierFilterOptions = LensFilterOptions & {
+type CapsuleLensFilterOptions = LensFilterOptions & {
   /** Colour split at the rim for regular glass; --lg-glass-thickness scales it. */
   dispersion: number;
   /**
@@ -958,23 +958,23 @@ type CapsuleMagnifierFilterOptions = LensFilterOptions & {
   supersample?: number;
 };
 
-type CapsuleMagnifierState = CapsuleMagnifierMapBuildResult & { dispersion: number };
+type CapsuleLensState = CapsuleLensMapBuildResult & { dispersion: number };
 
 /**
- * Magnifier refraction for a capsule, such as a switch knob, applied with `filter` to a copy
+ * Rim refraction for a capsule lens, such as a switch knob, applied with `filter` to a copy
  * of what lies under it. Every engine with SVG filters on HTML runs it. Near the rim each
  * pixel samples the copy from further out, so it bends into the edge like a bead of glass
  * and splits into colour there; --lg-glass-thickness deepens both. The copy must reach
  * `margin` past the capsule on every side so the rim has content to sample, and the filter
  * region reaches one margin further, as the round magnifier's does.
  */
-export function useCapsuleMagnifierFilter(
+export function useCapsuleLensFilter(
   surfaceRef: RefObject<HTMLElement | null>,
-  { dispersion, enabled, signature, supersample = 1 }: CapsuleMagnifierFilterOptions,
+  { dispersion, enabled, signature, supersample = 1 }: CapsuleLensFilterOptions,
 ) {
   const rawId = useId().replaceAll(':', '');
   const filterId = `lg-capsule-${rawId}`;
-  const [map, setMap] = useState<CapsuleMagnifierState | null>(null);
+  const [map, setMap] = useState<CapsuleLensState | null>(null);
 
   useEffect(() => {
     const el = surfaceRef.current;
@@ -1010,7 +1010,7 @@ export function useCapsuleMagnifierFilter(
 
       const next = {
         // A supersampled copy already has the resolution the map needs.
-        ...buildCapsuleMagnifierMapDataUrl({
+        ...buildCapsuleLensMapDataUrl({
           devicePixelRatio: supersample > 1 ? 1 : window.devicePixelRatio || 1,
           height: height * supersample,
           thickness,
@@ -1074,7 +1074,7 @@ export function useCapsuleMagnifierFilter(
             primitiveUnits="userSpaceOnUse"
             colorInterpolationFilters="sRGB"
           >
-            <feGaussianBlur in="SourceGraphic" stdDeviation={blur} result="soft" />
+            <feGaussianBlur in="SourceGraphic" stdDeviation={blur} result="blurred" />
             <feImage
               href={map.href}
               x={margin}
@@ -1084,6 +1084,15 @@ export function useCapsuleMagnifierFilter(
               preserveAspectRatio="none"
               result="bend"
             />
+            {/* The map's blue channel softens only the scene the rim bends. */}
+            <feColorMatrix
+              in="bend"
+              type="matrix"
+              values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 1 0 0"
+              result="rim"
+            />
+            <feComposite in="blurred" in2="rim" operator="in" result="softRim" />
+            <feComposite in="softRim" in2="SourceGraphic" operator="over" result="soft" />
             {refractColours('soft', 'bend', depth * 2, map.dispersion)}
           </filter>
         </defs>
