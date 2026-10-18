@@ -55,8 +55,8 @@ function backdropColour(element: HTMLElement) {
   return alpha === 255 ? `rgb(${red} ${green} ${blue})` : undefined;
 }
 
-// The knob turns to thick glass while pressed and stays glass, stretching like
-// a drop, while it slides to its new side; see .lg-switch in liquid.css. The glass
+// The knob swells into glass while pressed and stays that way while it slides to
+// its new side, then shrinks back; see .lg-switch in liquid.css. The glass
 // is a lens over a copy of the track and the colour behind the switch: it shows them a
 // little smaller, and they bend into the rim and split into colour there in every engine.
 export const GlassSwitch = forwardRef<HTMLButtonElement, GlassSwitchProps>(

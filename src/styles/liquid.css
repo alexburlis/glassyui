@@ -3920,8 +3920,8 @@
      track and what lies around it show a little smaller, and they bend at the rim. Lit
      from the top left, the rim takes the track's colour, heavier along the bottom and
      right where the light leaves the glass, and glints on the left. A soft glow in the
-     same colour lies around it. After a flip it stays glass while it slides, stretching
-     like a drop and landing with a squash. */
+     same colour lies around it. After a flip it stays this size and glass while it
+     slides, and only then shrinks back. */
   .lg-switch:is(:active, [data-lg-moving]):not([data-disabled]) .lg-switch-thumb {
     background: rgb(255 255 255 / 0);
     box-shadow:
@@ -4014,9 +4014,9 @@
     transition-delay: 0s;
   }
 
-  /* The scene under the lens, around the knob's centre. It undoes the knob's swell and
-     stretch with the same timing, and shows what lies under the knob at
-     --lg-switch-minify of its size. */
+  /* The scene under the lens, around the knob's centre. It undoes the knob's swell with
+     the same timing, and shows what lies under the knob at --lg-switch-minify of its
+     size. */
   .lg-switch-lens-scene {
     position: absolute;
     inset: 0;
@@ -4059,36 +4059,6 @@
           var(--lg-switch-direction) * var(--lg-switch-lens-scale, 1) * -1
       )
       0;
-  }
-
-  .lg-switch[data-lg-moving]:not([data-disabled]) .lg-switch-thumb {
-    animation: lg-switch-travel 420ms var(--lg-ease-out);
-  }
-
-  .lg-switch[data-lg-moving]:not([data-disabled]) .lg-switch-lens-scene {
-    animation: lg-switch-lens-travel 420ms var(--lg-ease-out);
-  }
-
-  @keyframes lg-switch-travel {
-    30% {
-      scale: calc(var(--lg-switch-swell) * 1.14) calc(var(--lg-switch-swell) * 0.86);
-    }
-
-    64% {
-      scale: calc(var(--lg-switch-swell) * 0.93) calc(var(--lg-switch-swell) * 1.05);
-    }
-  }
-
-  @keyframes lg-switch-lens-travel {
-    30% {
-      scale: calc(var(--lg-switch-minify) / var(--lg-switch-swell) / 1.14)
-        calc(var(--lg-switch-minify) / var(--lg-switch-swell) / 0.86);
-    }
-
-    64% {
-      scale: calc(var(--lg-switch-minify) / var(--lg-switch-swell) / 0.93)
-        calc(var(--lg-switch-minify) / var(--lg-switch-swell) / 1.05);
-    }
   }
 
   /* ============================================

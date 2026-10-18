@@ -2093,24 +2093,63 @@ async function checkTabs(engine, page, results) {
 async function checkSwitch(engine, page, results) {
   await run(
     engine,
-    'L6 switch knob turns to glass and stretches as it slides',
+    'L6 switch knob turns to glass and swells evenly as it slides',
     results,
     async () => {
       await page.goto(componentPage('glass-switch'), { waitUntil: 'load' });
 
-      const sampling = sampleMotion(page, toggle, 600);
+      // The knob swells and slides on transitions, so the check reads them after the click
+      // instead of sampling frames: a headless engine can paint too few frames to catch a
+      // short swell. The swell is read halfway through, with its transition paused there.
+      await page
+        .locator(toggle)
+        .first()
+        .evaluate((root) => {
+          window.__knobSwell = null;
+
+          root.addEventListener(
+            'click',
+            () =>
+              requestAnimationFrame(() => {
+                const knob = root.querySelector('.lg-switch-thumb');
+                const running = knob.getAnimations();
+                const swell = running.find((item) => item.transitionProperty === 'scale');
+                let scale = 'none';
+
+                if (swell) {
+                  swell.pause();
+                  swell.currentTime = 160;
+                  scale = getComputedStyle(knob).scale;
+                  swell.play();
+                }
+
+                window.__knobSwell = {
+                  moving: root.hasAttribute('data-lg-moving'),
+                  keyframes: running
+                    .filter((item) => item.animationName)
+                    .map((item) => item.animationName),
+                  scale,
+                };
+              }),
+            { once: true },
+          );
+        });
 
       await page.locator(toggle).first().click();
       await page.waitForTimeout(110);
       await motionShot(page, toggle, 24, `${engine}-switch-travel.png`);
+      await page.waitForFunction(() => window.__knobSwell, null, { polling: 50, timeout: 3_000 });
+      await page.waitForTimeout(600);
 
-      const frames = await sampling;
+      const record = await page.evaluate(() => window.__knobSwell);
 
-      await page.waitForTimeout(300);
+      const [knob = 1, knobY = knob] =
+        record.scale === 'none' ? [] : record.scale.split(' ').map(Number);
 
       const outcome = {
-        moving: frames.some((frame) => frame.moving),
-        knob: widest(frames, 'knob'),
+        ...record,
+        knob,
+        squash: Math.abs(knob - knobY),
         landed: await page
           .locator(toggle)
           .first()
@@ -2118,8 +2157,12 @@ async function checkSwitch(engine, page, results) {
       };
 
       assert.ok(
+        outcome.squash < 0.01 && outcome.keyframes.length === 0,
+        `the knob must only scale and move, without a squash, while it slides (${JSON.stringify(outcome)})`,
+      );
+      assert.ok(
         outcome.moving && outcome.knob > 1.45,
-        `the knob must stretch while it slides (${JSON.stringify(outcome)})`,
+        `the knob must swell while it slides (${JSON.stringify(outcome)})`,
       );
       assert.ok(outcome.landed, 'the knob must turn solid again once it lands');
 
@@ -2165,7 +2208,7 @@ async function checkReduceMotionSwitch(engine, browser, results) {
         const root = document.querySelector(target);
         const thumb = root.querySelector('.lg-switch-thumb');
 
-        // Translation, independent of the knob's symmetrical stretch (covered by L6). Its
+        // Translation, independent of the knob's even swell (covered by L6). Its
         // left edge moves even when its centre is still.
         const offset = () => {
           const box = thumb.getBoundingClientRect();
