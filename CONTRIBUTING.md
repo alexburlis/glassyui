@@ -57,8 +57,11 @@ rejects failed, missing or inconsistent gate inputs.
 Newer commits cancel older runs of the same PR. Manual dispatch runs all owners
 with their full browser checks: the three-browser web consumer, served routes,
 agent HTTP, launch assets, platform choice, public Pro links, consent,
-development interactions, release UI/accessibility, refraction and material. Run
-that release proof explicitly before a release:
+development interactions, release UI/accessibility, refraction and material.
+Each part runs in its own job, side by side: the release UI smoke runs as its
+short contracts and one job per width and theme (`RELEASE_UI_SHARD`), and each
+stock shadcn style runs alone, so the sweep lasts as long as its slowest part.
+Run that release proof explicitly before a release:
 
 ```bash
 gh workflow run ci.yml --ref <release-branch>

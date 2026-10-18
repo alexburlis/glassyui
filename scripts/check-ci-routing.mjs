@@ -15,6 +15,8 @@ const previousOutput = process.env.GITHUB_OUTPUT;
 
 const previousNeeds = process.env.CI_NEEDS;
 
+const previousEvent = process.env.CI_EVENT;
+
 const results = [];
 
 process.env.GITHUB_OUTPUT = '';
@@ -232,11 +234,28 @@ try {
       },
     },
     'site-checks': { result: 'success' },
+    'install-smoke': { result: 'skipped' },
     'native-consumer': { result: 'skipped' },
     'shadcn-consumers': { result: 'skipped' },
+    'release-smokes': { result: 'skipped' },
+    'release-install': { result: 'skipped' },
+    'release-visuals': { result: 'skipped' },
+    'release-material': { result: 'skipped' },
+    'release-ui': { result: 'skipped' },
   };
 
-  for (const [name, needs, expectedPass] of [
+  const allSelected = {
+    result: 'success',
+    outputs: { site: 'true', visual: 'true', native: 'true', theme: 'true', dropins: 'true' },
+  };
+
+  const releaseParts = Object.fromEntries(
+    ['release-smokes', 'release-install', 'release-visuals', 'release-material', 'release-ui'].map(
+      (job) => [job, { result: 'success' }],
+    ),
+  );
+
+  for (const [name, needs, expectedPass, event = 'pull_request'] of [
     ['Documentation-only site job succeeds without consumers', passing, true],
     [
       'Base site checks succeed without consumers',
@@ -312,17 +331,63 @@ try {
       'All consumers passed',
       {
         ...passing,
-        changes: {
-          result: 'success',
-          outputs: { site: 'true', visual: 'true', native: 'true', theme: 'true', dropins: 'true' },
-        },
+        changes: allSelected,
+        'install-smoke': { result: 'success' },
         'native-consumer': { result: 'success' },
         'shadcn-consumers': { result: 'success' },
       },
       true,
     ],
+    [
+      'Visual pull request needs the install smoke',
+      {
+        ...passing,
+        changes: allSelected,
+        'native-consumer': { result: 'success' },
+        'shadcn-consumers': { result: 'success' },
+      },
+      false,
+    ],
+    [
+      'Release dispatch needs every release part',
+      {
+        ...passing,
+        changes: allSelected,
+        'native-consumer': { result: 'success' },
+        'shadcn-consumers': { result: 'success' },
+      },
+      false,
+      'workflow_dispatch',
+    ],
+    [
+      'Release dispatch passes with every part',
+      {
+        ...passing,
+        ...releaseParts,
+        changes: allSelected,
+        'native-consumer': { result: 'success' },
+        'shadcn-consumers': { result: 'success' },
+      },
+      true,
+      'workflow_dispatch',
+    ],
+    [
+      'A failed release part rejects the sweep',
+      {
+        ...passing,
+        ...releaseParts,
+        changes: allSelected,
+        'native-consumer': { result: 'success' },
+        'shadcn-consumers': { result: 'success' },
+        'release-ui': { result: 'failure' },
+      },
+      false,
+      'workflow_dispatch',
+    ],
+    ['Unknown event rejects release', passing, false, 'pull_request_target'],
   ]) {
     process.env.CI_NEEDS = JSON.stringify(needs);
+    process.env.CI_EVENT = event;
     const gate = spawnSync(process.execPath, [gateScript], { encoding: 'utf8' });
 
     assert.equal(gate.status === 0, expectedPass, name);
@@ -338,4 +403,7 @@ try {
 
   if (previousNeeds === undefined) delete process.env.CI_NEEDS;
   else process.env.CI_NEEDS = previousNeeds;
+
+  if (previousEvent === undefined) delete process.env.CI_EVENT;
+  else process.env.CI_EVENT = previousEvent;
 }

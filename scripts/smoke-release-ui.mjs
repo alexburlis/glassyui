@@ -62,6 +62,26 @@ const modes = [
 
 const viewports = [320, 390, 768, 1280];
 
+// RELEASE_UI_SHARD runs one part of the smoke, so CI can run the parts side by side:
+// "contracts" for the release metadata and the short contracts, or "<width>:<theme>" for
+// that width's two modes in that theme. Unset, the smoke runs every part.
+const shard = process.env.RELEASE_UI_SHARD ?? '';
+
+const [shardWidth, shardTheme] = shard.split(':');
+
+const cellShard =
+  viewports.includes(Number(shardWidth)) && modes.some((mode) => mode.theme === shardTheme);
+
+if (shard && shard !== 'contracts' && !cellShard) {
+  throw new Error(`RELEASE_UI_SHARD must be "contracts" or "<width>:<theme>", not "${shard}"`);
+}
+
+const runContracts = !shard || shard === 'contracts';
+
+const cellWidths = cellShard ? [Number(shardWidth)] : runContracts && shard ? [] : viewports;
+
+const cellModes = cellShard ? modes.filter((mode) => mode.theme === shardTheme) : modes;
+
 const artifactDirectory =
   process.argv[3] ?? fs.mkdtempSync(path.join(os.tmpdir(), 'glassyui-release-ui-'));
 
@@ -3774,7 +3794,7 @@ async function assertReleaseMetadata() {
   assert.match(loopResponse.headers.get('content-range') ?? '', /^bytes 0-1\/\d+$/);
 }
 
-await assertReleaseMetadata();
+if (runContracts) await assertReleaseMetadata();
 
 const browser = await chromium.launch({
   channel: 'chrome',
@@ -3783,26 +3803,28 @@ const browser = await chromium.launch({
 });
 
 try {
-  await assertProductionRouteContract();
+  if (runContracts) {
+    await assertProductionRouteContract();
 
-  // Run the short contracts before the full gallery matrix for useful failure feedback.
-  console.log('Release UI: checking default theme.');
-  await assertDefaultTheme();
-  console.log('Release UI: checking site text contrast.');
-  await assertSiteTextContrast();
-  console.log('Release UI: checking launch links.');
-  await assertLaunchLinks();
-  console.log('Release UI: checking site search.');
-  await assertSiteSearch();
-  console.log('Release UI: checking gallery sidebar.');
-  await assertGallerySidebar();
-  console.log('Release UI: checking exit motion.');
-  await assertExitMotion();
-  console.log('Release UI: checking motion effects.');
-  await assertMotionEffects();
+    // Run the short contracts before the full gallery matrix for useful failure feedback.
+    console.log('Release UI: checking default theme.');
+    await assertDefaultTheme();
+    console.log('Release UI: checking site text contrast.');
+    await assertSiteTextContrast();
+    console.log('Release UI: checking launch links.');
+    await assertLaunchLinks();
+    console.log('Release UI: checking site search.');
+    await assertSiteSearch();
+    console.log('Release UI: checking gallery sidebar.');
+    await assertGallerySidebar();
+    console.log('Release UI: checking exit motion.');
+    await assertExitMotion();
+    console.log('Release UI: checking motion effects.');
+    await assertMotionEffects();
+  }
 
-  for (const width of viewports) {
-    for (const mode of modes) {
+  for (const width of cellWidths) {
+    for (const mode of cellModes) {
       const started = Date.now();
       const context = `${width}px ${mode.name}`;
       console.log(`Release UI: starting ${context}.`);

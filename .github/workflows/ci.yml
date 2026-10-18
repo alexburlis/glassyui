@@ -15,6 +15,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# Every check runs in its own job, side by side, so a run lasts as long as its slowest
+# check rather than the sum of them. Browser jobs use the runner's own Chrome and install
+# WebKit and Firefox only where a check opens them.
 jobs:
   changes:
     runs-on: ubuntu-24.04
@@ -43,8 +46,7 @@ jobs:
   site-checks:
     needs: changes
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
-
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -54,10 +56,6 @@ jobs:
           pnpm format:check
           mkdir -p .artifacts/ci-routing
           node scripts/check-ci-routing.mjs > .artifacts/ci-routing/report.json
-
-      - name: Install release browsers
-        if: github.event_name == 'workflow_dispatch'
-        run: pnpm exec playwright install --with-deps chrome chromium firefox webkit
 
       - name: Run static release checks
         if: needs.changes.outputs.site == 'true'
@@ -73,43 +71,167 @@ jobs:
           pnpm lint
           pnpm build
 
+      - name: Upload CI routing report
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-routing-evidence
+          path: .artifacts/ci-routing
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # A pull request's source-copy install proof, beside the static checks.
+  install-smoke:
+    needs: changes
+    if: needs.changes.outputs.visual == 'true' && github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Build the site
+        run: pnpm build
       - name: Check source-copy installation
-        if: needs.changes.outputs.visual == 'true' && github.event_name != 'workflow_dispatch'
         run: |
           bash scripts/ci-server.sh start "$RUNNER_TEMP/glassyui-site"
           pnpm smoke:registry-install http://127.0.0.1:3100 --install-only
+      - name: Stop production server
+        if: always()
+        run: bash scripts/ci-server.sh stop "$RUNNER_TEMP/glassyui-site"
+      - name: Upload failed install proof
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-smoke-evidence
+          path: |
+            .artifacts/prelaunch/registry-install
+            .artifacts/ci-server.log
+          if-no-files-found: ignore
+          retention-days: 7
 
+  # The release sweep runs when dispatched by hand. Each of its parts below is its own job.
+  release-smokes:
+    needs: changes
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Build the site
+        run: pnpm build
       - name: Run production release smokes
-        if: github.event_name == 'workflow_dispatch'
-        timeout-minutes: 50
-        # Headless Firefox needs a Linux display to create its WebGL context.
-        shell: xvfb-run --auto-servernum bash --noprofile --norc -e -o pipefail {0}
         run: |
           bash scripts/ci-server.sh start "$RUNNER_TEMP/glassyui-site"
           pnpm smoke:registry-routes http://127.0.0.1:3100
-          pnpm smoke:registry-install http://127.0.0.1:3100
           GLASSYUI_BASE_URL=http://127.0.0.1:3100 pnpm smoke:docs-routes
           pnpm check:agent-discovery http://127.0.0.1:3100 .artifacts/agent-discovery
           pnpm smoke:launch http://127.0.0.1:3100 .artifacts/launch
           pnpm check:platform-switch http://127.0.0.1:3100 .artifacts/platform-switch
           node scripts/smoke-pro-links.mjs http://127.0.0.1:3100 .artifacts/pro-links
           pnpm check:analytics-consent http://127.0.0.1:3100 .artifacts/analytics-consent
+      - name: Stop production server
+        if: always()
+        run: bash scripts/ci-server.sh stop "$RUNNER_TEMP/glassyui-site"
+      - name: Upload failed smoke evidence
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-smokes-evidence
+          path: |
+            .artifacts/agent-discovery
+            .artifacts/launch
+            .artifacts/platform-switch
+            .artifacts/pro-links
+            .artifacts/analytics-consent
+            .artifacts/ci-server.log
+          if-no-files-found: ignore
+          retention-days: 7
 
-      - name: Run full visual and release matrix
-        if: github.event_name == 'workflow_dispatch'
-        timeout-minutes: 50
+  release-install:
+    needs: changes
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Install WebKit and Firefox
+        run: pnpm exec playwright install --with-deps firefox webkit
+      - name: Build the site
+        run: pnpm build
+      - name: Check every item installs, builds and renders
         shell: xvfb-run --auto-servernum bash --noprofile --norc -e -o pipefail {0}
         run: |
-          pnpm check:refraction-visuals http://127.0.0.1:3100 .artifacts/refraction-visuals
-          pnpm check:glass-material http://127.0.0.1:3100 .artifacts/glass-material
-          pnpm smoke:release-ui http://127.0.0.1:3100 .artifacts/release-ui
-
+          bash scripts/ci-server.sh start "$RUNNER_TEMP/glassyui-site"
+          pnpm smoke:registry-install http://127.0.0.1:3100
       - name: Stop production server
-        if: always() && needs.changes.outputs.visual == 'true'
+        if: always()
         run: bash scripts/ci-server.sh stop "$RUNNER_TEMP/glassyui-site"
+      - name: Upload failed install proof
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-install-evidence
+          path: |
+            .artifacts/prelaunch/registry-install
+            .artifacts/ci-server.log
+          if-no-files-found: ignore
+          retention-days: 7
 
+  release-visuals:
+    needs: changes
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Install WebKit and Firefox
+        run: pnpm exec playwright install --with-deps firefox webkit
+      - name: Build the site
+        run: pnpm build
+      - name: Check refraction in every engine
+        # Headless Firefox needs a Linux display to create its WebGL context.
+        shell: xvfb-run --auto-servernum bash --noprofile --norc -e -o pipefail {0}
+        run: |
+          bash scripts/ci-server.sh start "$RUNNER_TEMP/glassyui-site"
+          pnpm check:refraction-visuals http://127.0.0.1:3100 .artifacts/refraction-visuals
+      - name: Stop production server
+        if: always()
+        run: bash scripts/ci-server.sh stop "$RUNNER_TEMP/glassyui-site"
+      - name: Upload failed refraction evidence
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-visuals-evidence
+          path: |
+            .artifacts/refraction-visuals
+            .artifacts/ci-server.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  release-material:
+    needs: changes
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Install WebKit and Firefox
+        run: pnpm exec playwright install --with-deps firefox webkit
+      - name: Build the site
+        run: pnpm build
+      - name: Check the glass material in every engine
+        shell: xvfb-run --auto-servernum bash --noprofile --norc -e -o pipefail {0}
+        run: |
+          bash scripts/ci-server.sh start "$RUNNER_TEMP/glassyui-site"
+          pnpm check:glass-material http://127.0.0.1:3100 .artifacts/glass-material
+      - name: Stop production server
+        if: always()
+        run: bash scripts/ci-server.sh stop "$RUNNER_TEMP/glassyui-site"
       - name: Run development diagnostics interactions
-        if: github.event_name == 'workflow_dispatch'
         run: |
           setsid pnpm exec next dev -H 127.0.0.1 -p 3101 > /tmp/glassyui-dev.log 2>&1 &
           echo "$!" > /tmp/glassyui-dev.pid
@@ -124,9 +246,8 @@ jobs:
             sleep 1
           done
           pnpm exec node scripts/smoke-liquid-interactions.mjs http://127.0.0.1:3101/diagnostics .artifacts/liquid-interactions
-
       - name: Stop development server
-        if: always() && github.event_name == 'workflow_dispatch'
+        if: always()
         run: |
           if [ -f /tmp/glassyui-dev.pid ]; then
             server_pid="$(cat /tmp/glassyui-dev.pid)"
@@ -139,27 +260,65 @@ jobs:
               if kill -0 "$server_pid" 2>/dev/null; then kill -KILL -- "-$server_pid"; fi
             fi
           fi
-
-      # Keep browser evidence for failures or cancellations so passing runs never
-      # hit the account's artifact storage quota.
-      - name: Upload release UI evidence
+      - name: Upload failed material evidence
         if: failure() || cancelled()
         uses: actions/upload-artifact@v4
         with:
-          name: release-ui-evidence
+          name: release-material-evidence
+          path: |
+            .artifacts/glass-material
+            .artifacts/liquid-interactions
+            .artifacts/ci-server.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # The release UI smoke in parts: its short contracts, and each width's two modes in
+  # each theme (see RELEASE_UI_SHARD in the script).
+  release-ui:
+    needs: changes
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - contracts
+          - '320:dark'
+          - '320:light'
+          - '390:dark'
+          - '390:light'
+          - '768:dark'
+          - '768:light'
+          - '1280:dark'
+          - '1280:light'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Install WebKit and Firefox
+        # Only the contracts open WebKit and Firefox.
+        if: matrix.shard == 'contracts'
+        run: pnpm exec playwright install --with-deps firefox webkit
+      - name: Build the site
+        run: pnpm build
+      - name: Run the release UI smoke
+        shell: xvfb-run --auto-servernum bash --noprofile --norc -e -o pipefail {0}
+        env:
+          RELEASE_UI_SHARD: ${{ matrix.shard }}
+        run: |
+          bash scripts/ci-server.sh start "$RUNNER_TEMP/glassyui-site"
+          pnpm smoke:release-ui http://127.0.0.1:3100 .artifacts/release-ui
+      - name: Stop production server
+        if: always()
+        run: bash scripts/ci-server.sh stop "$RUNNER_TEMP/glassyui-site"
+      - name: Upload failed UI evidence
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-ui-evidence-${{ strategy.job-index }}
           path: |
             .artifacts/release-ui
-            .artifacts/refraction-visuals
-            .artifacts/glass-material
-            .artifacts/platform-switch
-            .artifacts/liquid-interactions
-            .artifacts/prelaunch/registry-install
-            .artifacts/pro-links
-            .artifacts/analytics-consent
-            .artifacts/agent-discovery
-            .artifacts/launch
             .artifacts/ci-server.log
-            .artifacts/ci-routing
           if-no-files-found: ignore
           retention-days: 7
 
@@ -191,48 +350,48 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  # A pull request installs the theme and drop-ins into both stock styles in one job; the
+  # release sweep runs each style's full browser proof in its own job.
   shadcn-consumers:
     needs: changes
     if: needs.changes.outputs.theme == 'true' || needs.changes.outputs.dropins == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        check: ${{ fromJSON(github.event_name == 'workflow_dispatch' && '["theme new-york", "theme base-nova", "dropins new-york", "dropins base-nova"]' || '["install-only"]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      - name: Install consumer browsers
-        if: github.event_name == 'workflow_dispatch'
-        run: pnpm exec playwright install --with-deps chrome chromium firefox webkit
-      - name: Check theme in both stock styles
-        if: needs.changes.outputs.theme == 'true'
-        timeout-minutes: 45
+      - name: Install WebKit and Firefox
+        if: matrix.check != 'install-only'
+        run: pnpm exec playwright install --with-deps firefox webkit
+      - name: Check the theme and drop-ins in the stock styles
         shell: bash
+        env:
+          CHECK: ${{ matrix.check }}
+          THEME: ${{ needs.changes.outputs.theme }}
+          DROPINS: ${{ needs.changes.outputs.dropins }}
         run: |
-          runner=()
-          install_args=(--install-only)
-          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
-            runner=(xvfb-run --auto-servernum)
-            install_args=()
+          if [ "$CHECK" = install-only ]; then
+            for style in new-york base-nova; do
+              if [ "$THEME" = true ]; then
+                pnpm check:shadcn-theme ".artifacts/shadcn-theme/$style" --fixture "$style" --install-only
+              fi
+              if [ "$DROPINS" = true ]; then
+                pnpm check:shadcn-dropins ".artifacts/shadcn-dropins/$style" --fixture "$style" --install-only
+              fi
+            done
+          else
+            read -r kind style <<< "$CHECK"
+            xvfb-run --auto-servernum pnpm "check:shadcn-$kind" ".artifacts/shadcn-$kind/$style" --fixture "$style"
           fi
-          "${runner[@]}" pnpm check:shadcn-theme .artifacts/shadcn-theme/new-york --fixture new-york "${install_args[@]}"
-          "${runner[@]}" pnpm check:shadcn-theme .artifacts/shadcn-theme/base-nova --fixture base-nova "${install_args[@]}"
-      - name: Check drop-ins in both stock styles
-        if: needs.changes.outputs.dropins == 'true'
-        timeout-minutes: 45
-        shell: bash
-        run: |
-          runner=()
-          install_args=(--install-only)
-          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
-            runner=(xvfb-run --auto-servernum)
-            install_args=()
-          fi
-          "${runner[@]}" pnpm check:shadcn-dropins .artifacts/shadcn-dropins/new-york --fixture new-york "${install_args[@]}"
-          "${runner[@]}" pnpm check:shadcn-dropins .artifacts/shadcn-dropins/base-nova --fixture base-nova "${install_args[@]}"
       - name: Upload failed shadcn proof
         if: failure() || cancelled()
         uses: actions/upload-artifact@v4
         with:
-          name: shadcn-consumer-evidence
+          name: shadcn-consumer-evidence-${{ strategy.job-index }}
           path: |
             .artifacts/shadcn-theme
             .artifacts/shadcn-dropins
@@ -242,7 +401,17 @@ jobs:
   # This unique, always-running name is main's required check. A skipped
   # optional owner passes only when Git routing explicitly did not select it.
   release-gate:
-    needs: [changes, site-checks, native-consumer, shadcn-consumers]
+    needs:
+      - changes
+      - site-checks
+      - install-smoke
+      - native-consumer
+      - shadcn-consumers
+      - release-smokes
+      - release-install
+      - release-visuals
+      - release-material
+      - release-ui
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -251,4 +420,5 @@ jobs:
       - name: Require every selected verification owner
         env:
           CI_NEEDS: ${{ toJSON(needs) }}
+          CI_EVENT: ${{ github.event_name }}
         run: node scripts/ci-release-gate.mjs
