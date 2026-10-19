@@ -40,6 +40,11 @@ const worstBackdrop = { dark: '#fff', light: '#000' };
 
 const engines = (process.env.GLASS_ENGINES ?? 'chromium,webkit,firefox').split(',');
 
+const suites = new Set((process.env.GLASS_MATERIAL_SUITES ?? 'material,prominent').split(','));
+
+for (const suite of suites)
+  assert.ok(['material', 'prominent'].includes(suite), `unknown suite ${suite}`);
+
 const targets = [
   {
     id: 'panel',
@@ -579,6 +584,85 @@ async function checkFallbackEngine(name, launcher) {
   return results;
 }
 
+// Freeze each real CSS transition at its paint times: a settled screenshot misses a fill
+// fading in after its blue backdrop tint and light have already been removed.
+async function sampleProminentPreferenceTransition(page, button, statsPage) {
+  const previous = await page.evaluate(() => {
+    const root = document.documentElement;
+    const previous = root.getAttribute('data-lg-reduce-transparency');
+    root.setAttribute('data-lg-reduce-transparency', '0');
+
+    return previous;
+  });
+
+  const samples = [];
+
+  await page.addStyleTag({
+    content: `
+      [data-release-demo="glass-button"] .lg-button__label { color: transparent !important; }
+      .docs-preview:has([data-release-demo="glass-button"]) { background: #fff !important; }
+      .docs-preview::before, .docs-preview::after { display: none !important; }
+    `,
+  });
+  await page.waitForTimeout(300);
+
+  try {
+    for (const solid of ['1', '0']) {
+      await button.evaluate(async (node, value) => {
+        const face = node.querySelector('.lg-button__distortion');
+        document.documentElement.setAttribute('data-lg-reduce-transparency', value);
+        // Resolve the new styles before asking for the CSS transition they create.
+        face.getBoundingClientRect();
+        const animations = face.getAnimations();
+
+        for (const animation of animations) animation.pause();
+        await Promise.all(animations.map((animation) => animation.ready));
+
+        for (const animation of animations) animation.currentTime = 0;
+      }, solid);
+
+      for (const time of [0, 16, 50, 100, 250]) {
+        const material = await button.evaluate(async (node, currentTime) => {
+          const face = node.querySelector('.lg-button__distortion');
+
+          for (const animation of face.getAnimations()) animation.currentTime = currentTime;
+          await new Promise((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve)),
+          );
+          const style = getComputedStyle(face);
+
+          return { background: style.backgroundColor, filter: style.backdropFilter };
+        }, time);
+
+        const box = await button.boundingBox();
+
+        const pixels = await measure(statsPage, await page.screenshot({ clip: box }), {
+          inset: 0.3,
+        });
+
+        samples.push({
+          solid: solid === '1',
+          time,
+          ...material,
+          brightest: pixels.brightest,
+          labelContrast: Number(contrast([255, 255, 255], pixels.brightest).toFixed(2)),
+        });
+      }
+    }
+  } finally {
+    await button.evaluate((node) => {
+      for (const animation of node.querySelector('.lg-button__distortion').getAnimations())
+        animation.finish();
+    });
+    await page.evaluate((value) => {
+      if (value === null) document.documentElement.removeAttribute('data-lg-reduce-transparency');
+      else document.documentElement.setAttribute('data-lg-reduce-transparency', value);
+    }, previous);
+  }
+
+  return samples;
+}
+
 // The prominent button is blue glass, not a fill: what lies behind it must show through it,
 // tinted, and the tint must still keep its white label at WCAG AA over the brightest backdrop
 // there is. Every way that can fail: an opaque fill crept back (the backdrop no longer changes
@@ -601,6 +685,8 @@ async function checkProminentGlass(name, browserToUse, statsPage) {
     });
     const page = await context.newPage();
     const label = `${name} ${theme} prominent button`;
+    const row = { engine: name, theme };
+    results.push(row);
 
     try {
       await page.goto(new URL('/components/glass-button', baseUrl).href, {
@@ -625,6 +711,24 @@ async function checkProminentGlass(name, browserToUse, statsPage) {
             { timeout: 5_000 },
           )
           .catch(() => {});
+      }
+
+      if (name === 'chromium') {
+        row.transitions = await sampleProminentPreferenceTransition(page, button, statsPage);
+
+        for (const sample of row.transitions) {
+          const point = `${label}: solid ${sample.solid ? 'on' : 'off'} at ${sample.time}ms`;
+          const [red, green, blue] = sample.brightest;
+
+          assert.ok(
+            blue > red + 60 && blue > green + 40,
+            `${point} must keep its blue face (rgb ${sample.brightest})`,
+          );
+          assert.ok(
+            sample.labelContrast >= minOverlayContrast,
+            `${point} must keep white text at ${minOverlayContrast}:1 (${sample.labelContrast}:1)`,
+          );
+        }
       }
 
       await page.addStyleTag({
@@ -656,8 +760,7 @@ async function checkProminentGlass(name, browserToUse, statsPage) {
         return { glass, guarded };
       });
 
-      const row = { engine: name, theme, filter: material.glass.filter };
-      results.push(row);
+      row.filter = material.glass.filter;
       assert.match(
         material.glass.filter,
         /grayscale\(1\).*sepia\(1\)/,
@@ -763,6 +866,7 @@ const manifest = {
   baseUrl,
   maxFrostedDeviation,
   minOverlayContrast,
+  suites: [...suites],
   chromium: [],
   guards: [],
   fallbacks: [],
@@ -773,36 +877,45 @@ const manifest = {
 try {
   const statsPage = await browser.newPage();
 
-  const control = await measure(
-    statsPage,
-    await (async () => {
-      const page = await browser.newPage({ viewport: { width: 200, height: 100 } });
-      await page.setContent(`<body style="margin:0;background:${stripes}"></body>`);
-      const png = await page.screenshot();
-      await page.close();
+  if (suites.has('material')) {
+    const control = await measure(
+      statsPage,
+      await (async () => {
+        const page = await browser.newPage({ viewport: { width: 200, height: 100 } });
+        await page.setContent(`<body style="margin:0;background:${stripes}"></body>`);
+        const png = await page.screenshot();
+        await page.close();
 
-      return png;
-    })(),
-    { inset: 0 },
-  );
+        return png;
+      })(),
+      { inset: 0 },
+    );
 
-  manifest.control = control;
-  assert.ok(control.deviation > 100, 'the unfrosted stripe control must measure as high contrast');
-  assert.ok(
-    control.stripeDeviation > 100,
-    'the three-pixel stripe probe must detect unfrosted stripes',
-  );
+    manifest.control = control;
+    assert.ok(
+      control.deviation > 100,
+      'the unfrosted stripe control must measure as high contrast',
+    );
+    assert.ok(
+      control.stripeDeviation > 100,
+      'the three-pixel stripe probe must detect unfrosted stripes',
+    );
 
-  for (const theme of ['dark', 'light']) {
-    manifest.chromium.push(...(await checkChromium(browser, statsPage, theme)));
+    for (const theme of ['dark', 'light']) {
+      manifest.chromium.push(...(await checkChromium(browser, statsPage, theme)));
+    }
   }
 
-  manifest.prominent.push(...(await checkProminentGlass('chromium', browser, statsPage)));
+  if (suites.has('prominent'))
+    manifest.prominent.push(...(await checkProminentGlass('chromium', browser, statsPage)));
 
   const launchers = { webkit, firefox };
 
   for (const engine of engines.filter((name) => name !== 'chromium')) {
-    manifest.fallbacks.push(...(await checkFallbackEngine(engine, launchers[engine])));
+    if (suites.has('material'))
+      manifest.fallbacks.push(...(await checkFallbackEngine(engine, launchers[engine])));
+
+    if (!suites.has('prominent')) continue;
 
     const other = await launchers[engine].launch({ headless: true });
 
