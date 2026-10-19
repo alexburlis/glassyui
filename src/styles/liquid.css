@@ -1898,6 +1898,9 @@
   .lg-button--prominent > .lg-button__layers > .lg-button__distortion {
     -webkit-backdrop-filter: blur(0.6px) var(--lg-prominent-tint);
     backdrop-filter: blur(0.6px) var(--lg-prominent-tint);
+    /* The solid fill replaces the tint and light together. Fading only the
+       fill exposes the untinted backdrop while those layers switch. */
+    transition: none;
   }
 
   .lg-button--prominent > .lg-button__layers > .lg-button__distortion,
