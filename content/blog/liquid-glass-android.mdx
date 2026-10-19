@@ -1,0 +1,241 @@
+---
+title: Liquid glass on Android with React Native
+description:
+  How to put Apple-style glass controls in an Android app built with React
+  Native and Expo, what Android actually draws, and where it falls back to a
+  tint.
+excerpt:
+  Apple's glass material is iOS-only, so on Android a React Native app blurs a
+  view it marks. Here is how GlassBackdrop sets that up, what you get before and
+  after Android 12, and how to offer solid glass.
+publishedAt: '2026-10-19T08:00:00+02:00'
+status: published
+tags:
+  - react-native
+  - expo
+  - android
+  - liquid-glass
+heroImage: '/share/blog/liquid-glass-android.jpg'
+heroImageAlt:
+  'A glass switch over ribbon artwork, beside the words: Liquid glass. On
+  Android.'
+---
+
+To get liquid glass controls in an Android app built with React Native, wrap the
+screen in a view that Android is allowed to blur, then place glass controls on
+top of it. In Glassy UI, that view is `GlassBackdrop`. Apple's glass material is
+not available to Android apps, so on Android Glassy UI blurs the backdrop you
+choose, tints it and lights the rim. Glass outside a `GlassBackdrop` still
+renders on Android, but as a translucent tint with no blur. This article covers
+that structure, what Android draws on each version and in each situation, and
+how to give users a solid option.
+
+This is about glass inside your own app. If you want your whole phone to look
+like iOS 26, with glass on the home screen, notification shade and icons, that
+is a job for a launcher or system theme. An app's components can't change any of
+that.
+
+## What Android draws
+
+On iOS 26 and later, Glassy UI draws the system's own glass through
+`expo-glass-effect`, and that glass bends what lies behind it. That module draws
+only on iOS, so the availability checks in
+[Glass Surface](/components/glass-surface?platform=react-native) return false on
+Android. There Glassy UI uses its blur material instead: an `expo-blur`
+`BlurView`, a tint layer and an inset rim highlight. The result is frosted glass
+with a lit edge. Glassy UI does not add refraction on Android.
+
+In Expo SDK 57, `expo-blur` on Android blurs only content you wrap in a
+`BlurTargetView`, whose ref you pass to the `BlurView`
+([Expo `BlurView` documentation](https://docs.expo.dev/versions/v57.0.0/sdk/blur-view/)).
+`GlassBackdrop` does this for you. It renders your `backdrop` inside a
+`BlurTargetView` that fills it, then shares that view's ref with every Glassy UI
+surface among its children.
+
+| Situation on Android                            | What the glass shows                                       |
+| ----------------------------------------------- | ---------------------------------------------------------- |
+| Inside a `GlassBackdrop`, Android 12 or later   | Blur of the backdrop, tint and rim                         |
+| Inside a `GlassBackdrop`, Android 11 or earlier | Translucent tint and rim, no blur                          |
+| Outside any `GlassBackdrop`                     | Translucent tint and rim, no blur, and one console warning |
+| Dialog, sheet, menu, select or popover          | The denser overlay tint                                    |
+| `reduceTransparency` set in the app             | An opaque surface                                          |
+
+The Android 11 row follows from the blur method Glassy UI picks. `GlassSurface`
+sets `blurMethod` to `dimezisBlurViewSdk31Plus`. Expo documents that method as
+blurring on Android 12 (API 31) and later and rendering a semi-transparent view
+on older versions. Expo's other Android method also blurs on older versions, but
+its documentation warns that it may be slower there. Because Glassy UI uses the
+first method, older phones get a tint.
+
+## Build a glass screen
+
+Install the button and switch from the Expo registry. Both depend on
+`glass-surface`, which brings in `GlassBackdrop`, and on `glass-provider`, so
+the CLI adds those too. The first time, follow the [Expo guide](/guides/expo) to
+add a `components.json` to your app, then run:
+
+```shell
+npx shadcn@4.14.1 add https://glassyui.com/r/native/glass-button.json https://glassyui.com/r/native/glass-switch.json && npx expo install --fix
+```
+
+`npx expo install --fix` aligns `expo-blur` and `expo-glass-effect` with your
+SDK. Expo Go already includes both packages. If you use a development build,
+rebuild it.
+
+This screen puts a card of controls over a photo. It assumes the files landed in
+`components/glassyui` and that you have an image at `assets/photo.jpg`:
+
+```tsx
+import { useState } from 'react';
+import { Image, StyleSheet, Text, View } from 'react-native';
+import { GlassBackdrop } from '@/components/glassyui/glass-backdrop';
+import { GlassButton } from '@/components/glassyui/glass-button';
+import {
+  GlassProvider,
+  useGlassTheme,
+  usePreferences,
+} from '@/components/glassyui/glass-provider';
+import { GlassSurface } from '@/components/glassyui/glass-surface';
+import { GlassSwitch } from '@/components/glassyui/glass-switch';
+
+// Metro bundles images through require.
+const photo = require('@/assets/photo.jpg');
+
+function NowPlaying() {
+  const { colors } = useGlassTheme();
+  const { preferences, setPreferences } = usePreferences();
+  const [playing, setPlaying] = useState(false);
+
+  return (
+    <GlassBackdrop
+      backdrop={
+        <Image alt="" resizeMode="cover" source={photo} style={styles.fill} />
+      }
+      style={styles.screen}
+    >
+      <GlassSurface preset="prominent" style={styles.card}>
+        <Text style={[styles.title, { color: colors.foreground }]}>
+          Evening mix
+        </Text>
+        <View style={styles.row}>
+          <Text style={{ color: colors.foreground, fontSize: 16 }}>
+            Solid glass
+          </Text>
+          <GlassSwitch
+            accessibilityLabel="Solid glass"
+            checked={preferences.reduceTransparency}
+            onCheckedChange={(on) => setPreferences({ reduceTransparency: on })}
+          />
+        </View>
+        <GlassButton
+          variant="prominent"
+          onPress={() => setPlaying((current) => !current)}
+        >
+          {playing ? 'Pause' : 'Play'}
+        </GlassButton>
+      </GlassSurface>
+    </GlassBackdrop>
+  );
+}
+
+export default function NowPlayingScreen() {
+  return (
+    <GlassProvider>
+      <NowPlaying />
+    </GlassProvider>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: { borderRadius: 24, gap: 16, padding: 24 },
+  fill: { height: '100%', width: '100%' },
+  row: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  screen: { flex: 1, justifyContent: 'center', padding: 24 },
+  title: { fontSize: 22, fontWeight: '600' },
+});
+```
+
+A few details in this code matter on Android:
+
+- The image has an explicit full width and height. A `require`d image otherwise
+  takes its own pixel size, and the blur only has what the image covers.
+- The card, the switch's glass and the button's glass all blur the same
+  backdrop. Glass nested in glass blurs the photo, not the card above it.
+- `style` on `GlassBackdrop` lays out the children, not the backdrop. The
+  backdrop always fills the `GlassBackdrop`.
+
+The same code runs on iOS and the web, where `GlassBackdrop` simply lays the
+children over the image. Setting up the system's own glass on iOS 26 is covered
+in
+[liquid glass in React Native with Expo](/blog/liquid-glass-react-native-expo).
+
+## A missing backdrop and an empty backdrop look alike
+
+If the glass on your Android build looks like a flat translucent panel, there
+are two likely causes, and they need different fixes.
+
+**The glass is outside a `GlassBackdrop`.** `GlassSurface` then passes no blur
+target and sets the blur method to `none`, so you see the tint alone. The
+console shows this warning once:
+
+```text
+Glassy UI: Android blurs only what sits inside a GlassBackdrop. Glass outside one is a translucent tint.
+```
+
+Fix it by moving the glass into the children of a `GlassBackdrop`. React context
+carries the target, so the glass can sit at any depth below it.
+
+**The glass is inside a backdrop with no detail.** A blur of a flat colour is
+the same flat colour. If your backdrop is a plain `View` with a background
+colour, the glass is working correctly and has nothing to show. Give it a photo,
+a wallpaper, a gradient image or real content.
+
+A third case is easy to miss. Android blurs the `backdrop` prop and nothing
+else. Views you pass as children are drawn on top of the backdrop and are never
+blurred, even when they pass under a glass toolbar. If a glass header should
+frost a scrolling list on Android, the list belongs in `backdrop`, not beside
+the header in the children.
+
+## Modals open in a separate window
+
+`GlassDialog`, `GlassSheet`, `GlassMenu`, `GlassSelect` and `GlassPopover`
+render through React Native's `Modal`. On Android a modal opens in its own
+window, which the backdrop's blur does not reach, so these layers show Glassy
+UI's denser `overlay` tint rather than a blur. The [Expo guide](/guides/expo)
+lists this among the places Android differs from the web. Check text contrast on
+your own screens, because the tint's readability depends on what lies beneath
+it.
+
+The dimmed scrim behind a dialog or sheet is a separate layer, a plain colour
+that fades in. It is not glass and needs no backdrop. A tap on it closes the
+layer, and Android's back button closes it too.
+
+You don't need to change anything for modals. Just don't spend time wrapping
+dialog content in another `GlassBackdrop` to force a blur of the screen beneath
+it. A backdrop can only blur its own `backdrop` prop.
+
+## Offer solid glass on Android
+
+Under Reduce Transparency, every Glassy UI surface draws an opaque fill with a
+hairline border instead of glass. On iOS and the web, `GlassProvider` reads that
+setting from the system. On Android it does not: the library's preference code
+subscribes to the reduce-transparency setting only on iOS and reads the browser
+media query only on the web. On Android, `reduceTransparency` stays `false`
+unless your app sets it.
+
+The switch in the example above is that setting. It calls
+`setPreferences({ reduceTransparency: on })`, and every surface under the
+provider turns opaque at once. Such a switch is worth adding if your glass sits
+over busy photos, or if your users ask for plainer screens.
+
+`setPreferences` keeps the choice only while the provider is mounted. To make it
+last across launches, save it in your app's own storage and apply it again on
+startup.
+
+Each Expo component page in the
+[component docs](/components/glass-surface?platform=react-native) shows a React
+Native example that the Expo test app type-checks and renders.

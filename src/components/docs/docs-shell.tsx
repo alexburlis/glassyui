@@ -47,6 +47,7 @@ const documentationGroup: DocsMobileNavGroup = {
     { href: '/components', label: 'All components' },
     { href: '/mobile', label: 'React Native' },
     { href: '/guides', label: 'Guides' },
+    { href: '/blog', label: 'Blog' },
     { href: PRO_ORIGIN, label: 'Templates', external: true },
     { href: GITHUB.repository, label: 'GitHub', external: true },
   ],
@@ -71,9 +72,11 @@ const mobileNavGroups: DocsMobileNavGroup[] = [
   ...categoryGroups,
 ];
 
-/** The sidebar marks Guides current on every guide, and each other page on its own route. */
+/** The sidebar marks each guide or article's section current. */
 function isCurrent(href: string, current: string) {
-  return href === '/guides' ? current.startsWith('/guides') : href === current;
+  return href === '/guides' || href === '/blog'
+    ? current === href || current.startsWith(`${href}/`)
+    : href === current;
 }
 
 export function DocsShell({ children, contribute, current, rail, toc = [] }: DocsShellProps) {

@@ -1,0 +1,260 @@
+---
+title: Apple Liquid Glass in React Native and Expo
+description:
+  Draw the system's own glass on iOS 26 in an Expo app, fall back to a blur on
+  older iOS and Android, and respect Reduce Transparency, with a complete screen
+  built from Glassy UI.
+excerpt:
+  The system's glass comes from expo-glass-effect and only draws on iOS 26 and
+  later. Here is how to check for it, what to draw everywhere else, and a
+  complete Expo screen that handles all of it.
+publishedAt: '2026-10-19T08:00:00+02:00'
+status: published
+tags:
+  - React Native
+  - Expo
+  - iOS 26
+  - Liquid Glass
+heroImage: '/share/blog/liquid-glass-react-native-expo.jpg'
+heroImageAlt:
+  'A glass segmented control over ribbon artwork, beside the words: System
+  glass. In Expo.'
+---
+
+In an Expo app, Apple's Liquid Glass comes from the `GlassView` component in
+[`expo-glass-effect`](https://docs.expo.dev/versions/v57.0.0/sdk/glass-effect/).
+The system draws it on iOS 26 and later. Everywhere else, `GlassView` renders as
+a plain `View`. That leaves three cases for your app to handle:
+
+- **iOS 26 and later:** draw `GlassView`. This is the system's own glass, which
+  bends and lights what lies behind it.
+- **Earlier iOS, Android and the web:** draw a blur of the content behind, for
+  example with `expo-blur`.
+- **Reduce Transparency on:** draw an opaque surface.
+
+Glassy UI's React Native components make this choice for you. This article shows
+how they make it, so you can check the result on your own devices, and ends with
+a complete screen. The guidance covers Expo SDK 57 and `expo-glass-effect` 57.0
+as of October 2026.
+
+## The system's glass and a blur are different materials
+
+Apple describes Liquid Glass as a material that "combines the optical properties
+of glass with a sense of fluidity". Standard SwiftUI, UIKit and AppKit controls
+pick it up automatically
+([Apple: Liquid Glass](https://developer.apple.com/documentation/technologyoverviews/liquid-glass)).
+React Native views are not those controls, so they only get the material through
+a native view that asks for it. `GlassView` is that view.
+
+A blur from `expo-blur`, or a CSS `backdrop-filter` on the web, softens what
+lies behind. It does not refract it the way the system's glass does. A blur is a
+reasonable stand-in where the system material does not exist. It still draws a
+different material, so test each path on its own instead of assuming they match.
+
+## Two checks before you draw `GlassView`
+
+`expo-glass-effect` exports two functions, and you need both:
+
+| Function                      | What it checks                                                                                                                |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `isLiquidGlassAvailable()`    | The app can use the material: the system version, the compiler version the app was built with, and its `Info.plist` settings. |
+| `isGlassEffectAPIAvailable()` | The glass API exists on this device at runtime. Expo notes that some iOS 26 beta builds lack it, which "can lead to crashes". |
+
+Both return `false` on Android and the web. Neither one tells you whether the
+user turned on Reduce Transparency. The Expo docs point to
+`AccessibilityInfo.isReduceTransparencyEnabled()` for that.
+
+Glassy UI combines the checks once, in `lib/material.ts`, and adds Reduce
+Transparency on top:
+
+```ts
+import {
+  isGlassEffectAPIAvailable,
+  isLiquidGlassAvailable,
+} from 'expo-glass-effect';
+
+export type GlassMaterial = 'liquid' | 'blur' | 'solid';
+
+// Both checks return false off iOS. The second guards early iOS 26 builds that lack the API.
+const systemGlass = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
+
+export function resolveGlassMaterial(
+  reduceTransparency: boolean,
+): GlassMaterial {
+  if (reduceTransparency) return 'solid';
+
+  return systemGlass ? 'liquid' : 'blur';
+}
+```
+
+Reduce Transparency can change while the app runs, so `GlassProvider` reads it
+through a subscription. The two availability checks cannot change during a
+session, so they run once.
+
+## What each platform draws
+
+`GlassSurface` is the base that the button, panel, dialog and other glass
+components are built on. It picks one of three layers:
+
+| Where                                | Material | What draws it                                                                     |
+| ------------------------------------ | -------- | --------------------------------------------------------------------------------- |
+| iOS 26 and later, both checks pass   | `liquid` | `GlassView` from `expo-glass-effect`                                              |
+| iOS before 26, or either check fails | `blur`   | `BlurView` from `expo-blur`, a translucent fill and a lit rim                     |
+| Android                              | `blur`   | Android 12 and later blur the `GlassBackdrop`; older versions show a tint and rim |
+| Web                                  | `blur`   | The same blur, through React Native for Web                                       |
+| Reduce Transparency on (iOS and web) | `solid`  | An opaque fill with a hairline border                                             |
+
+On the `liquid` path, Glassy UI passes its own settings into `GlassView`'s
+props:
+
+- `preset="subtle"` becomes `glassEffectStyle="clear"`. Every other preset uses
+  `"regular"`.
+- The provider's light or dark theme becomes `colorScheme`, so an in-app theme
+  switch overrides the device's appearance.
+- A `tint`, such as the prominent button's blue, becomes `tintColor`.
+
+Android has no Reduce Transparency setting that React Native can read. There,
+the `solid` material only appears when your app sets `reduceTransparency`
+itself. Android also blurs only the view marked as the blur's target, which is
+what `GlassBackdrop` sets up. For Android's own failure modes, see
+[Liquid Glass on Android](/blog/liquid-glass-android).
+
+## Install the components
+
+The [Expo guide](/guides/expo) covers the `components.json` that the CLI needs
+in an Expo app. With that in place, install the button and the panel:
+
+```sh
+npx shadcn@4.14.1 add https://glassyui.com/r/native/glass-button.json https://glassyui.com/r/native/glass-panel.json && npx expo install --fix
+```
+
+Both items depend on `glass-surface`. That item brings `glass-backdrop.tsx`,
+`lib/material.ts`, the provider and the two native packages, `expo-glass-effect`
+and `expo-blur`. `expo install --fix` matches those packages to your SDK. Expo
+Go includes both packages. If you use a development build, rebuild it after
+installing them.
+
+The files land in `components/glassyui`, or in `src/components/glassyui` when
+your app keeps its code in `src`.
+
+## A complete screen
+
+This screen assumes an Expo Router app with `@/` mapped to the project root, as
+in the [Expo guide](/guides/expo). Save it as `app/index.tsx` and put any photo
+at `assets/wallpaper.jpg`. Glass needs something behind it to bend or blur.
+
+```tsx
+import { useState } from 'react';
+import { Image, Text } from 'react-native';
+import { GlassBackdrop } from '@/components/glassyui/glass-backdrop';
+import { GlassButton } from '@/components/glassyui/glass-button';
+import { GlassPanel } from '@/components/glassyui/glass-panel';
+import {
+  GlassProvider,
+  useGlassTheme,
+} from '@/components/glassyui/glass-provider';
+import { resolveGlassMaterial } from '@/components/glassyui/lib/material';
+
+const wallpaper = require('@/assets/wallpaper.jpg');
+
+function RunCard() {
+  const { colors, preferences } = useGlassTheme();
+  const [running, setRunning] = useState(false);
+  const material = resolveGlassMaterial(preferences.reduceTransparency);
+
+  return (
+    <GlassPanel variant="card" style={{ gap: 12 }}>
+      <Text
+        style={{ color: colors.foreground, fontSize: 17, fontWeight: '600' }}
+      >
+        Morning run
+      </Text>
+      <Text style={{ color: colors.mutedForeground }}>
+        Material: {material}
+      </Text>
+      <GlassButton variant="prominent" onPress={() => setRunning(!running)}>
+        {running ? 'Pause' : 'Start'}
+      </GlassButton>
+    </GlassPanel>
+  );
+}
+
+export default function Home() {
+  return (
+    <GlassProvider>
+      <GlassBackdrop
+        backdrop={
+          <Image
+            alt=""
+            source={wallpaper}
+            style={{ height: '100%', width: '100%' }}
+          />
+        }
+        style={{ flex: 1, justifyContent: 'center', padding: 24 }}
+      >
+        <RunCard />
+      </GlassBackdrop>
+    </GlassProvider>
+  );
+}
+```
+
+The "Material" line shows which path ran on the current device. On an iPhone
+with iOS 26, it should read `liquid`. On an older iPhone, an Android phone or in
+the browser, it reads `blur`. If an iOS 26 device shows `blur`, one of the two
+checks failed. Check that the app was built with an iOS 26 SDK and that its
+`Info.plist` does not opt out of the new design.
+
+Some notes on the code:
+
+- `GlassBackdrop` wraps the wallpaper so that Android has a view to blur. iOS
+  and the web blur whatever lies behind, so the backdrop changes nothing there.
+- A `require`d image keeps its own pixel size unless you size it, so the
+  backdrop image gets a full width and height.
+- `RunCard` sits inside `GlassProvider`, so `useGlassTheme` returns the
+  provider's colours. The text follows the light or dark theme.
+- Remove the "Material" line before you ship. It is there to check your devices,
+  not for your users.
+
+## Reduce Transparency
+
+Turn on **Settings › Accessibility › Display & Text Size › Reduce Transparency**
+on an iPhone and return to the app. The "Material" line changes to `solid`, and
+the panel and button turn opaque without a restart. `GlassProvider` subscribes
+to `AccessibilityInfo`'s `reduceTransparencyChanged` event on iOS. On the web,
+it watches the `prefers-reduced-transparency` media query.
+
+To offer the same choice inside the app, call
+`setPreferences({ reduceTransparency: true })` from `usePreferences()`. The Expo
+guide has [a settings switch](/guides/expo) that does this. The choice lasts
+while the provider is mounted. Save it in your app's own storage if it should
+survive a restart.
+
+## Opacity pitfalls
+
+Expo documents one known issue: setting `opacity` to `0` on a `GlassView` or on
+**any of its parents** stops the glass from rendering at all. This matters if
+your screens fade in from zero. A transition that starts a container at
+`opacity: 0` and animates it up can leave the system's glass missing on iOS 26,
+while the blur path on other platforms looks fine. Reveal glass by moving or
+scaling its container instead, or fade a sibling layer above it. Glassy UI's
+modal scrim fades as a sibling, not as a parent of the glass.
+
+Expo's known issue names only zero. Glassy UI's disabled button sits at `0.45`,
+so it falls outside that issue.
+
+The `tint` prop on `GlassSurface` expects an opaque colour. The blur path
+composites that tint with the backdrop, so check text contrast on the final
+surface rather than judging the tint colour alone.
+
+## When to use the system's glass
+
+Apple's guidance is to keep colour in controls and navigation restrained, so
+that content shows through and controls stay legible
+([Apple: Liquid Glass](https://developer.apple.com/documentation/technologyoverviews/liquid-glass)).
+Glass suits the layer that floats above your content: bars, buttons, cards over
+a photo and sheets. Behind long passages of text, use a solid surface.
+
+For the full component list, the Android limits for dialogs and menus, and the
+gesture components, read the [Expo guide](/guides/expo).
+[See the components on a phone](/mobile) before you install them.

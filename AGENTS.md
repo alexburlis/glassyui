@@ -12,6 +12,10 @@
 - `src/styles/liquid.css` — token layer for glass effects; keep edits
   documented.
 - `public` — static assets; prefer optimized SVG/PNG.
+- `content/blog` — MDX articles served at `/blog`. `src/lib/blog.ts` uses the
+  internal `mdx-blog-kit` package shared with Paraspeech and GamesLike; the site
+  owns rendering and styling. See `docs/blog-authoring.md` for creation, cards,
+  visibility and verification. Keep reusable blog mechanics in that package.
 - Keep promotional film projects, renders and production evidence outside this
   repository. The one film here is `link-previews/`, which renders the share
   cards' loops.

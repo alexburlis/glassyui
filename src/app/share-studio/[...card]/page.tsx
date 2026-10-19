@@ -4,6 +4,7 @@ import { componentDocs, getComponentDoc } from '@/components/docs/component-docs
 import { getGuide, guides } from '@/components/docs/guide-data';
 import { ShareCard, ShareStage, type ShareCardProps } from '@/components/share/share-studio';
 import { getNativeUsage } from '@/lib/native-usage-source';
+import { getBlogPostForStudio } from '@/lib/blog';
 import '@/styles/share-studio.css';
 
 export const metadata: Metadata = {
@@ -56,7 +57,44 @@ const MOSAIC = ['glass-button', 'glass-switch', 'glass-slider', 'glass-segmented
 );
 
 /** What a card says and shows, from its address: /share-studio/card/<kind>/<name>. */
-function cardFor(kind: string, name: string | undefined): ShareCardProps | null {
+async function cardFor(kind: string, name: string | undefined): Promise<ShareCardProps | null> {
+  if (kind === 'blog') {
+    return { eyebrow: 'Blog', title: 'Build with glass.', stage: stage('glass-scene') };
+  }
+
+  if (kind === 'post' && name) {
+    const post = await getBlogPostForStudio(name);
+
+    if (!post) return null;
+
+    const cards = new Map<string, ShareCardProps>(
+      Object.entries({
+        'liquid-glass-android': {
+          eyebrow: 'React Native',
+          title: 'Liquid glass.',
+          second: 'On Android.',
+          stage: stage('glass-switch'),
+        },
+        'liquid-glass-react-native-expo': {
+          eyebrow: 'React Native',
+          title: 'System glass.',
+          second: 'In Expo.',
+          stage: stage('glass-segmented-control'),
+        },
+        'liquid-glass-css-react': {
+          eyebrow: 'CSS and React',
+          title: 'Liquid glass.',
+          second: 'On the web.',
+          stage: stage('glass-scene'),
+        },
+      }),
+    );
+
+    return (
+      cards.get(name) ?? { eyebrow: 'Blog', title: post.metadata.title, stage: stage('glass-lens') }
+    );
+  }
+
   if (kind === 'component' && name) {
     const component = getComponentDoc(name);
 
@@ -108,7 +146,7 @@ export default async function ShareStudioPage({ params }: { params: Promise<{ ca
     return <ShareStage id={kind} />;
   }
 
-  const card = mode === 'card' && kind ? cardFor(kind, name) : null;
+  const card = mode === 'card' && kind ? await cardFor(kind, name) : null;
 
   if (!card) notFound();
 

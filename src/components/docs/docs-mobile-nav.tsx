@@ -51,7 +51,11 @@ export function DocsMobileNav({ groups }: DocsMobileNavProps) {
   const pathname = usePathname();
   const list = useRef<HTMLElement>(null);
 
-  const currentLink = groups.flatMap((group) => group.links).find((link) => link.href === pathname);
+  const currentLink = groups
+    .flatMap((group) => group.links)
+    .find(
+      (link) => link.href === pathname || (link.href === '/blog' && pathname.startsWith('/blog/')),
+    );
 
   return (
     <details
@@ -78,7 +82,7 @@ export function DocsMobileNav({ groups }: DocsMobileNavProps) {
             <ul role="list">
               {group.links.map((link) => (
                 <li key={link.href}>
-                  <DocsNavLink current={link.href === pathname} link={link} />
+                  <DocsNavLink current={link === currentLink} link={link} />
                 </li>
               ))}
             </ul>

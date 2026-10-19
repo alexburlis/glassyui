@@ -1,0 +1,11 @@
+{
+  "siteId": "glassyui",
+  "baseUrl": "https://glassyui.com",
+  "routeBase": "/blog",
+  "proof": {
+    "article": "https://glassyui.com/blog/{slug}",
+    "index": "https://glassyui.com/blog",
+    "rss": "https://glassyui.com/blog/rss",
+    "sitemap": "https://glassyui.com/sitemap.xml"
+  }
+}

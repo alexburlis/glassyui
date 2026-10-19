@@ -42,6 +42,7 @@ export function SiteFooter() {
             <Link href="/components/glass-provider">Theming</Link>
             <a href={PRO_ORIGIN}>Templates</a>
             <Link href="/guides">Guides</Link>
+            <Link href="/blog">Blog</Link>
           </div>
           {FOOTER_CATEGORIES.map((category) => (
             <div key={category}>

@@ -3,8 +3,11 @@ import { componentDocs } from '@/components/docs/component-docs-data';
 import { guides } from '@/components/docs/guide-data';
 import { SITE_URL } from '@/lib/site-links';
 import { nativeComponentDocs } from '@/lib/native-component-docs';
+import { getBlogSitemapEntries } from '@/lib/blog';
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export const revalidate = 900;
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const routes: MetadataRoute.Sitemap = [
     {
       url: SITE_URL,
@@ -26,11 +29,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   return [
     ...routes,
-    ...['/mobile', '/guides', ...guides.map((guide) => `/guides/${guide.slug}`)].map((route) => ({
-      url: `${SITE_URL}${route}`,
-      changeFrequency: 'monthly' as const,
-      priority: 0.8,
-    })),
+    ...['/mobile', '/guides', '/blog', ...guides.map((guide) => `/guides/${guide.slug}`)].map(
+      (route) => ({
+        url: `${SITE_URL}${route}`,
+        changeFrequency: 'monthly' as const,
+        priority: 0.8,
+      }),
+    ),
     ...componentDocs.map((component) => ({
       url: `${SITE_URL}${component.route}`,
       changeFrequency: 'monthly' as const,
@@ -41,5 +46,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly' as const,
       priority: 0.8,
     })),
+    ...(await getBlogSitemapEntries()),
   ];
 }

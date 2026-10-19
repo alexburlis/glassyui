@@ -12,6 +12,7 @@ card fails the build.
 | `components.jpg`                 | Four live demos                                             | Share studio                   |
 | `docs.jpg`, `guides.jpg`         | The install command; the lens                               | Share studio                   |
 | `guides/<slug>.jpg`              | Each guide's demo beside its title                          | Share studio                   |
+| `blog.jpg`, `blog/<slug>.jpg`    | The blog and each article, illustrated with live web demos  | Share studio                   |
 | `components/<slug>.jpg`          | Each component's live demo beside its name, overlays opened | Share studio                   |
 
 Expo-only components share the React Native card; pages without tags of their

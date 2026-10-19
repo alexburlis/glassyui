@@ -14,8 +14,15 @@ if (process.env.NEXT_PUBLIC_SENTRY_DSN && !/^glassyui@[0-9a-f]{40}$/.test(releas
 const nextConfig: NextConfig = {
   // The production image (Dockerfile) runs the traced standalone server.
   output: 'standalone',
+  images: {
+    localPatterns: [{ pathname: '/**', search: '' }, { pathname: '/share/blog/**' }],
+  },
   env: { NEXT_PUBLIC_SENTRY_RELEASE: release ?? '' },
   outputFileTracingIncludes: {
+    '/blog': ['./content/blog/*.mdx'],
+    '/blog/*': ['./content/blog/*.mdx'],
+    '/sitemap.xml': ['./content/blog/*.mdx'],
+    '/search-index.json': ['./content/blog/*.mdx'],
     '/components/*': ['./src/components/examples/*.tsx', './fixtures/expo-consumer/usage/*.tsx'],
   },
   allowedDevOrigins: ['127.0.0.1', 'localhost'],

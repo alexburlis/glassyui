@@ -21,7 +21,7 @@ import { changeTheme } from '@/lib/change-theme';
 
 type Entry = { category?: string; description: string; href: string; title: string };
 
-type SearchIndex = { components: Entry[]; guides: Entry[] };
+type SearchIndex = { components: Entry[]; guides: Entry[]; articles: Entry[] };
 
 /** Opens the search from anywhere, such as the desk's menu bar. */
 export const OPEN_SEARCH_EVENT = 'glassy:open-search';
@@ -35,6 +35,7 @@ const PAGES: Entry[] = [
   { description: 'Every component, live', href: '/components', title: 'All components' },
   { description: 'Complete sites in Glassy UI Pro', href: PRO_ORIGIN, title: 'Templates' },
   { description: 'Step-by-step tutorials', href: '/guides', title: 'Guides' },
+  { description: 'Liquid glass tutorials for web and mobile apps', href: '/blog', title: 'Blog' },
 ];
 
 /**
@@ -233,6 +234,9 @@ export function SiteSearch() {
                 </GlassCommandGroup>
                 <GlassCommandGroup heading="Guides">
                   {entries('Guide', index.guides)}
+                </GlassCommandGroup>
+                <GlassCommandGroup heading="Blog">
+                  {entries('Article', index.articles)}
                 </GlassCommandGroup>
               </>
             ) : null}

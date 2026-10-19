@@ -8,6 +8,7 @@ RUN corepack enable
 # 1. Package manifests and dependency patches (cached until either changes)
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches ./patches
+COPY vendor ./vendor
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 
