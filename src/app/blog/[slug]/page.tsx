@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { compileMDX } from 'next-mdx-remote/rsc';
@@ -82,15 +81,6 @@ export default async function BlogPostPage({ params }: BlogPageProps) {
             </time>
           </div>
         </header>
-        <Image
-          className="blog-article-image"
-          src={blogPostShareCard(post).image}
-          alt={post.heroImageAlt!}
-          width={1200}
-          height={630}
-          sizes="(min-width: 1200px) 800px, (min-width: 768px) 65vw, 100vw"
-          priority
-        />
         <div className="blog-prose">{content}</div>
         <p className="blog-feed-link">
           <Link href="/blog">

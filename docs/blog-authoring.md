@@ -35,11 +35,16 @@ The page supplies the H1, so start body sections at H2.
 MDX is trusted repository content compiled on the server, never visitor input.
 Code fences use the site's copyable code block; GFM tables scroll on narrow
 screens. Article code must match the current registry and its install closure.
-Drafts stay hidden from public routes even in development. Changing `status` to
-`published` makes a post eligible only after `publishedAt`; lists, RSS, sitemap
-and article routes use the package's visible-post helpers. Pages revalidate
-every 15 minutes. This mechanism needs no daily writer or deployment automation.
-Publishing the site still requires explicit authority.
+Use `<BlogGlassDemo variant="scene" />`, `variant="expo"` or `variant="android"`
+for a live example near the opening answer. These are React browser demos;
+native articles must distinguish the preview from the native code and material.
+Keep demo components in `src/components/blog` and their styling scoped to the
+demo. Index and social cards use the hero image; articles lead with live
+content. Drafts stay hidden from public routes even in development. Changing
+`status` to `published` makes a post eligible only after `publishedAt`; lists,
+RSS, sitemap and article routes use the package's visible-post helpers. Pages
+revalidate every 15 minutes. This mechanism needs no daily writer or deployment
+automation. Publishing the site still requires explicit authority.
 
 ## Editorial checks
 

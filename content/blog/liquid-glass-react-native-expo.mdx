@@ -9,6 +9,7 @@ excerpt:
   later. Here is how to check for it, what to draw everywhere else, and a
   complete Expo screen that handles all of it.
 publishedAt: '2026-10-19T08:00:00+02:00'
+updatedAt: '2026-10-19T12:17:46+02:00'
 status: published
 tags:
   - React Native
@@ -36,6 +37,13 @@ Glassy UI's React Native components make this choice for you. This article shows
 how they make it, so you can check the result on your own devices, and ends with
 a complete screen. The guidance covers Expo SDK 57 and `expo-glass-effect` 57.0
 as of October 2026.
+
+<BlogGlassDemo variant="expo" />
+
+This React browser preview recreates the run card with web components. Press
+Start to run its timer; Reduce Transparency switches the Material line from
+`blur` to `solid`. The native example below uses the system's own glass on
+supported iOS 26 devices.
 
 ## The system's glass and a blur are different materials
 
@@ -247,13 +255,25 @@ The `tint` prop on `GlassSurface` expects an opaque colour. The blur path
 composites that tint with the backdrop, so check text contrast on the final
 surface rather than judging the tint colour alone.
 
-## When to use the system's glass
+## Where to put the system's glass
 
 Apple's guidance is to keep colour in controls and navigation restrained, so
 that content shows through and controls stay legible
 ([Apple: Liquid Glass](https://developer.apple.com/documentation/technologyoverviews/liquid-glass)).
-Glass suits the layer that floats above your content: bars, buttons, cards over
-a photo and sheets. Behind long passages of text, use a solid surface.
+Glass suits the layer that floats above your content. Good first places in an
+Expo app:
+
+- **A card over a photo**, like the run card above: a now-playing, timer or
+  delivery-status card over artwork or a map snapshot.
+- **Bottom navigation** with
+  [`GlassDock`](/components/glass-dock?platform=react-native).
+- **A filter over content** with
+  [`GlassSegmentedControl`](/components/glass-segmented-control?platform=react-native).
+- **Quick actions** in a
+  [`GlassSheet`](/components/glass-sheet?platform=react-native).
+
+Behind long passages of text, such as settings lists or an article, use a solid
+surface.
 
 For the full component list, the Android limits for dialogs and menus, and the
 gesture components, read the [Expo guide](/guides/expo).

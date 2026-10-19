@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Children, isValidElement, type ComponentPropsWithoutRef } from 'react';
 import type { MDXRemoteProps } from 'next-mdx-remote/rsc';
 import { CopyCodeBlock } from '@/components/docs/copy-code-block';
+import { BlogGlassDemo } from './glass-demo';
 
 function MdxPre({ children }: ComponentPropsWithoutRef<'pre'>) {
   const code = Children.only(children);
@@ -55,6 +56,7 @@ function MdxTable(props: ComponentPropsWithoutRef<'table'>) {
 }
 
 export const blogMdxComponents = {
+  BlogGlassDemo,
   a: MdxLink,
   pre: MdxPre,
   table: MdxTable,

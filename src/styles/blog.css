@@ -20,8 +20,7 @@
   border-radius: 16px;
 }
 
-.blog-post-image img,
-.blog-article-image {
+.blog-post-image img {
   display: block;
   width: 100%;
   height: auto;
@@ -74,12 +73,6 @@
   margin-top: 18px;
   color: var(--site-link);
   font-weight: 500;
-}
-
-.blog-article-image {
-  margin: 0 0 40px;
-  border: 1px solid var(--site-hairline);
-  border-radius: 16px;
 }
 
 .blog-prose {
