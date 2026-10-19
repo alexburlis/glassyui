@@ -1,10 +1,11 @@
 import { componentDocs } from '@/components/docs/component-docs-data';
 import { guides } from '@/components/docs/guide-data';
+import { getBlogPosts } from '@/lib/blog';
 
-export const dynamic = 'force-static';
+export const revalidate = 900;
 
 /** What the site search lists. It is fetched the first time the search opens, so no page carries it. */
-export function GET() {
+export async function GET() {
   return Response.json({
     components: componentDocs.map((component) => ({
       category: component.category,
@@ -25,5 +26,10 @@ export function GET() {
         title: guide.title,
       })),
     ],
+    articles: (await getBlogPosts()).map((post) => ({
+      description: post.description,
+      href: `/blog/${post.slug}`,
+      title: post.title,
+    })),
   });
 }

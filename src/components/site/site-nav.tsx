@@ -19,6 +19,7 @@ const NAV_LINKS = [
   // Templates are Glassy UI Pro's.
   { href: PRO_ORIGIN, label: 'Templates' },
   { href: '/guides', label: 'Guides' },
+  { href: '/blog', label: 'Blog' },
 ];
 
 function NavigationLinks({ pathname }: { pathname: string }) {

@@ -1,0 +1,118 @@
+diff --git a/dist/matter.js b/dist/matter.js
+index f6e2961..1f88e02 100644
+--- a/dist/matter.js
++++ b/dist/matter.js
+@@ -1,4 +1,4 @@
+-import yaml from "js-yaml";
++import { load } from "js-yaml";
+ 
+ export const parseFrontmatter = (source) => {
+     const match = /^(?:\uFEFF)?---[ \t]*\r?\n([\s\S]*?)\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/.exec(source);
+@@ -10,7 +10,7 @@ export const parseFrontmatter = (source) => {
+             content: source,
+         };
+     }
+-    const loaded = yaml.load(match[1] ?? "") ?? {};
++    const loaded = load(match[1] ?? "") ?? {};
+     if (typeof loaded !== "object" || Array.isArray(loaded)) {
+         throw new Error("MDX frontmatter must be a YAML object.");
+     }
+diff --git a/dist/proof.js b/dist/proof.js
+--- a/dist/proof.js
++++ b/dist/proof.js
+@@ -2,6 +2,59 @@
+ const fillSlug = (template, slug) => template.replaceAll("{slug}", slug).replaceAll("<slug>", slug);
+ const expectedPathFor = (contract, slug) => `${contract.routeBase ?? "/blog"}/${slug}`;
+ const containsExpectedPath = (body, expectedPath, articleUrl) => body.includes(expectedPath) || body.includes(articleUrl);
++
++const indexLinks = (body, pageUrl) => {
++    const links = [];
++    const html = body.replace(/<!--[\s\S]*?-->|<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "");
++    for (const anchor of html.matchAll(/<a\b[^>]*>/gi)) {
++        const href = anchor[0].match(/\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
++        if (!href)
++            continue;
++        const value = href[1] ?? href[2] ?? href[3];
++        if (!URL.canParse(value, pageUrl))
++            continue;
++        links.push(new URL(value, pageUrl));
++    }
++    return links;
++};
++const verifyIndex = async (indexUrl, articleUrl, fetchImpl) => {
++    const root = new URL(indexUrl);
++    const article = new URL(articleUrl);
++    const archivePrefix = `${root.pathname.replace(/\/$/, "")}/page/`;
++    const pending = [root.href];
++    const discovered = new Set(pending);
++    const inspectedPages = [];
++    const maxPages = 50;
++    let check;
++    while (pending.length) {
++        if (inspectedPages.length >= maxPages)
++            throw new Error(`Blog index proof exceeded ${maxPages}-page limit: ${JSON.stringify(inspectedPages)}`);
++        const url = pending.shift();
++        // A redirect must not move proof onto another origin or unrelated path.
++        const response = await fetchImpl(url, { redirect: "manual", signal: AbortSignal.timeout(30000) });
++        const body = await response.text();
++        const links = indexLinks(body, url).filter((link) => link.origin === root.origin && !link.username && !link.password && !link.search && !link.hash);
++        check = {
++            url,
++            status: response.status,
++            ok: response.ok,
++            containsExpectedPath: response.ok && links.some((link) => link.origin === article.origin && link.pathname === article.pathname),
++        };
++        inspectedPages.push(check);
++        if (!check.ok || check.containsExpectedPath)
++            break;
++        for (const link of links) {
++            const pageNumber = link.pathname.slice(archivePrefix.length);
++            if (!link.pathname.startsWith(archivePrefix) || !/^[1-9]\d*$/.test(pageNumber) || discovered.has(link.href))
++                continue;
++            if (discovered.size >= maxPages)
++                throw new Error(`Blog index proof exceeded ${maxPages}-page limit: ${JSON.stringify(inspectedPages)}`);
++            discovered.add(link.href);
++            pending.push(link.href);
++        }
++    }
++    return { surface: "index", ...check, inspectedPages };
++};
+ export const verifyPublishedPost = async ({ contract, slug, fetchImpl = fetch, }) => {
+     const expectedPath = expectedPathFor(contract, slug);
+     const articleUrl = fillSlug(contract.proof.article, slug);
+@@ -9,6 +62,10 @@
+     const checks = [];
+     for (const surface of surfaces) {
+         const url = surface === "article" ? articleUrl : fillSlug(contract.proof[surface], slug);
++        if (surface === "index") {
++            checks.push(await verifyIndex(url, articleUrl, fetchImpl));
++            continue;
++        }
+         const response = await fetchImpl(url);
+         const body = await response.text().catch(() => "");
+         checks.push({
+@@ -23,7 +80,7 @@
+     if (!ok) {
+         const failed = checks
+             .filter((check) => !check.ok || !check.containsExpectedPath)
+-            .map((check) => `${check.surface}:${check.status}`)
++            .map((check) => `${check.surface}:${check.status}${check.inspectedPages ? ` inspected=${JSON.stringify(check.inspectedPages)}` : ""}`)
+             .join(", ");
+         throw new Error(`Publish proof failed for "${slug}": ${failed}`);
+     }
+diff --git a/dist/types.d.ts b/dist/types.d.ts
+--- a/dist/types.d.ts
++++ b/dist/types.d.ts
+@@ -82,6 +82,12 @@
+ };
+ export type ProofSurface = "article" | "index" | "rss" | "sitemap";
+ export type ProofCheck = {
++    inspectedPages?: {
++        url: string;
++        status: number;
++        ok: boolean;
++        containsExpectedPath: boolean;
++    }[];
+     surface: ProofSurface;
+     url: string;
+     status: number;

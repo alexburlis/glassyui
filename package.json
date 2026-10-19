@@ -65,7 +65,9 @@
     "test:error-startup": "node scripts/test-error-startup.mjs",
     "test:build-upload": "node scripts/test-build-upload.mjs",
     "test:braces-security": "node scripts/test-braces-security.mjs",
-    "check:error-reports": "node scripts/check-error-reports.mjs"
+    "check:error-reports": "node scripts/check-error-reports.mjs",
+    "smoke:blog": "node scripts/smoke-blog.mjs",
+    "blogkit:prove": "mdx-blog-kit prove --contract blogkit.site.json"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.16",
@@ -92,7 +94,10 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "remotion": "4.0.529",
-    "turndown": "7.2.4"
+    "turndown": "7.2.4",
+    "mdx-blog-kit": "file:vendor/mdx-blog-kit-0.1.2.tgz",
+    "next-mdx-remote": "6.0.0",
+    "remark-gfm": "4.0.1"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",
@@ -123,7 +128,8 @@
     },
     "patchedDependencies": {
       "next@16.3.8": "patches/next@16.3.8.patch",
-      "braces@3.0.3": "patches/braces@3.0.3.patch"
+      "braces@3.0.3": "patches/braces@3.0.3.patch",
+      "mdx-blog-kit@0.1.2": "patches/mdx-blog-kit@0.1.2.patch"
     }
   },
   "packageManager": "pnpm@10.23.0+sha512.21c4e5698002ade97e4efe8b8b4a89a8de3c85a37919f957e7a0f30f38fbc5bbdd05980ffe29179b2fb6e6e691242e098d945d1601772cad0fef5fb6411e2a4b"

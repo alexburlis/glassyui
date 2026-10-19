@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { createMdxBlog } from 'mdx-blog-kit';
 import { chromium } from 'playwright';
 
 const baseUrl = process.argv[2];
@@ -55,11 +56,23 @@ const webComponents = new Set(
 const slugUnder = (prefix) =>
   pages.flatMap((page) => (page.startsWith(prefix) ? [page.slice(prefix.length)] : []));
 
+// Artwork must be ready while a post is still a draft or scheduled for a future date.
+const blogPosts = await createMdxBlog({
+  contentDir: path.resolve('content/blog'),
+  baseUrl: new URL(baseUrl).origin,
+  routeBase: '/blog',
+}).getAllPosts({ includeDrafts: true });
+
 const cards = [
   { file: 'components.jpg', route: 'components' },
   { file: 'docs.jpg', route: 'docs' },
   { file: 'guides.jpg', route: 'guides' },
+  { file: 'blog.jpg', route: 'blog' },
   ...slugUnder('/guides/').map((slug) => ({ file: `guides/${slug}.jpg`, route: `guide/${slug}` })),
+  ...blogPosts.map(({ slug }) => ({
+    file: `blog/${slug}.jpg`,
+    route: `post/${slug}`,
+  })),
   ...slugUnder('/components/').flatMap((slug) =>
     webComponents.has(slug) ? [{ file: `components/${slug}.jpg`, route: `component/${slug}` }] : [],
   ),

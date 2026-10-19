@@ -1,0 +1,292 @@
+---
+title: 'Liquid glass with CSS and React: blur, refraction and browser support'
+description:
+  'Build a glass effect for a website: a CSS frost that works in current
+  browsers, what blur cannot do, and how Glassy UI’s GlassScene adds refraction
+  over a backdrop you supply.'
+excerpt:
+  'CSS backdrop-filter gives you frosted glass in every current browser. It
+  cannot bend light. Here is a working frost, the reason refraction needs more,
+  and a React scene that draws it.'
+publishedAt: '2026-10-19T08:00:00+02:00'
+status: published
+tags:
+  - css
+  - react
+  - liquid glass
+  - backdrop-filter
+  - refraction
+heroImage: '/share/blog/liquid-glass-css-react.jpg'
+heroImageAlt:
+  'Glass panels and drops bending ribbon artwork, beside the words: Liquid
+  glass. On the web.'
+---
+
+On a website, "liquid glass" means two separate effects. **Frost** blurs and
+tints whatever is behind an element. CSS does it with one property,
+[`backdrop-filter`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/backdrop-filter),
+and it works in current Chrome, Edge, Safari and Firefox. **Refraction** shifts
+the backdrop at the rims, so edges look thick and lines bend as they pass under
+the glass. CSS blur cannot do that. For refraction across browsers, you need to
+draw the backdrop yourself: Glassy UI's [Glass Scene](/components/glass-scene)
+does this with WebGL2 over an image you supply.
+
+So the decision is short:
+
+- **You want a translucent card, menu or header.** Use the CSS frost below. No
+  library is needed.
+- **You want visible bending at the edges, in Safari and Firefox too.** Put a
+  backdrop image and your glass inside a `GlassScene`.
+- **You already use shadcn/ui and want its components to look glassy.** Use the
+  [Glassy UI theme for shadcn/ui](/guides/shadcn-theme). Its rim bend appears
+  only in Chromium browsers. Safari and Firefox show the frost.
+
+This article covers websites. The system's own glass on iOS 26 is a native
+material. A browser does not expose it, and nothing on this page reproduces it.
+
+## A CSS frost that works
+
+This card frosts the content behind it, keeps some colour and lights its top
+edge:
+
+```css
+.frost {
+  border: 1px solid rgb(255 255 255 / 0.28);
+  border-radius: 20px;
+  background: rgb(255 255 255 / 0.14);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    0 12px 32px rgb(0 0 0 / 0.18);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  backdrop-filter: blur(16px) saturate(1.6);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .frost {
+    background: #1c1c1e;
+    color: #f5f5f7;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+```
+
+```html
+<div class="frost">
+  <p>Settings</p>
+</div>
+```
+
+Each line has one job:
+
+- `backdrop-filter: blur()` blurs the pixels painted behind the element.
+  `saturate()` restores the colour that blur washes out.
+- The semi-transparent `background` is the tint. Without it, a blur over a busy
+  image leaves text hard to read.
+- The inset shadow is the lit rim. The outer shadow lifts the card off the page.
+- The `-webkit-` line covers Safari versions that only knew the prefixed
+  property.
+- The media query gives people who ask for less transparency a solid surface.
+  Use an opaque colour from your own palette.
+
+MDN lists `backdrop-filter` as Baseline 2024: it has worked across current
+browsers since September 2024, with gaps on older devices.
+
+### When the blur does nothing
+
+If the card looks like a flat tint, check its ancestors first. MDN describes a
+[backdrop root](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/backdrop-filter#backdrop_root):
+the filter only sees content painted between the element and the nearest
+ancestor that has any of these:
+
+- a `filter` other than `none`
+- `opacity` below 1
+- a `mask`, `mask-image`, `mask-border` or `clip-path`
+- its own `backdrop-filter`
+- a `mix-blend-mode` other than `normal`
+- `will-change` set to one of these properties
+
+A fade-in wrapper with `opacity: 0.99` is enough to stop the card seeing the
+page. Move the animation onto the card itself, or end it at `opacity: 1`.
+
+The second cause is an empty backdrop. Frost over a flat colour is invisible.
+Glass needs a photo, a gradient or content under it.
+
+## What blur cannot do
+
+Blur averages nearby pixels. The pixels stay in place, so a straight line behind
+frost is still straight, only softer. Real glass is thicker at its rim: light
+leaving the curved edge moves sideways, and different colours move by different
+amounts. That displacement is what makes a shape read as a solid lens, not as
+frosted plastic.
+
+To move a pixel, a renderer must read the backdrop as an image and sample it at
+an offset. Chromium can apply an SVG displacement filter inside
+`backdrop-filter`, which is how the shadcn/ui theme and the components' `lens`
+option bend live page content. Glassy UI's sources draw that lens only in
+Chromium. Safari and Firefox keep the frost alone.
+
+To bend a backdrop in every current browser, Glassy UI takes the other route:
+you supply the backdrop as an image, and a WebGL2 canvas draws it through the
+glass. As the [glass accessibility guide](/guides/glass-accessibility) puts it,
+Glass Scene "does not capture and refract arbitrary DOM behind the page." It
+refracts the image you give it.
+
+| You need                                  | Use                                     | Browsers that bend the backdrop |
+| ----------------------------------------- | --------------------------------------- | ------------------------------- |
+| Frosted, tinted surfaces                  | CSS `backdrop-filter`                   | None: frost only                |
+| shadcn/ui components that turn to glass   | [Glassy UI theme](/guides/shadcn-theme) | Chromium; others show frost     |
+| Bent rims over live page content          | Glassy UI components with `lens`        | Chromium; others show frost     |
+| Bent rims, colour split and merging drops | [`GlassScene`](/components/glass-scene) | Any browser with WebGL2         |
+
+## Refraction in React with GlassScene
+
+`GlassScene` paints its `backdrop` behind its children and draws all the glass
+inside it on one WebGL2 canvas. Glass Panels and Glass Buttons inside the scene
+register with it. A `GlassDrop` is a plain piece of glass that you size and
+place with CSS. Pieces that come within the merge distance, 12 CSS pixels by
+default, melt into one body.
+
+### Install
+
+The components install with the shadcn CLI from their registry URLs. If you have
+not added Glassy UI to the project before, the [shadcn guide](/guides/shadcn)
+covers setup and the folder the files land in.
+
+```bash
+npx shadcn@4.14.1 add https://glassyui.com/r/glass-scene.json https://glassyui.com/r/glass-panel.json https://glassyui.com/r/glass-button.json
+```
+
+The scene item depends on `clsx` and on the `glass-provider` item, which carries
+the shared stylesheet. The CLI installs both.
+
+### A hero card with a drop of glass
+
+Put an image in `public/hero-backdrop.jpg`, then add this client component:
+
+```tsx
+'use client';
+
+import { GlassButton } from '@/components/glassyui/glass-button';
+import { GlassPanel } from '@/components/glassyui/glass-panel';
+import { GlassDrop, GlassScene } from '@/components/glassyui/glass-scene';
+
+export function HeroGlass() {
+  return (
+    <GlassScene
+      backdrop="/hero-backdrop.jpg"
+      style={{ height: 340, overflow: 'hidden', borderRadius: 22 }}
+    >
+      <GlassPanel
+        variant="card"
+        style={{
+          position: 'absolute',
+          top: 24,
+          left: 24,
+          width: 260,
+          padding: 18,
+        }}
+      >
+        <p style={{ margin: 0, fontSize: 12, fontWeight: 600 }}>Glassy UI</p>
+        <p
+          style={{
+            margin: '6px 0 0',
+            fontSize: 22,
+            fontWeight: 700,
+            lineHeight: 1.15,
+          }}
+        >
+          Light bends at every edge.
+        </p>
+      </GlassPanel>
+      <GlassDrop
+        style={{
+          position: 'absolute',
+          right: 32,
+          bottom: 72,
+          width: 120,
+          height: 120,
+          borderRadius: '50%',
+        }}
+      />
+      <div style={{ position: 'absolute', left: 24, bottom: 22 }}>
+        <GlassButton size="sm" variant="prominent">
+          Get started
+        </GlassButton>
+      </div>
+    </GlassScene>
+  );
+}
+```
+
+This is a reduced version of the example on the
+[Glass Scene page](/components/glass-scene), which adds merge and flow toggles.
+The scene positions its children, because `.lg-scene` is `position: relative`.
+The card, drop and button sit far enough apart that they stay separate. Move the
+drop next to the card, or raise `optics={{ merge: 24 }}`, and they melt
+together.
+
+### The props that matter
+
+- `backdrop`: the image the glass bends. Pass a URL, or a CSS `url()` or `var()`
+  value. Serve it from your own origin or with CORS, because WebGL can only read
+  images it is allowed to read.
+- `backdropSpace`: `'local'` (the default) covers the scene with the image.
+  `'viewport'` pins it to the viewport, like `background-attachment: fixed`, so
+  scrolling carries the glass across a still image.
+- `optics`: `ior` (1.5), `thickness` (40), `bevel` (28), `dispersion` (0.15),
+  `frost` (1), `merge` (12) and `specular` (1). Lengths are CSS pixels. Without
+  a value of your own, the site's thickness preference scales `thickness`,
+  `bevel` and `dispersion`.
+- `flow`: lets glass ripple like liquid. Reduced motion holds it still.
+
+The [component page](/components/glass-scene) lists the full API.
+
+### What happens when it cannot draw
+
+The canvas appears only after it has drawn a frame. Until then, the children
+show their CSS glass. They keep it in these cases too:
+
+- the browser has no WebGL2, or loses the context
+- the visitor asks for reduced transparency or more contrast
+- forced colours are active
+
+The scene writes its state to `data-lg-scene-renderer` on its root: `css`,
+`webgl` or `off`. Check that attribute in devtools when the glass looks flat. A
+CORS error on the backdrop is the next thing to look for.
+
+The canvas takes no clicks and no focus. Text, links and buttons stay ordinary
+HTML, so keyboard use, selection and screen readers work as they do on the rest
+of the page.
+
+## Keep it readable
+
+Glass over an image puts text on a background you do not fully control. Scene
+surfaces adjust their face behind text, but that does not make every colour
+combination accessible. Test the longest label over the lightest and darkest
+parts of your actual image.
+
+Rendering cost grows with the area and number of glass layers, and with
+animation. Start with one scene or a few accents, then check scrolling on the
+slowest device your visitors use. The
+[glass accessibility guide](/guides/glass-accessibility) covers reduced-motion
+and reduced-transparency settings, legibility and where to spend rendering work.
+
+## Quick answers
+
+**Can CSS alone make liquid glass?** CSS makes the frost: blur, tint, lit rims
+and shadow. Bending the backdrop needs the Chromium-only SVG lens or a renderer
+that draws a supplied image, such as `GlassScene`.
+
+**Does GlassScene refract the text and elements behind it?** No. It refracts its
+`backdrop` image. Put the content you want people to read inside the scene as
+ordinary HTML, on top of the glass.
+
+**Does the shadcn/ui theme refract in Safari?** No. The theme bends rims only in
+Chromium browsers. Safari and Firefox show its frost. For refraction there, use
+Glassy UI's own components in a `GlassScene`.
+
+**Is this the iOS 26 material?** No. On the web you get CSS and WebGL
+approximations. For an Expo app, the [Expo guide](/guides/expo) shows how Glassy
+UI's native components use the system's own glass on iOS 26 and blur on other
+platforms.

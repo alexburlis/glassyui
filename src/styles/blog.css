@@ -1,0 +1,239 @@
+.blog-post-list {
+  display: grid;
+  gap: 40px;
+  margin-top: 40px;
+}
+
+.blog-post-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  align-items: start;
+  gap: 28px;
+  padding-bottom: 40px;
+  border-bottom: 1px solid var(--site-hairline);
+}
+
+.blog-post-image {
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--site-hairline);
+  border-radius: 16px;
+}
+
+.blog-post-image img,
+.blog-article-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.blog-article .docs-page-header {
+  margin-bottom: 32px;
+}
+
+.blog-post-summary {
+  min-width: 0;
+}
+
+.blog-post-summary h2 {
+  margin: 10px 0 12px;
+  font-family: var(--site-font-display);
+  font-size: 25px;
+  font-weight: 600;
+  line-height: 1.16;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.blog-post-summary h2 a {
+  color: var(--site-text);
+  text-decoration: none;
+}
+
+.blog-post-summary h2 a:hover {
+  color: var(--site-link);
+}
+
+.blog-post-summary > p:not(.blog-post-meta) {
+  color: var(--site-text-2);
+  line-height: 1.6;
+}
+
+.blog-post-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--site-text-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.blog-post-read {
+  display: inline-block;
+  margin-top: 18px;
+  color: var(--site-link);
+  font-weight: 500;
+}
+
+.blog-article-image {
+  margin: 0 0 40px;
+  border: 1px solid var(--site-hairline);
+  border-radius: 16px;
+}
+
+.blog-prose {
+  min-width: 0;
+  color: var(--site-text-2);
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+
+.blog-prose > * + * {
+  margin-top: 22px;
+}
+
+.blog-prose :is(h1, h2, h3, h4) {
+  color: var(--site-text);
+  font-family: var(--site-font-display);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.blog-prose h2 {
+  margin-top: 48px;
+  font-size: 30px;
+}
+
+.blog-prose h3 {
+  margin-top: 32px;
+  font-size: 23px;
+}
+
+.blog-prose h4 {
+  font-size: 19px;
+}
+
+.blog-prose :is(h2, h3, h4) + * {
+  margin-top: 14px;
+}
+
+.blog-prose :is(a, a:visited) {
+  color: var(--site-link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.blog-prose strong {
+  color: var(--site-text);
+  font-weight: 600;
+}
+
+.blog-prose :is(ul, ol) {
+  padding-left: 24px;
+}
+
+.blog-prose ul {
+  list-style: disc;
+}
+
+.blog-prose ol {
+  list-style: decimal;
+}
+
+.blog-prose li + li {
+  margin-top: 8px;
+}
+
+.blog-prose li > p + p {
+  margin-top: 12px;
+}
+
+.blog-prose :not(pre) > code {
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: var(--site-fill);
+  color: var(--site-text);
+  font-family: var(--site-font-mono);
+  font-size: 0.86em;
+}
+
+.blog-prose .docs-code-block {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: normal;
+}
+
+.blog-prose blockquote {
+  padding-left: 20px;
+  border-left: 2px solid var(--site-hairline);
+}
+
+.blog-prose hr {
+  margin-block: 40px;
+  border-color: var(--site-hairline);
+}
+
+.blog-prose img {
+  max-width: 100%;
+  height: auto;
+}
+
+.blog-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--site-hairline);
+  border-radius: 12px;
+}
+
+.blog-table-scroll:focus-visible {
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: 3px;
+}
+
+.blog-table-scroll table {
+  width: 100%;
+  min-width: 480px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.blog-table-scroll :is(th, td) {
+  padding: 14px 18px;
+  vertical-align: top;
+}
+
+.blog-table-scroll th {
+  background: var(--site-fill);
+  color: var(--site-text);
+  font-weight: 600;
+}
+
+.blog-table-scroll tr + tr td {
+  border-top: 1px solid var(--site-hairline);
+}
+
+.blog-feed-link {
+  margin-top: 40px;
+  color: var(--site-link);
+  font-size: 15px;
+}
+
+@media (max-width: 767px) {
+  .blog-post-card {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .blog-post-summary h2 {
+    font-size: 24px;
+  }
+
+  .blog-prose h2 {
+    font-size: 26px;
+  }
+}
