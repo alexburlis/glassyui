@@ -1,0 +1,196 @@
+/* Live examples in blog articles (src/components/blog/glass-demo.tsx). Every
+   rule is scoped to .blog-demo, which also resets the prose styles the
+   components would otherwise inherit. */
+
+.blog-demo {
+  margin-inline: 0;
+  margin-bottom: 0;
+  color: var(--site-text);
+  line-height: 1.4;
+  overflow-wrap: normal;
+}
+
+.blog-demo:first-child {
+  margin-top: 0;
+}
+
+.blog-demo p {
+  margin: 0;
+}
+
+.blog-demo .blog-demo-code {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--site-fill);
+  color: var(--site-text);
+  font-family: var(--site-font-mono);
+  font-size: 13px;
+}
+
+/* A link styled as a button keeps the button's own colour, not the prose link's. */
+.blog-prose .blog-demo a.lg-button {
+  color: revert-layer;
+  text-decoration: none;
+}
+
+.blog-demo-stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  background: var(--site-wallpaper) center / cover no-repeat;
+}
+
+/* The scene paints its own backdrop layer. */
+.blog-demo-stage.lg-scene {
+  background: none;
+}
+
+.blog-demo-stage--scene {
+  --blog-demo-card: min(240px, calc(100cqi - 40px));
+  --blog-demo-drop: clamp(76px, 24cqi, 116px);
+  container-type: inline-size;
+  height: 300px;
+}
+
+.blog-demo-hero-card {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: var(--blog-demo-card);
+  min-height: 112px;
+  padding: 18px;
+}
+
+.blog-demo-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.blog-demo .blog-demo-headline {
+  margin-top: 6px;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.blog-demo-drop {
+  position: absolute;
+  top: calc(300px - 20px - var(--blog-demo-drop));
+  left: calc(100cqi - 20px - var(--blog-demo-drop));
+  width: var(--blog-demo-drop);
+  height: var(--blog-demo-drop);
+  border-radius: 50%;
+  transition:
+    top 700ms var(--lg-spring),
+    left 700ms var(--lg-spring);
+}
+
+/* Beside the card's lower corner, inside the merge distance, so they melt. */
+.blog-demo-stage[data-merged='true'] .blog-demo-drop {
+  top: calc(20px + 112px - var(--blog-demo-drop) * 0.4);
+  left: calc(20px + var(--blog-demo-card) - var(--blog-demo-drop) * 0.35);
+}
+
+.blog-demo-hero-action {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+}
+
+.blog-demo-stage--native {
+  display: grid;
+  place-items: center;
+  min-height: 300px;
+  padding: 28px 20px;
+}
+
+.blog-demo-native-card {
+  display: grid;
+  gap: 14px;
+  width: min(320px, 100%);
+  padding: 22px;
+  border-radius: 24px;
+}
+
+.blog-demo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.blog-demo-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.blog-demo .blog-demo-title--large {
+  font-size: 22px;
+}
+
+.blog-demo-muted,
+.blog-demo-hint {
+  color: var(--site-text-2);
+  font-size: 14px;
+}
+
+.blog-demo-time {
+  font-family: var(--site-font-mono);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Android without a blur target: the tint and rim, no blur. */
+.blog-demo-stage[data-blur-target='none'] :is(.lg-glass-surface, .lg-button, .lg-button *),
+.blog-demo-stage[data-blur-target='none'] .lg-glass-surface::before {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.blog-demo-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin-top: 16px;
+  font-size: 15px;
+}
+
+.blog-demo-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.blog-demo-control--slider {
+  flex: 1 1 200px;
+}
+
+.blog-demo-control--slider > :last-child {
+  flex: 1;
+}
+
+.blog-demo-readout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  flex-basis: 100%;
+}
+
+.blog-demo-renderer {
+  font-weight: 600;
+}
+
+.blog-demo-caption {
+  margin-top: 12px;
+  color: var(--site-text-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blog-demo-drop {
+    transition: none;
+  }
+}

@@ -9,6 +9,7 @@ excerpt:
   view it marks. Here is how GlassBackdrop sets that up, what you get before and
   after Android 12, and how to offer solid glass.
 publishedAt: '2026-10-19T08:00:00+02:00'
+updatedAt: '2026-10-19T12:17:46+02:00'
 status: published
 tags:
   - react-native
@@ -26,9 +27,15 @@ screen in a view that Android is allowed to blur, then place glass controls on
 top of it. In Glassy UI, that view is `GlassBackdrop`. Apple's glass material is
 not available to Android apps, so on Android Glassy UI blurs the backdrop you
 choose, tints it and lights the rim. Glass outside a `GlassBackdrop` still
-renders on Android, but as a translucent tint with no blur. This article covers
-that structure, what Android draws on each version and in each situation, and
-how to give users a solid option.
+renders on Android, but as a translucent tint with no blur.
+
+<BlogGlassDemo variant="android" />
+
+This React browser preview recreates the "Evening mix" screen with web
+components. Press Play, then turn off Inside GlassBackdrop to compare the frost
+with a tint-only surface. Turn on Solid glass for the opaque option your app can
+offer. The native code below blurs the backdrop on Android 12 and later; older
+versions show the tint.
 
 This is about glass inside your own app. If you want your whole phone to look
 like iOS 26, with glass on the home screen, notification shade and icons, that

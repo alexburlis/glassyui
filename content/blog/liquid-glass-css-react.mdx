@@ -9,6 +9,7 @@ excerpt:
   cannot bend light. Here is a working frost, the reason refraction needs more,
   and a React scene that draws it.'
 publishedAt: '2026-10-19T08:00:00+02:00'
+updatedAt: '2026-10-19T12:17:46+02:00'
 status: published
 tags:
   - css
@@ -40,6 +41,14 @@ So the decision is short:
 - **You already use shadcn/ui and want its components to look glassy.** Use the
   [Glassy UI theme for shadcn/ui](/guides/shadcn-theme). Its rim bend appears
   only in Chromium browsers. Safari and Firefox show the frost.
+
+<BlogGlassDemo variant="scene" />
+
+The demo above is the hero card from later in this article, running in a live
+`GlassScene`. Choose Frost only and the ribbons under the drop stop bending:
+that is all CSS blur can do. Choose Refraction again, then turn on Move drop to
+card and watch the two pieces melt into one. Drag Thickness to see the slab thin
+or deepen; the demo prints the `optics` prop to paste into your own scene.
 
 This article covers websites. The system's own glass on iOS 26 is a native
 material. A browser does not expose it, and nothing on this page reproduces it.
@@ -140,6 +149,10 @@ refracts the image you give it.
 | Bent rims, colour split and merging drops | [`GlassScene`](/components/glass-scene) | Any browser with WebGL2         |
 
 ## Refraction in React with GlassScene
+
+`GlassScene` suits glass over one image you control: a hero photo, album art
+behind a player card, a product shot under a price. It does not suit glass over
+a scrolling article or a live map, because it bends its image, not the page.
 
 `GlassScene` paints its `backdrop` behind its children and draws all the glass
 inside it on one WebGL2 canvas. Glass Panels and Glass Buttons inside the scene
