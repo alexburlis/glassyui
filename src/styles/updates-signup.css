@@ -1,0 +1,173 @@
+/* The footer's signup for Glassy UI updates: one quiet tile at the top of the footer, the notice
+   on the left and the form on the right, stacking on narrow screens. The input and the button are
+   the library's own; only their placement is styled here. */
+.updates-signup {
+  display: grid;
+  gap: 20px 48px;
+  padding: 28px;
+  border-radius: 24px;
+  background: var(--site-tile);
+  color: var(--site-text-2);
+}
+
+@media (min-width: 860px) {
+  .updates-signup {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 440px);
+    align-items: center;
+    padding: 32px 36px;
+  }
+}
+
+.updates-signup-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.updates-signup-heading {
+  margin: 0;
+  color: var(--site-text);
+  font-family: var(--site-font-display);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+}
+
+.updates-signup-notice {
+  max-width: 54ch;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.updates-signup-privacy {
+  color: var(--site-text);
+  text-decoration: underline;
+  text-decoration-color: var(--site-hairline);
+  text-underline-offset: 3px;
+}
+
+.updates-signup-privacy:hover {
+  text-decoration-color: currentcolor;
+}
+
+.updates-signup-privacy:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: 2px;
+}
+
+.updates-signup-form {
+  display: grid;
+  min-width: 0;
+}
+
+.updates-signup-row {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.updates-signup-row > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.updates-signup-submit {
+  flex: none;
+}
+
+/* Below 420 px the button takes the full width under the field, so neither is cramped. */
+@media (max-width: 419px) {
+  .updates-signup {
+    padding: 22px 20px;
+  }
+
+  .updates-signup-row {
+    flex-direction: column;
+  }
+}
+
+/* Always rendered so screen readers hear it change; it takes no space while empty. */
+.updates-signup-error {
+  margin: 8px 0 0;
+  padding-inline: 4px;
+  color: var(--lg-invalid);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.updates-signup-error:empty {
+  margin: 0;
+}
+
+.updates-signup-accepted {
+  display: grid;
+  gap: 4px;
+  border-radius: 12px;
+  outline: none;
+  animation: updates-signup-in 320ms var(--lg-ease-out) both;
+}
+
+.updates-signup-accepted:focus-visible {
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: 6px;
+}
+
+.updates-signup-accepted p {
+  margin: 0;
+}
+
+.updates-signup-accepted-title {
+  color: var(--site-text);
+  font-family: var(--site-font-display);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.updates-signup-accepted-detail {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.updates-signup-email {
+  color: var(--site-text);
+  overflow-wrap: anywhere;
+}
+
+@keyframes updates-signup-in {
+  from {
+    translate: 0 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .updates-signup-accepted {
+    animation: none;
+  }
+}
+
+:root[data-lg-reduce-motion='1'] .updates-signup-accepted {
+  animation: none;
+}
+
+.updates-signup-change {
+  border-radius: 4px;
+  color: var(--site-text);
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--site-hairline);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.updates-signup-change:hover {
+  text-decoration-color: currentcolor;
+}
+
+.updates-signup-change:focus-visible {
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: 2px;
+}

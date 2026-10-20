@@ -4,6 +4,7 @@ import { PRO_ORIGIN, GITHUB, newIssueUrl } from '@/lib/site-links';
 import { BrandMark } from './app-icons';
 import { GithubMark } from './github-mark';
 import { PrivacySettingsButton } from './analytics-consent';
+import { UpdatesSignup } from './updates-signup';
 
 const FOOTER_CATEGORIES = componentCategories.filter((category) => category !== 'Core');
 
@@ -11,6 +12,7 @@ export function SiteFooter() {
   return (
     <footer className="site-footer">
       <div className="site-footer-inner">
+        <UpdatesSignup />
         <div className="site-footer-top">
           <div className="site-footer-brand">
             <Link className="site-brand" href="/">

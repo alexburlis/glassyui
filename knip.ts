@@ -14,6 +14,8 @@ const config: KnipConfig = {
   // The preview capture command uses the system's WebP encoder, not an npm bin.
   ignoreBinaries: ['cwebp'],
   ignoreIssues: {
+    // The generated Mailwerk client keeps its complete upstream protocol API.
+    'src/lib/mailwerk.ts': [...publicExports],
     // These exports are the documented source-copy API, not private app code.
     'src/components/liquid/*.tsx': [...publicExports],
     'src/components/liquid/index.ts': [...publicExports],
