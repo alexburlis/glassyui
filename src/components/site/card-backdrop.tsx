@@ -21,10 +21,8 @@ const bottomLeft = { kind: 'drop', cx: 70, cy: 288, r: 140 } as const;
 
 const bottomRight = { kind: 'drop', cx: 338, cy: 262, r: 118 } as const;
 
-// Forms in a 400 x 300 card: a stretch of the ribbon seen from one of six directions, or a drop
-// in a corner with its lit side in view, clear of the middle where panels would smear it. The
-// diagonal that every card used to show is two forms in twelve. Drops sit four apart, so none
-// meet across a row or down a column in grids of up to three columns.
+// Keep shapes clear of the card's central panel. Space drops four cards apart
+// so they never touch horizontally or vertically in grids of up to three columns.
 const FORMS: Form[] = [
   { ...rise, mirror: false },
   topRight,

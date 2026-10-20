@@ -1,7 +1,6 @@
 import { PRO_OFFER, PRO_TEMPLATE_NAMES } from '@/lib/pro-teaser';
 import { PRO_ORIGIN } from '@/lib/site-links';
 
-/** The gallery's last chapter: whole sites made of its components, in Glassy UI Pro. */
 export function TemplatesSection() {
   return (
     <section

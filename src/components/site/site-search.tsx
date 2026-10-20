@@ -39,9 +39,8 @@ const PAGES: Entry[] = [
 ];
 
 /**
- * How well one item answers the query, from 0 (hide it) to 1. Titles count most: the whole title,
- * then the start of a word in it, then anywhere in it; the description and category only count when
- * a word in them begins with what was typed. Every word of the query has to land.
+ * Score from 0 (hidden) to 1. Every query token must match. Title matches rank
+ * above keyword prefixes; the weakest title match still beats a keyword match.
  */
 function score(value: string, search: string, keywords: string[] = []) {
   const title = value.toLowerCase();
@@ -76,8 +75,7 @@ function score(value: string, search: string, keywords: string[] = []) {
   return scores.includes(0) ? 0 : scores.reduce((total, next) => total + next, 0) / scores.length;
 }
 
-// The shortcut reads ⌘K on systems with a Command key and Ctrl K elsewhere. The server has no device to ask,
-// so it renders ⌘ and a browser on another system corrects it once it hydrates.
+// Render ⌘ on the server, then choose the platform's modifier after hydration.
 const subscribeToNothing = () => () => {};
 
 const usesCommandKey = () => /Mac|iPhone|iPad/.test(navigator.userAgent);
@@ -87,8 +85,7 @@ const assumeCommandKey = () => true;
 const LOAD_FAILED = 'The component list did not load. Close the search and open it again to retry.';
 
 /**
- * What the search tells a screen reader as the list narrows. It stays mounted while the search is
- * open, so its changes are announced; a line that appears already written would not be.
+ * Keep the live region mounted while search is open so result changes are announced.
  */
 function SearchStatus({ failed }: { failed: boolean }) {
   const count = useCommandState((state) => state.filtered.count);
@@ -125,9 +122,7 @@ function SearchIcon() {
 }
 
 /**
- * The site's search, built from its own Command component. It opens with ⌘K (Ctrl K elsewhere),
- * lists every component, guide and page, and can flip the theme. It has no single-key shortcut,
- * which WCAG 2.1.4 would require a way to turn off.
+ * Use a modifier-key shortcut so typing a single character cannot open search.
  */
 export function SiteSearch() {
   const router = useRouter();
@@ -138,7 +133,7 @@ export function SiteSearch() {
   const mac = useSyncExternalStore(subscribeToNothing, usesCommandKey, assumeCommandKey);
   const requested = useRef(false);
 
-  // The list is a static file, fetched the first time anyone reaches for the search.
+  // Fetch once on focus, hover or opening; failed requests may retry.
   const load = useCallback(() => {
     if (requested.current) return;
 
@@ -154,7 +149,6 @@ export function SiteSearch() {
         setFailed(false);
       })
       .catch(() => {
-        // Say so, and let the next opening try again.
         requested.current = false;
         setFailed(true);
       });

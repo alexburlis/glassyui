@@ -19,8 +19,6 @@ const SIZE = { width: 1200, height: 630 } as const;
 function versioned(file: string) {
   const target = path.join(process.cwd(), 'public/share', file);
 
-  // A page without its own card fails the build with the way to make it, rather than shipping a
-  // stand-in nobody notices.
   if (!existsSync(target)) {
     throw new Error(
       `No link-preview card at public/share/${file}. With pnpm dev running, capture every missing card: node scripts/capture-share-cards.mjs http://127.0.0.1:3000 --missing (public/share/README.md)`,
