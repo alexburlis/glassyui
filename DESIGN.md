@@ -60,6 +60,7 @@ with 0.012em tracking, centred on the text.
 | Footer        | 22 px | 15 px                        | 8 px  |
 | Desk menu bar | 16 px | Bold, at the menu bar's size | 7 px  |
 | Share image   | 44 px | 30 px                        | 14 px |
+| Email header  | 28 px | 22 px                        | 9 px  |
 
 Write the name as **Glassy UI**: two words, capital G, U and I.
 
@@ -291,6 +292,30 @@ right, bleeding off the edge.
   `og:site_name` carries it.
 - **Nothing that goes stale.** A card is a photograph: no counts, prices or
   dates in the artwork.
+
+## Email
+
+Mailwerk sends Glassy UI's email from `mailwerk/projects/glassyui/`, which takes
+its brand from this guide. Restyle those templates in the same change as any
+redesign of the tokens below.
+
+- **Mark:** the email header lockup, drawn from the compact cut at three times
+  its size, as content-hashed PNGs in `public/email`: black ribbon with
+  `#222224` type for light mode, the white ribbon with `#f5f5f7` for dark. The
+  wordmark travels in the image because mail cannot load the display face; the
+  alt text names Glassy UI when images are blocked. Render new files when the
+  mark changes; never edit a published one.
+- **Colour:** ivory page `#faf9f7`, a white card, `#222224` ink and `#66666a`
+  secondary text. Actions and links are `#0067d9` with white labels. Vermilion
+  appears only in the mark.
+- **Type and shape:** the SF Pro Text stack for copy; headlines in the SF Pro
+  Display stack, Semibold at −0.015em, with a second line in the secondary
+  colour. Buttons are capsules and the card has a 24 px radius.
+- **Dark mode:** clients that honour it get the white mark and the shell's own
+  dark palette, close to charcoal.
+- **Content:** one action per message. Update pictures are the linked page's own
+  card from `public/share`; links stay on glassyui.com and pro.glassyui.com, or
+  Mailwerk's own confirm and unsubscribe pages.
 
 ## Voice
 

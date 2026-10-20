@@ -28,6 +28,7 @@
   "scripts": {
     "test:analytics-consent": "node scripts/test-analytics-consent.mjs",
     "check:analytics-consent": "node scripts/check-analytics-consent.mjs",
+    "check:updates": "node scripts/check-updates.mjs",
     "check:agent-discovery": "node scripts/check-agent-discovery.mjs",
     "dev": "next dev -H 127.0.0.1",
     "build": "next build",
@@ -94,6 +95,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "remotion": "4.0.529",
+    "server-only": "0.0.1",
     "turndown": "7.2.4",
     "mdx-blog-kit": "file:vendor/mdx-blog-kit-0.1.2.tgz",
     "next-mdx-remote": "6.0.0",

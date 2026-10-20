@@ -89,6 +89,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
+      - name: Check updates consent and signup
+        run: pnpm check:updates .artifacts/updates
       - name: Build the site
         run: pnpm build
       - name: Check source-copy installation
@@ -104,6 +106,7 @@ jobs:
         with:
           name: install-smoke-evidence
           path: |
+            .artifacts/updates
             .artifacts/prelaunch/registry-install
             .artifacts/ci-server.log
           if-no-files-found: ignore
@@ -122,6 +125,7 @@ jobs:
         run: pnpm build
       - name: Run production release smokes
         run: |
+          pnpm check:updates .artifacts/updates
           bash scripts/ci-server.sh start "$RUNNER_TEMP/glassyui-site"
           pnpm smoke:registry-routes http://127.0.0.1:3100
           GLASSYUI_BASE_URL=http://127.0.0.1:3100 pnpm smoke:docs-routes
@@ -139,6 +143,7 @@ jobs:
         with:
           name: release-smokes-evidence
           path: |
+            .artifacts/updates
             .artifacts/agent-discovery
             .artifacts/launch
             .artifacts/platform-switch

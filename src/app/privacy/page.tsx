@@ -6,7 +6,8 @@ import { OPERATOR } from '@/lib/legal';
 
 export const metadata: Metadata = {
   title: 'Privacy policy',
-  description: 'How glassyui.com and pro.glassyui.com handle visits, purchases and support.',
+  description:
+    'How glassyui.com and pro.glassyui.com handle visits, purchases, email updates and support.',
   alternates: { canonical: '/privacy' },
   robots: { index: false, follow: true },
 };
@@ -16,7 +17,8 @@ export default function PrivacyPage() {
     <>
       <SiteNav />
       <LegalDocument
-        description="How glassyui.com and pro.glassyui.com handle visits, purchases and support messages."
+        description="How glassyui.com and pro.glassyui.com handle visits, purchases, email updates and support messages."
+        effectiveDate="October 20, 2026"
         label="Privacy"
         title="Privacy policy"
       >
@@ -181,9 +183,36 @@ export default function PrivacyPage() {
             We use this information to answer you and follow up. Purchase enquiries and support
             necessary for a contract rely on Article 6(1)(b) GDPR; other correspondence relies on
             our legitimate interest in responding to requests, Article 6(1)(f). Delivery and
-            essential product communications are not a newsletter subscription. We do not operate a
-            newsletter for these sites. See the{' '}
+            essential product communications do not subscribe you to marketing updates. See the{' '}
             <a href="https://proton.me/mail/privacy-policy">Proton Mail privacy policy</a>.
+          </p>
+        </LegalSection>
+        <LegalSection title="Optional email updates">
+          <p>
+            If you subscribe, we email you about new Glassy UI components and tutorials, and Glassy
+            UI Pro launches, templates and offers. We use your email address and record the signup
+            notice, its version, source, request and confirmation times, and a stable pseudonymous
+            identifier derived from your address. Only confirming the link in our email subscribes
+            you. This relies on your consent under Article 6(1)(a) GDPR. You can withdraw it at any
+            time through the unsubscribe link in each marketing email, without signing in or
+            affecting your use of Glassy UI.
+          </p>
+          <p>
+            Our Mailwerk service manages subscriptions, consent and withdrawal. Amazon Web Services
+            provides delivery through Amazon SES in the Stockholm region (<code>eu-north-1</code>).
+            AWS is a US-parented processor; its data processing agreement governs relevant
+            international transfers. Your chosen mailbox provider also processes delivered mail. We
+            record delivery, bounces, complaints and unsubscribe events to operate the service. We
+            do not track email opens or link clicks.
+          </p>
+          <p>
+            We keep active subscriptions until you withdraw consent or request deletion. Contacts
+            without confirmed consent or an active email sequence are erased after 30 days of
+            inactivity, normally within 31 days. We retain minimal consent evidence where needed to
+            demonstrate permission, and keyed suppression records to prevent unwanted sends;
+            suppression survives deletion of the contact. To request access or deletion, contact{' '}
+            <a href={`mailto:${OPERATOR.email}`}>{OPERATOR.email}</a>. See the{' '}
+            <a href="https://aws.amazon.com/privacy/">AWS privacy notice</a>.
           </p>
         </LegalSection>
         <LegalSection title="Retention">

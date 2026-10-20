@@ -43,6 +43,7 @@ docs/seo/28day-*/
 .env*
 !.env.example
 !.env.build.1p.example
+!.env.runtime.1p.example
 .vercel
 
 # logs
