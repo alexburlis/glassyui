@@ -16,6 +16,6 @@ export const UPDATES_LABELS = {
   success: 'Check your inbox to confirm.',
   change: 'Use another address',
   invalid: 'Enter a valid email address.',
-  rateLimited: 'Too many attempts. Try again in a few minutes.',
+  rateLimited: 'Too many attempts. Try again later.',
   failed: 'Something went wrong. Try again later.',
 } as const;

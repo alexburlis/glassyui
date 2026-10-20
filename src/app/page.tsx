@@ -26,8 +26,7 @@ import { siteDescription } from '@/lib/site-description';
 import { GITHUB, SITE_URL } from '@/lib/site-links';
 import nativeRegistry from '../../registry-native.json';
 
-// Three signature demos with the source to recreate each, then the pieces an app is made of.
-// A tile without a demo shows the one from its docs page.
+// Tiles without a custom demo use their component's docs example.
 const SHOWCASE: Array<{ demo?: ReactNode; id: string }> = [
   { id: 'glass-scene' },
   { id: 'glass-lens' },
@@ -164,7 +163,7 @@ export default function Home() {
         <section aria-labelledby="home-features-title" className="home-section">
           <header className="home-section-header">
             <h2 className="home-section-title" id="home-features-title">
-              A material, not a filter.
+              Light, depth and motion.
             </h2>
             <p className="home-section-lead">
               Every component shares one glass. It bends what sits behind it, catches light at its

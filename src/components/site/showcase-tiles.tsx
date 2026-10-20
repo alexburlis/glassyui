@@ -29,7 +29,6 @@ const JUMPS = [
   { category: 'Navigation', href: '/components/glass-dock', label: 'Dock' },
 ];
 
-/** A live palette that filters as you type and opens the page of whatever you choose. */
 export function CommandTile() {
   const router = useRouter();
 
@@ -65,9 +64,8 @@ export function CommandTile() {
 }
 
 /**
- * Two of the four tones, side by side with the copy a real product would write. They are a
- * picture of alerts on a page that is not theirs, so they are notes: a warning here must not be
- * read out as if it had just happened.
+ * These are sample alerts. Use role="note" so screen readers do not announce
+ * them as new events.
  */
 export function AlertsTile() {
   return (
@@ -83,8 +81,8 @@ export function AlertsTile() {
 }
 
 /**
- * Where you are and the way on, on the same glass. The trail ends at the page that documents it,
- * as a link: this page is not the one it names, so nothing here says it is the current page.
+ * The sample trail links to the component docs. None of its items represents
+ * the current page, so none uses aria-current.
  */
 export function NavigationTile() {
   const [page, setPage] = useState(4);

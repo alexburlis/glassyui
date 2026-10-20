@@ -16,7 +16,6 @@ const NAV_LINKS = [
   { href: '/components', label: 'Components' },
   { href: '/mobile', label: 'Mobile' },
   { href: '/docs', label: 'Docs' },
-  // Templates are Glassy UI Pro's.
   { href: PRO_ORIGIN, label: 'Templates' },
   { href: '/guides', label: 'Guides' },
   { href: '/blog', label: 'Blog' },
