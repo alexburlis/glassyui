@@ -1,5 +1,5 @@
 import { BlockList, isIP } from 'node:net';
-import { POSTHOG_HOST, type AnalyticsConfig } from './config';
+import { POSTHOG_HOST, POSTHOG_PROXY, type AnalyticsConfig } from './config';
 import { consentMode, parseCountry, REVIEWED_OPT_OUT_COUNTRIES } from './consent';
 
 // Published Cloudflare proxy networks, checked October 5, 2026:
@@ -67,7 +67,7 @@ export function analyticsConfig(headers: Headers): AnalyticsConfig & { country: 
   // parser discards it; it is neither persisted nor attached to analytics events.
   return {
     token: configured ? token : null,
-    host: POSTHOG_HOST,
+    host: POSTHOG_PROXY,
     mode,
     signal,
     country,

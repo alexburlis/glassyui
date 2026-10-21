@@ -5,11 +5,11 @@ import { gunzipSync } from 'node:zlib';
 import AxeBuilder from '@axe-core/playwright';
 import { chromium } from 'playwright';
 
-const [baseArgument, artifactDirectory, proArgument] = process.argv.slice(2);
+const [baseArgument, artifactDirectory, proArgument, scenarioFilter] = process.argv.slice(2);
 
 if (!baseArgument || !artifactDirectory) {
   throw new Error(
-    'Usage: node scripts/check-analytics-consent.mjs <free-base-url> <artifact-directory> [pro-base-url]',
+    'Usage: node scripts/check-analytics-consent.mjs <free-base-url> <artifact-directory> [pro-base-url] [scenario-name]',
   );
 }
 
@@ -71,7 +71,7 @@ const MAIN = 'https://glassyui.com';
 
 const PRO = 'https://pro.glassyui.com';
 
-const HOST = 'https://eu.i.posthog.com';
+const HOST = '/api/pulse';
 
 const COOKIE = 'glassy-ui-analytics-consent';
 
@@ -93,6 +93,8 @@ const checks = [];
 const failures = [];
 
 const evidence = [];
+
+let matchedScenario = !scenarioFilter;
 
 fs.mkdirSync(artifactDirectory, { recursive: true });
 
@@ -181,6 +183,7 @@ async function openSession(options = {}) {
   const page = await context.newPage();
   const requests = [];
   const events = [];
+  const allEvents = [];
   const pageErrors = [];
   const routingErrors = [];
   let config = { ...CONFIG, ...options.config };
@@ -233,10 +236,18 @@ async function openSession(options = {}) {
     const url = new URL(request.url());
 
     try {
-      if (/posthog\.(com|net)$/.test(url.hostname)) {
+      if (/posthog\.(com|net)$/.test(url.hostname) || url.pathname.startsWith('/api/pulse/')) {
         requests.push({ method: request.method(), path: url.pathname, query: url.search });
 
-        if (request.method() === 'POST') events.push(...decodeEvents(request));
+        if (request.method() === 'POST') {
+          const captured = decodeEvents(request);
+          allEvents.push(...captured);
+          events.push(
+            ...captured.filter((event) =>
+              ['$pageview', 'pro_checkout_click'].includes(event.event),
+            ),
+          );
+        }
 
         await route.fulfill({
           status: failedIngest ? 503 : 200,
@@ -308,6 +319,7 @@ async function openSession(options = {}) {
     page,
     requests,
     events,
+    allEvents,
     pageErrors,
     routingErrors,
     configCount: () => configCount,
@@ -417,7 +429,7 @@ async function assertImplicitPermission(session) {
 function assertMinimalEvents(events) {
   for (const event of events) {
     assert.ok(
-      ['$pageview', 'pro_checkout_click'].includes(event.event),
+      ['$pageview', '$pageleave', '$web_vitals', 'pro_checkout_click'].includes(event.event),
       `Unapproved event ${event.event}`,
     );
     const encoded = JSON.stringify(event.properties);
@@ -440,13 +452,16 @@ function assertMinimalEvents(events) {
 }
 
 async function scenario(name, run, options = {}) {
+  if (scenarioFilter && !name.includes(scenarioFilter)) return;
+  matchedScenario = true;
+  console.log(`Checking analytics consent: ${name}`);
   const session = await openSession(options);
 
   try {
     await run(session);
     assert.deepEqual(session.routingErrors, [], `${name}: requests can be inspected`);
     assert.deepEqual(session.pageErrors, [], `${name}: no browser runtime errors`);
-    assertMinimalEvents(session.events);
+    assertMinimalEvents(session.allEvents);
 
     for (const request of session.requests) {
       assert.equal(
@@ -478,7 +493,7 @@ async function scenario(name, run, options = {}) {
     evidence.push({
       name,
       requests: session.requests,
-      events: session.events,
+      events: session.allEvents,
       pageErrors: session.pageErrors,
     });
     await session.context.close();
@@ -519,9 +534,8 @@ try {
           await session.page.getByRole('button', { name: 'Privacy settings', exact: true }).count(),
           1,
         );
-        assert.equal(
-          await session.page.locator('a[href^="https://buy.stripe.com/"]').count(),
-          1,
+        assert.ok(
+          (await session.page.locator('a[href^="https://buy.stripe.com/"]').count()) > 0,
           'Purchases stay accessible before consent',
         );
       }
@@ -546,6 +560,16 @@ try {
       await quiet(session.page);
       assert.equal(session.events.length, 1, 'No pre-consent queue is flushed');
       assert.equal(session.events[0].event, '$pageview');
+      assert.match(
+        session.events[0].properties.$session_id ?? '',
+        /^[0-9a-f-]{36}$/,
+        'Web Analytics requires the SDK session ID',
+      );
+      assert.match(
+        session.events[0].properties.$pageview_id ?? '',
+        /^[0-9a-f-]{36}$/,
+        'Page duration requires pageview identity',
+      );
       assert.equal(new URL(session.events[0].properties.$current_url).pathname, '/cookie-policy');
       await assertChoice(session, 'accepted');
       await session.page.getByRole('link', { name: 'Privacy', exact: true }).last().click();
@@ -558,7 +582,7 @@ try {
         await go(session, `${PRO}/?session=secret-session#private-fragment`);
         await until(() => session.events.length === 3, 'shared accepted choice on Pro');
         assert.equal(await panel(session).count(), 0, 'Pro uses the shared explicit choice');
-        await session.page.locator('a[href^="https://buy.stripe.com/"]').click();
+        await session.page.locator('a[href^="https://buy.stripe.com/"]').first().click();
         await until(
           () => session.events.some((event) => event.event === 'pro_checkout_click'),
           'explicit checkout click',
@@ -601,6 +625,42 @@ try {
       await session.page.reload({ waitUntil: 'networkidle' });
       await quiet(session.page);
       assert.equal(session.requests.length, count, 'Refusal survives reload');
+    },
+  );
+
+  await scenario(
+    'web analytics sessions, page leave, scroll and vitals use first-party transport',
+    async (session) => {
+      await go(session);
+      await accept(session);
+      await until(() => session.events.length === 1, 'initial pageview');
+      const first = session.events[0];
+      assert.match(first.properties.$session_id ?? '', /^[0-9a-f-]{36}$/);
+      assert.match(first.properties.$pageview_id ?? '', /^[0-9a-f-]{36}$/);
+      await session.page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await quiet(session.page);
+      await session.page.getByRole('link', { name: 'Cookies', exact: true }).last().click();
+      await session.page.waitForURL(`${MAIN}/cookie-policy`);
+      await until(() => session.events.length === 2, 'next pageview');
+      const leave = session.allEvents.find((event) => event.event === '$pageleave');
+      assert.ok(leave, 'Navigation emits pageleave');
+      assert.equal(leave.properties.$current_url, `${MAIN}/privacy`);
+      assert.equal(leave.properties.$prev_pageview_id, first.properties.$pageview_id);
+      assert.equal(session.events[1].properties.$session_id, first.properties.$session_id);
+      assert.ok(leave.properties.$prev_pageview_duration > 0);
+      assert.ok(leave.properties.$prev_pageview_max_scroll_percentage > 0);
+      await until(
+        () => session.allEvents.some((event) => event.event === '$web_vitals'),
+        'real browser Web Vitals',
+      );
+      const vitals = session.allEvents.filter((event) => event.event === '$web_vitals');
+      assert.ok(vitals.some((event) => Number.isFinite(event.properties.$web_vitals_FCP_value)));
+      assert.ok(session.requests.every((request) => request.path === '/api/pulse/i/v0/e'));
+      await reopen(session);
+      await reject(session);
+      const count = session.requests.length;
+      await quiet(session.page, 6000);
+      assert.equal(session.requests.length, count, 'Delayed vitals cannot send after withdrawal');
     },
   );
 
@@ -731,12 +791,24 @@ try {
       }
 
       session.setConfig({ mode: 'opt-in' });
-      const count = session.requests.length;
+      const eventCount = session.allEvents.length;
+      const permittedExitUrl = proBase ? `${PRO}/` : `${MAIN}/cookie-policy`;
 
       await go(session, `${MAIN}/privacy`);
       await panel(session).getByRole('button', { name: 'Accept analytics', exact: true }).waitFor();
       await quiet(session.page);
-      assert.equal(session.requests.length, count, 'Moving to opt-in stops implicit permission');
+      // The old permitted document may finish its exit metrics during navigation.
+      // The new opt-in document must produce no events without acceptance.
+      assert.ok(
+        session.allEvents
+          .slice(eventCount)
+          .every(
+            (event) =>
+              ['$pageleave', '$web_vitals'].includes(event.event) &&
+              event.properties.$current_url === permittedExitUrl,
+          ),
+        'Moving to opt-in captures no events from the new document',
+      );
       assert.deepEqual(
         (await storage(session)).analytics,
         [],
@@ -818,7 +890,7 @@ try {
       await noCollection(session, 'Missing project configuration');
 
       if (proBase) {
-        assert.equal(await session.page.locator('a[href^="https://buy.stripe.com/"]').count(), 1);
+        assert.ok((await session.page.locator('a[href^="https://buy.stripe.com/"]').count()) > 0);
       } else {
         assert.equal(
           await session.page.getByRole('link', { name: 'Cookies', exact: true }).last().isVisible(),
@@ -1119,6 +1191,8 @@ try {
       configured: Boolean(actualConfig.token),
     });
   }
+
+  assert.ok(matchedScenario, `No scenario matches ${scenarioFilter}.`);
 } catch (error) {
   failures.push(error.stack ?? error.message);
 } finally {

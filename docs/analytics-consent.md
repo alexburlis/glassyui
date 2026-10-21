@@ -12,25 +12,31 @@ choice cookie and SDK privacy contract.
 
 ## Collection contract
 
-- Only manual `$pageview` and `pro_checkout_click` events are permitted.
+- `$pageview`, `$pageleave`, `$web_vitals` and `pro_checkout_click` events are
+  permitted. Pageviews and SPA exits are manual; document exits and
+  non-attributed Web Vitals use the pinned SDK.
 - The SDK is lazy-loaded after the permission gate permits collection. No events
   from a disallowed period are queued or replayed after acceptance.
 - Events carry a known public path or coarse route family, the canonical Glassy
-  UI origin, event time, a document-memory identifier, the processing basis and
-  a `direct` / `same_site` / `external` referrer category. Dynamic path
-  segments, queries, fragments, full referrers and free-form content are
-  excluded.
+  UI origin, event time, document-memory visitor, session and pageview
+  identifiers, the processing basis, browser/device categories, screen
+  dimensions, scroll depth, page duration, scalar Web Vitals and a `direct` /
+  `same_site` / `external` referrer category. Dynamic path segments, queries,
+  fragments, full referrers and free-form content are excluded.
 - No person profile is created. Payloads set `$process_person_profile: false`,
   `$geoip_disable: true` and `$ip: '0.0.0.0'`. PostHog still receives connection
   information, including the network IP and browser user agent; payload
   minimization does not eliminate infrastructure processing.
-- Autocapture, page-leave capture, replay, heatmaps, performance capture,
-  console recording, surveys, flags, experiments and automatic exceptions are
-  disabled. There is no advertising, marketing integration or cookieless
-  tracking fallback.
+- Autocapture, replay, heatmaps, performance attribution, console recording,
+  surveys, flags, experiments and automatic exceptions are disabled. There is no
+  advertising, marketing integration or cookieless tracking fallback.
 - The SDK's public `before_send` hook replaces SDK delivery with one abortable
   request and always returns `null`. The SDK receives no events to batch, retry
   or flush on shutdown. The application transport has no retry or unload beacon.
+  Exit/vitals requests use fetch keepalive so document closure need not cancel
+  delivery; withdrawal still aborts them. The first-party `/api/pulse/i/v0/e`
+  route rewrites only to EU ingestion. SDK assets are bundled locally, with no
+  remote configuration or dependency requests.
 - Withdrawal closes the gate synchronously, invalidates pending SDK loads,
   aborts in-flight application requests and clears optional PostHog storage.
   Already transmitted data cannot be recalled by aborting a browser request.
@@ -104,7 +110,8 @@ requires a new `CONSENT_VERSION` and renewed acceptance.
 ## Configuration
 
 Set `POSTHOG_PROJECT_TOKEN` and `POSTHOG_HOST` as runtime-only variables. The
-allowed host is `https://eu.i.posthog.com`; missing, invalid or other-host
+upstream host must be `https://eu.i.posthog.com`; the client receives only the
+fixed first-party `/api/pulse` path; missing, invalid or other-host
 configuration disables tracking. The project token is public client
 configuration. Personal/admin keys never belong in this endpoint or client code.
 Set `ANALYTICS_TRUST_CLOUDFLARE_PROXY=true` only after verifying the
@@ -114,16 +121,18 @@ reverse-proxy trust invariant above.
 
 The decision and browser scripts exercise unknown/EU/UK locations, acceptance,
 rejection, reload, navigation, withdrawal, shared-subdomain choices,
-refused/old/ expired preferences, GPC/DNT, absent configuration and untrusted
-country headers. US opt-out checks distinguish `legitimate_interest` from
-explicit consent and verify that remembered refusal and GPC/DNT override the
-default. Regional checks cover Cloudflare country replacement, trusted proxy
-peers and public-origin header spoofing; forged or unavailable region data must
-not enable default-on collection. Browser checks inspect both network traffic
-and storage, including interrupted SDK loading/delivery and preservation of
-appearance/documentation choices. Keyboard and mobile interactions are part of
-the browser check. Keep actual command results and artifact locations in the PR,
-rather than treating this list as passing evidence.
+session/pageview identity, exit duration/scroll, real browser Web Vitals,
+first-party routing, refused/old/ expired preferences, GPC/DNT, absent
+configuration and untrusted country headers. US opt-out checks distinguish
+`legitimate_interest` from explicit consent and verify that remembered refusal
+and GPC/DNT override the default. Regional checks cover Cloudflare country
+replacement, trusted proxy peers and public-origin header spoofing; forged or
+unavailable region data must not enable default-on collection. Browser checks
+inspect both network traffic and storage, including interrupted SDK
+loading/delivery and preservation of appearance/documentation choices. Keyboard
+and mobile interactions are part of the browser check. Keep actual command
+results and artifact locations in the PR, rather than treating this list as
+passing evidence.
 
 ## Sources checked on October 4, 2026
 
@@ -148,6 +157,22 @@ rather than treating this list as passing evidence.
   [official consolidated PDF](https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?qid=1789247945921&uri=CELEX%3A02016R0679-20160504)
   supplies the regulation text.
 
+## Web Analytics reporting limits
+
+The minimized transport must preserve `$session_id`, `$window_id`,
+`$pageview_id`, previous-page identity, duration and scroll properties. Dropping
+these produces pageview events that cannot form Web Analytics sessions.
+`$lib_custom_api_host` identifies the first-party transport. Web Vitals retain
+numeric values only, excluding DOM attribution and resource URLs. Blog routes
+use `/blog` or `/blog/[page]`.
+
+Visitors here mean browsers permitted to run analytics, with identifiers limited
+to the current document. Reloads and cross-host navigations start a new
+identity. This is not a count of all human visitors or returning people.
+Rejected visits, opt-in visits without acceptance, DNT/GPC, and blocked
+JavaScript remain excluded. Historic events missing session IDs cannot be
+reliably stitched into sessions after the fact.
+
 ## Checking the two applications
 
 Default public CI runs the existing browser owner against the free app only. Its
@@ -164,3 +189,6 @@ its actual app. The owner intercepts telemetry and checkout navigation; it makes
 no provider or payment write. The paired proof covers shared acceptance,
 refusal, withdrawal and checkout-link events. An omitted private target cannot
 silently reuse the free server as Pro.
+
+To rerun one browser scenario, pass its name as a fourth argument. Use an empty
+third argument for a focused free-only check.
