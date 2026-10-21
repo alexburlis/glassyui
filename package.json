@@ -90,7 +90,7 @@
     "@sentry/nextjs": "10.73.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
-    "next": "16.3.8",
+    "next": "16.4.1",
     "posthog-js": "1.434.15",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -110,7 +110,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/turndown": "5.0.6",
     "eslint": "9.39.5",
-    "eslint-config-next": "16.3.8",
+    "eslint-config-next": "16.4.1",
     "jsdom": "^29.1.1",
     "knip": "6.39.0",
     "oxfmt": "0.70.0",
@@ -125,14 +125,15 @@
       "mdx-blog-kit>js-yaml": "4.3.2",
       "postcss": "8.5.23",
       "source-map-js": "1.2.2",
-      "@modelcontextprotocol/sdk": "1.31.0",
+      "@modelcontextprotocol/sdk": "1.32.0",
       "proxy-addr": "2.0.8",
-      "postcss-selector-parser": "7.1.6"
+      "postcss-selector-parser": "7.1.6",
+      "hono": "4.13.11"
     },
     "patchedDependencies": {
-      "next@16.3.8": "patches/next@16.3.8.patch",
       "braces@3.0.3": "patches/braces@3.0.3.patch",
-      "mdx-blog-kit@0.1.2": "patches/mdx-blog-kit@0.1.2.patch"
+      "mdx-blog-kit@0.1.2": "patches/mdx-blog-kit@0.1.2.patch",
+      "next@16.4.1": "patches/next@16.4.1.patch"
     }
   },
   "packageManager": "pnpm@10.23.0+sha512.21c4e5698002ade97e4efe8b8b4a89a8de3c85a37919f957e7a0f30f38fbc5bbdd05980ffe29179b2fb6e6e691242e098d945d1601772cad0fef5fb6411e2a4b"

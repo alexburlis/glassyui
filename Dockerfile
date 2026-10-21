@@ -1,5 +1,5 @@
 # ── Stage 1: Build ──────────────────────────────────────────────
-FROM node:22.22.2-alpine3.22 AS builder
+FROM node:22.23.2-alpine3.23 AS builder
 ARG SOURCE_COMMIT
 ARG NEXT_PUBLIC_SENTRY_DSN
 WORKDIR /app
@@ -23,7 +23,7 @@ RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN \
     pnpm build
 
 # ── Stage 2: Runtime ────────────────────────────────────────────
-FROM node:22.22.2-alpine3.22 AS runner
+FROM node:22.23.2-alpine3.23 AS runner
 WORKDIR /app
 ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0 NEXT_TELEMETRY_DISABLED=1
 
