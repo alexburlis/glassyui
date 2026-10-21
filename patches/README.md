@@ -29,3 +29,13 @@ Node's bundled-root update is pending. Normal HTTPS must succeed and both
 incident test hosts must fail certificate validation under the exact runtime.
 Reconsider this mitigation only after the selected upstream Node image rejects
 both incident chains with its default trust configuration.
+
+The October Node security rebuild uses the official 22.23.4 executable while
+keeping the existing Alpine base, npm and Corepack. The AMD64 musl artifact and
+ARM64 source archive have pinned SHA-256 values from Node's release manifest.
+The recipe follows `nodejs/docker-node` commit
+`84410eeaede25daf49826da8265fbf548cc604fe`; it rejects other architectures.
+ARM64 uses the vendor's source-build path with two compiler jobs and a one-hour
+compile limit, so it needs a separate build capacity reservation. This
+campaign's production runtime verification covers AMD64; the ARM64 branch has
+source review only until that build runs.

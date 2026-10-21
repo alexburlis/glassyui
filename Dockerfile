@@ -1,7 +1,39 @@
 # The distro trust store removes the compromised eMudhra certificate paths.
-FROM node:22.23.2-alpine3.23 AS trusted-base
+FROM node:22.23.2-alpine3.23 AS trusted-os
 RUN apk add --no-cache --upgrade ca-certificates ca-certificates-bundle 'libssl3>=3.5.8-r0' 'libcrypto3>=3.5.8-r0' 'zlib>=1.3.2-r1' \
     && update-ca-certificates
+
+# Node-owned musl/source recipe: nodejs/docker-node@84410eeaede25daf49826da8265fbf548cc604fe.
+FROM trusted-os AS node-security
+ARG TARGETARCH
+RUN apk add --no-cache --virtual .node-security-tools curl tar xz \
+    && mkdir -p /tmp/node-release/bin \
+    && case "${TARGETARCH}:$(apk --print-arch)" in \
+      amd64:x86_64) \
+        curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 10 --max-time 120 \
+          --output /tmp/node.tar.xz https://nodejs.org/dist/v22.23.4/node-v22.23.4-linux-x64-musl.tar.xz \
+        && echo '38355b952f0392b91703d38a0d9af84eb0ff77d69828ca4bc8cc3bc3af80a720  /tmp/node.tar.xz' | sha256sum -c - \
+        && tar -xJf /tmp/node.tar.xz -C /tmp/node-release --strip-components=1 \
+          node-v22.23.4-linux-x64-musl/bin/node \
+        ;; \
+      arm64:aarch64) \
+        apk add --no-cache --virtual .node-security-build binutils-gold g++ gcc libgcc linux-headers make python3 py-setuptools \
+        && curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 10 --max-time 120 \
+          --output /tmp/node-source.tar.xz https://nodejs.org/dist/v22.23.4/node-v22.23.4.tar.xz \
+        && echo '7b9adc82d612d0a2a863d96c46de2292552e250cee51956ebbe0146c42aacae9  /tmp/node-source.tar.xz' | sha256sum -c - \
+        && tar -xJf /tmp/node-source.tar.xz -C /tmp \
+        && cd /tmp/node-v22.23.4 && ./configure \
+        && timeout 3600 make -j2 \
+        && make install DESTDIR=/tmp/node-security-install \
+        && cp /tmp/node-security-install/usr/local/bin/node /tmp/node-release/bin/node \
+        ;; \
+      *) echo 'Unsupported or inconsistent Node security target architecture' >&2; exit 1 ;; \
+    esac \
+    && test "$(/tmp/node-release/bin/node --version)" = v22.23.4
+
+FROM trusted-os AS trusted-base
+COPY --from=node-security /tmp/node-release/bin/node /usr/local/bin/node
+ENV NODE_VERSION=22.23.4
 
 # ── Stage 1: Build ──────────────────────────────────────────────
 FROM trusted-base AS builder
