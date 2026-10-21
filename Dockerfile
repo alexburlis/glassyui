@@ -1,5 +1,10 @@
+# The distro trust store removes the compromised eMudhra certificate paths.
+FROM node:22.23.2-alpine3.23 AS trusted-base
+RUN apk add --no-cache --upgrade ca-certificates ca-certificates-bundle 'libssl3>=3.5.8-r0' 'libcrypto3>=3.5.8-r0' 'zlib>=1.3.2-r1' \
+    && update-ca-certificates
+
 # ── Stage 1: Build ──────────────────────────────────────────────
-FROM node:22.23.2-alpine3.23 AS builder
+FROM trusted-base AS builder
 ARG SOURCE_COMMIT
 ARG NEXT_PUBLIC_SENTRY_DSN
 WORKDIR /app
@@ -10,7 +15,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches ./patches
 COPY vendor ./vendor
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
+    NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--use-openssl-ca" pnpm install --frozen-lockfile
 
 # 2. Source (filtered by .dockerignore), then the static build
 COPY . .
@@ -20,10 +25,10 @@ RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN \
     --mount=type=secret,id=NEXT_PUBLIC_SENTRY_DSN,env=BUILD_SENTRY_DSN \
     SOURCE_COMMIT="${BUILD_SOURCE_COMMIT:-$SOURCE_COMMIT}" \
     NEXT_PUBLIC_SENTRY_DSN="${BUILD_SENTRY_DSN:-$NEXT_PUBLIC_SENTRY_DSN}" \
-    pnpm build
+    NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--use-openssl-ca" pnpm build
 
 # ── Stage 2: Runtime ────────────────────────────────────────────
-FROM node:22.23.2-alpine3.23 AS runner
+FROM trusted-base AS runner
 WORKDIR /app
 ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0 NEXT_TELEMETRY_DISABLED=1
 
@@ -34,4 +39,4 @@ COPY --from=builder --chown=node:node /app/public ./public
 
 USER node
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["node", "--use-openssl-ca", "server.js"]
