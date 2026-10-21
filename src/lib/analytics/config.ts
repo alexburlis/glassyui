@@ -5,6 +5,8 @@ export type AnalyticsConfig = {
   signal: boolean;
 };
 
+export const POSTHOG_PROXY = '/api/pulse';
+
 export const POSTHOG_HOST = 'https://eu.i.posthog.com';
 
 export function parseAnalyticsConfig(raw: string): AnalyticsConfig | null {
@@ -13,7 +15,7 @@ export function parseAnalyticsConfig(raw: string): AnalyticsConfig | null {
 
     if (
       !value ||
-      value.host !== POSTHOG_HOST ||
+      value.host !== POSTHOG_PROXY ||
       (value.token !== null && !/^phc_[a-zA-Z0-9_-]+$/.test(value.token)) ||
       (value.mode !== 'opt-in' && value.mode !== 'opt-out') ||
       (value.signal !== true && value.signal !== false)

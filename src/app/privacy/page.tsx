@@ -88,12 +88,15 @@ export default function PrivacyPage() {
             refuse.
           </p>
           <p>
-            We send only page views (<code>$pageview</code>) and explicit Pro checkout-button clicks
-            (<code>pro_checkout_click</code>). An event contains a known public route or route
-            category, the Glassy UI site, event time, processing basis, a broad referral category
-            (direct, same-site or external), and a random identifier held only in the current page
-            document&apos;s memory. We do not link this identifier to an account or purchase. A
-            visit to a thank-you page is a page view, not proof of payment.
+            We send page views (<code>$pageview</code>), page exits (<code>$pageleave</code>),
+            loading and interaction measurements (<code>$web_vitals</code>), and explicit Pro
+            checkout-button clicks (<code>pro_checkout_click</code>). An event contains a known
+            public route or route category, the Glassy UI site, event time, processing basis, scroll
+            depth, time on a page, browser and device categories, screen dimensions, a broad
+            referral category (direct, same-site or external), and random visitor, session and
+            page-view identifiers held only in the current page document&apos;s memory. We do not
+            link this identifier to an account or purchase. A visit to a thank-you page is a page
+            view, not proof of payment.
           </p>
           <p>
             Event properties exclude query strings, fragments, full referring URLs, email addresses,
@@ -130,8 +133,8 @@ export default function PrivacyPage() {
         </LegalSection>
         <LegalSection title="PostHog hosting and international processing">
           <p>
-            This integration is configured for PostHog EU Cloud and accepts only{' '}
-            <code>https://eu.i.posthog.com</code>. PostHog&apos;s published{' '}
+            This integration is configured for PostHog EU Cloud and sends events through a
+            first-party endpoint to <code>https://eu.i.posthog.com</code>. PostHog&apos;s published{' '}
             <a href="https://posthog.com/subprocessors">subprocessor information</a> describes EU
             Cloud data storage in Germany and international infrastructure processing. Our PostHog
             processor agreement and transfer arrangements are in place. Its{' '}

@@ -44,6 +44,9 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [{ source: '/api/pulse/i/v0/e', destination: 'https://eu.i.posthog.com/i/v0/e/' }];
+  },
   async headers() {
     return [
       {

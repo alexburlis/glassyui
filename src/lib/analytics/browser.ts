@@ -1,4 +1,4 @@
-import type { PostHog } from 'posthog-js';
+import type { PostHog, Properties } from 'posthog-js';
 import type { AnalyticsConfig } from './config';
 import {
   CONSENT_COOKIE,
@@ -138,6 +138,7 @@ function pagePath(pathname: string) {
     '/docs',
     '/mobile',
     '/guides',
+    '/blog',
     '/privacy',
     '/cookie-policy',
     '/imprint',
@@ -149,7 +150,7 @@ function pagePath(pathname: string) {
   if (pages.includes(path)) return path;
 
   // Dynamic path segments can contain private content. Send only the route family.
-  for (const family of ['/components/', '/docs/', '/guides/']) {
+  for (const family of ['/components/', '/docs/', '/guides/', '/blog/']) {
     if (path.startsWith(family)) return `${family}[page]`;
   }
 
@@ -176,13 +177,66 @@ function referrerKind() {
   }
 }
 
+// Parse the SDK event boundary into scalar properties approved for our transport.
+/* oxlint-disable anti-slop/no-runtime-typeof -- SDK Properties are untyped; validate their scalar values at this delivery boundary. */
+function webAnalyticsProperties(properties: Properties) {
+  const result: Record<string, string | number | null> = {};
+
+  for (const key of [
+    '$session_id',
+    '$window_id',
+    '$pageview_id',
+    '$prev_pageview_id',
+    '$lib',
+    '$lib_version',
+    '$browser',
+    '$browser_version',
+    '$os',
+    '$os_version',
+    '$device_type',
+    '$screen_width',
+    '$screen_height',
+    '$viewport_width',
+    '$viewport_height',
+    '$prev_pageview_duration',
+    '$prev_pageview_last_scroll',
+    '$prev_pageview_last_scroll_percentage',
+    '$prev_pageview_max_scroll',
+    '$prev_pageview_max_scroll_percentage',
+    '$prev_pageview_last_content',
+    '$prev_pageview_last_content_percentage',
+    '$prev_pageview_max_content',
+    '$prev_pageview_max_content_percentage',
+    '$web_vitals_LCP_value',
+    '$web_vitals_INP_value',
+    '$web_vitals_CLS_value',
+    '$web_vitals_FCP_value',
+  ]) {
+    const value = properties[key];
+
+    if (typeof value === 'string' || (typeof value === 'number' && Number.isFinite(value))) {
+      result[key] = value;
+    }
+  }
+
+  if (typeof properties.$prev_pageview_pathname === 'string') {
+    result.$prev_pageview_pathname = pagePath(properties.$prev_pageview_pathname);
+  }
+
+  return result;
+}
+/* oxlint-enable anti-slop/no-runtime-typeof */
+
 export async function startAnalytics(config: AnalyticsConfig) {
   if (!trackingAllowed(config) || sdk || starting) return;
   starting = true;
   const currentGeneration = generation;
 
   try {
-    const { PostHog } = await import('posthog-js');
+    const [{ PostHog }] = await Promise.all([
+      import('posthog-js/no-external'),
+      import('posthog-js/dist/web-vitals'),
+    ]);
 
     if (currentGeneration !== generation || !trackingAllowed(config)) return;
     const instance = new PostHog();
@@ -204,11 +258,11 @@ export async function startAnalytics(config: AnalyticsConfig) {
       respect_dnt: true,
       autocapture: false,
       capture_pageview: false,
-      capture_pageleave: false,
+      capture_pageleave: true,
       capture_dead_clicks: false,
       rageclick: false,
       capture_heatmaps: false,
-      capture_performance: false,
+      capture_performance: { web_vitals: true, web_vitals_attribution: false },
       capture_exceptions: false,
       disable_session_recording: true,
       enable_recording_console_log: false,
@@ -223,7 +277,7 @@ export async function startAnalytics(config: AnalyticsConfig) {
       person_profiles: 'never',
       save_campaign_params: false,
       save_referrer: false,
-      disable_scroll_properties: true,
+      disable_scroll_properties: false,
       disableDeviceModel: true,
       request_batching: false,
       disable_beacon: true,
@@ -236,11 +290,12 @@ export async function startAnalytics(config: AnalyticsConfig) {
           !event ||
           currentGeneration !== generation ||
           !trackingAllowed(config) ||
-          !['$pageview', 'pro_checkout_click'].includes(event.event)
+          !['$pageview', '$pageleave', '$web_vitals', 'pro_checkout_click'].includes(event.event)
         )
           return null;
 
-        const path = pagePath(location.pathname);
+        const eventUrl = new URL(event.properties.$current_url ?? location.href, location.origin);
+        const path = pagePath(eventUrl.pathname);
 
         if (path === null) return null;
         const controller = new AbortController();
@@ -249,18 +304,21 @@ export async function startAnalytics(config: AnalyticsConfig) {
         pending.add(controller);
         // SDK shutdown flushes retry queues even after opt-out. Own this one transport,
         // with no queue/retry/beacon, and return null BEFORE the SDK enqueues anything.
-        void fetch(`${config.host}/i/v0/e/`, {
+        void fetch(`${config.host}/i/v0/e`, {
           method: 'POST',
           credentials: 'omit',
           referrerPolicy: 'no-referrer',
           headers: { 'Content-Type': 'application/json' },
           signal: controller.signal,
+          keepalive: event.event === '$pageleave' || event.event === '$web_vitals',
           body: JSON.stringify({
             api_key: config.token,
             event: event.event,
             distinct_id: event.properties.distinct_id,
             timestamp: new Date().toISOString(),
             properties: {
+              ...webAnalyticsProperties(event.properties),
+              $lib_custom_api_host: `${location.origin}${config.host}`,
               $current_url: `${origin}${path}`,
               $pathname: path,
               $host: new URL(origin).host,
@@ -295,6 +353,11 @@ export async function startAnalytics(config: AnalyticsConfig) {
 
 export function capturePage(config: AnalyticsConfig, pathname: string) {
   if (!sdk || !trackingAllowed(config) || lastPage === pathname) return;
+
+  if (lastPage && pagePath(lastPage)) {
+    sdk.capture('$pageleave', { $current_url: `${siteOrigin()}${pagePath(lastPage)}` });
+  }
+
   lastPage = pathname;
   sdk.capture('$pageview');
 }
