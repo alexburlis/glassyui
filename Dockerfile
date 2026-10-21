@@ -1,6 +1,6 @@
 # The distro trust store removes the compromised eMudhra certificate paths.
 FROM node:22.23.2-alpine3.23 AS trusted-os
-RUN apk add --no-cache --upgrade ca-certificates ca-certificates-bundle 'libssl3>=3.5.8-r0' 'libcrypto3>=3.5.8-r0' 'zlib>=1.3.2-r1' \
+RUN apk add --no-cache --upgrade ca-certificates ca-certificates-bundle 'libssl3>=3.5.9-r0' 'libcrypto3>=3.5.9-r0' 'zlib>=1.3.2-r1' \
     && update-ca-certificates
 
 # Node-owned musl/source recipe: nodejs/docker-node@84410eeaede25daf49826da8265fbf548cc604fe.
