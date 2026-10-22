@@ -1,6 +1,6 @@
 'use client';
 
-import { captureAction } from '@/lib/analytics/browser';
+import { actionOutcome } from '@/lib/analytics/browser';
 
 import { Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -191,16 +191,17 @@ export function CopyCodeBlock({
   }, [copyState, expanded]);
 
   async function copyCode() {
+    const recordOutcome = actionOutcome({
+      source: 'docs',
+      action: command ? 'install_copy' : 'source_copy',
+    });
+
     onReveal?.();
     const request = Symbol('copy');
     setResult({ code, label, state: 'copying', request });
 
     function finish(state: CopyState) {
-      captureAction({
-        source: 'docs',
-        action: command ? 'install_copy' : 'source_copy',
-        outcome: state === 'copied' ? 'succeeded' : 'failed',
-      });
+      recordOutcome(state === 'copied' ? 'succeeded' : 'failed');
       setResult((current) => (current.request === request ? { ...current, state } : current));
     }
 

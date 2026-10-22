@@ -42,6 +42,18 @@ export function captureAction(action: SiteAction) {
   captureInteraction('site_action', action);
 }
 
+/** An asynchronous result belongs only to the permission window where its action began. */
+export function actionOutcome(action: Pick<SiteAction, 'source' | 'action'>) {
+  const instance = sdk;
+  const actionGeneration = generation;
+  const allowed = Boolean(instance && trackingAllowed(activeConfig));
+
+  return (outcome: SiteAction['outcome']) => {
+    if (!allowed || sdk !== instance || generation !== actionGeneration) return;
+    captureAction({ ...action, outcome });
+  };
+}
+
 export function captureSearchResult(href: string) {
   captureLink(href, 'search', captureInteraction, pagePath);
 }
