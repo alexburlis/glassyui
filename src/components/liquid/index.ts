@@ -62,6 +62,8 @@ export * from './laptop';
 
 export * from './phone-duo';
 
+export * from './logo-reveal';
+
 export * from './surface';
 
 export * from './scene';

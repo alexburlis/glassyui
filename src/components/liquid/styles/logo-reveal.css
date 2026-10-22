@@ -1,0 +1,107 @@
+/*
+  Glass Logo Reveal: the stage the reveal is drawn on and the lockup it lands on. The lockup is
+  the real one, laid out by the page; the canvas paints over it while the glass moves and steps
+  aside once it has landed. Size the lockup with font-size: the mark follows the name.
+*/
+
+/* Preserve Tailwind's order even when the reveal loads before global CSS. */
+@layer properties;
+@layer theme, base, components, utilities;
+
+@layer components {
+  .lg-logo-reveal {
+    --lg-logo-reveal-stage: #1c1c1e;
+    --lg-logo-reveal-ink: #f5f5f7;
+
+    position: relative;
+    display: grid;
+    place-items: center;
+    aspect-ratio: 16 / 9;
+    margin: 0;
+    overflow: hidden;
+    container-type: inline-size;
+    background-color: var(--lg-logo-reveal-stage);
+    color: var(--lg-logo-reveal-ink);
+  }
+
+  [data-lg-theme='light'] .lg-logo-reveal {
+    --lg-logo-reveal-stage: #faf9f7;
+    --lg-logo-reveal-ink: #222224;
+  }
+
+  .lg-logo-reveal-lockup {
+    display: flex;
+    align-items: center;
+    gap: 0.42em;
+    font-size: clamp(1rem, 6.5cqi, 4.5rem);
+    font-weight: 600;
+    letter-spacing: 0.012em;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .lg-logo-reveal-mark {
+    display: block;
+    width: auto;
+    height: 1.26em;
+  }
+
+  /* An empty inline block whose top is the name's baseline. */
+  .lg-logo-reveal-baseline {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    vertical-align: baseline;
+  }
+
+  .lg-logo-reveal-canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .lg-logo-reveal[data-state='ended'] .lg-logo-reveal-canvas {
+    opacity: 0;
+    transition: opacity 240ms var(--lg-ease-out, cubic-bezier(0.32, 0.72, 0, 1));
+  }
+
+  /* With scripting the canvas draws everything until the glass has gone. */
+  @media (scripting: enabled) {
+    .lg-logo-reveal:not([data-state='ended']) .lg-logo-reveal-lockup {
+      visibility: hidden;
+    }
+  }
+
+  /* Reduced motion and reduced transparency keep the lockup and drop the glass. */
+  html[data-lg-reduce-motion='1'] .lg-logo-reveal-lockup,
+  html[data-lg-reduce-transparency='1'] .lg-logo-reveal-lockup {
+    visibility: visible;
+  }
+
+  html[data-lg-reduce-motion='1'] .lg-logo-reveal-canvas,
+  html[data-lg-reduce-transparency='1'] .lg-logo-reveal-canvas {
+    visibility: hidden;
+  }
+
+  @media (prefers-reduced-motion: reduce), (prefers-reduced-transparency: reduce) {
+    .lg-logo-reveal-lockup {
+      visibility: visible;
+    }
+
+    .lg-logo-reveal-canvas {
+      visibility: hidden;
+    }
+  }
+
+  .lg-logo-reveal-error {
+    position: absolute;
+    inset: auto 0 0;
+    padding: 12px;
+    font-size: 0.875rem;
+    text-align: center;
+  }
+}

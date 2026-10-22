@@ -33,6 +33,7 @@ const STAGE_ZOOM = new Map([
   ['glass-header', 1.6],
   ['glass-laptop', 1.05],
   ['glass-lens', 1.45],
+  ['glass-logo-reveal', 1.1],
   ['glass-menu', 1.5],
   ['glass-phone-duo', 1.15],
   ['glass-popover', 1.5],

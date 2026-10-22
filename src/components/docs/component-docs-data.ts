@@ -3496,6 +3496,141 @@ export default function Page() {
     pageToc: standardToc,
   },
   {
+    id: 'glass-logo-reveal',
+    name: 'Glass Logo Reveal',
+    category: 'Effects',
+    isNew: true,
+    status: 'ready',
+    route: '/components/glass-logo-reveal',
+    searchTitle: 'Glass Logo Reveal: a WebGL logo animation for React',
+    description:
+      'A logo sting: a capsule of thick glass carries your mark and name into view, then lands on the real lockup.',
+    usage: `import { GlassLogoReveal } from "@/components/glassyui/glass-logo-reveal";
+
+export function Intro() {
+  return (
+    <GlassLogoReveal
+      className="w-full max-w-3xl rounded-3xl"
+      markSrc="/logo.svg"
+      name="Acme"
+    />
+  );
+}`,
+    examples: [
+      {
+        title: 'Play it again',
+        code: `const [run, setRun] = useState(0);
+
+return (
+  <>
+    <GlassLogoReveal key={run} markSrc="/logo.svg" name="Acme" />
+    <button type="button" onClick={() => setRun(run + 1)}>
+      Replay
+    </button>
+  </>
+);`,
+      },
+      {
+        title: 'Scrub it with a slider',
+        code: `const [moment, setMoment] = useState<number>();
+
+return (
+  <>
+    <GlassLogoReveal markSrc="/logo.svg" name="Acme" progress={moment} />
+    <input
+      aria-label="Moment"
+      max={100}
+      min={0}
+      type="range"
+      onChange={(event) => setMoment(Number(event.target.value) / 100)}
+    />
+  </>
+);`,
+      },
+      {
+        title: 'Open a splash screen',
+        code: `const [splash, setSplash] = useState(true);
+
+return splash ? (
+  <GlassLogoReveal
+    className="fixed inset-0 aspect-auto"
+    markSrc="/logo.svg"
+    name="Acme"
+    play="mount"
+    onComplete={() => setTimeout(() => setSplash(false), 600)}
+  />
+) : (
+  <App />
+);`,
+      },
+      {
+        title: 'Set the stage and the type',
+        code: `<GlassLogoReveal
+  className="aspect-[3/1] bg-black font-semibold text-white"
+  markSrc="/logo-white.svg"
+  name="Acme"
+/>`,
+      },
+    ],
+    api: [
+      {
+        name: 'GlassLogoReveal',
+        description:
+          'A figure with role img: the stage, drawn on a canvas, and the lockup it lands on. Its background is the stage and its colour the name; size the lockup with font-size.',
+        extends: 'HTML figure attributes (no children)',
+        props: [
+          {
+            name: 'markSrc',
+            type: 'string',
+            default: '—',
+            description:
+              'The mark, from your origin or served with CORS. An SVG stays sharp under the glass.',
+            required: true,
+          },
+          {
+            name: 'name',
+            type: 'string',
+            default: '—',
+            description:
+              "The name set beside the mark, in the figure's font and colour. Also its accessible name.",
+            required: true,
+          },
+          {
+            name: 'play',
+            type: "'visible' | 'mount'",
+            default: "'visible'",
+            description: 'Plays once: when half the figure is on screen, or as soon as it mounts.',
+          },
+          {
+            name: 'progress',
+            type: 'number',
+            default: '—',
+            description:
+              'Holds one moment, from 0 (the empty stage) to 1 (the lockup), instead of playing. Clearing it plays on from there.',
+          },
+          {
+            name: 'duration',
+            type: 'number',
+            default: '2600',
+            description: 'Milliseconds from the empty stage to the lockup.',
+          },
+          {
+            name: 'onComplete',
+            type: '() => void',
+            default: '—',
+            description: 'Called once the lockup has landed, or at once under reduced motion.',
+          },
+        ],
+      },
+    ],
+    types: ['GlassLogoRevealProps', 'GlassLogoRevealPlay'],
+    requires:
+      'WebGL2 and a mark from your origin or served with CORS. Without WebGL2 the finished lockup shows at once.',
+    accessibility:
+      'The figure is named by name; pass aria-label for a fuller name. Reduced motion and reduced transparency show the lockup at once.',
+    pageToc: standardToc,
+  },
+  {
     id: 'glass-laptop',
     name: 'Glass Laptop',
     category: 'Mockups',

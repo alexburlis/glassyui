@@ -220,6 +220,7 @@ const remainingItems = [
   'glass-kbd',
   'glass-laptop',
   'glass-lens',
+  'glass-logo-reveal',
   'glass-menu',
   'glass-pagination',
   'glass-phone-duo',
@@ -269,10 +270,12 @@ const expectedLibraryFiles = [
     'components/glassyui/lib/liquid-motion.ts',
     'components/glassyui/lib/scene-renderer.ts',
     'components/glassyui/lib/phone-duo-renderer.ts',
+    'components/glassyui/lib/logo-reveal-renderer.ts',
     // The laptop's own stylesheet.
     'components/glassyui/styles/laptop.css',
     'components/glassyui/styles/header.css',
     'components/glassyui/styles/phone-duo.css',
+    'components/glassyui/styles/logo-reveal.css',
   ]),
 ];
 
@@ -924,6 +927,82 @@ try {
     await page.evaluate(() => document.documentElement.removeAttribute('data-lg-reduce-motion'));
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.setViewportSize({ width: 800, height: 600 });
+
+    // The reveal plays on its own and lands exactly on the lockup the page laid out: its
+    // canvas's last frame and the real lockup make the same picture.
+    const reveal = page.locator('[data-installed-example="logo-reveal"]');
+    const sting = reveal.locator('.lg-logo-reveal');
+    const replay = reveal.getByRole('button', { name: 'Replay reveal', exact: true });
+
+    await reveal
+      .getByRole('img', { name: 'Installed reveal', exact: true })
+      .scrollIntoViewIfNeeded();
+    await replay.click();
+    await reveal.locator('.lg-logo-reveal[data-state="playing"]').waitFor();
+    assert.equal(
+      await sting.getAttribute('data-renderer'),
+      'webgl',
+      `${browserName}: the reveal must draw with WebGL2`,
+    );
+    await page.waitForTimeout(450);
+
+    const moving = await sting.screenshot({
+      path: path.join(artifactDirectory, `installed-logo-reveal-${browserName}-moving.png`),
+    });
+
+    await reveal.locator('.lg-logo-reveal[data-state="ended"]').waitFor({ timeout: 5000 });
+
+    const canvasOnly = await page.addStyleTag({
+      content:
+        '.lg-logo-reveal-canvas { opacity: 1 !important; transition: none !important; } .lg-logo-reveal-lockup { visibility: hidden !important; }',
+    });
+
+    await nextPaint(page);
+
+    const lastFrame = await sting.screenshot({
+      path: path.join(artifactDirectory, `installed-logo-reveal-${browserName}-last-frame.png`),
+    });
+
+    await canvasOnly.evaluate((node) => node.remove());
+    await page.waitForTimeout(400);
+
+    const lockup = await sting.screenshot({
+      path: path.join(artifactDirectory, `installed-logo-reveal-${browserName}-lockup.png`),
+    });
+
+    assert.ok(
+      (await pictureDifference(page, moving, lockup)) > 2,
+      `${browserName}: the reveal must move before it lands`,
+    );
+
+    const landing = await pictureDifference(page, lastFrame, lockup);
+
+    assert.ok(
+      landing < 0.6,
+      `${browserName}: the last frame must land on the real lockup (${landing.toFixed(2)})`,
+    );
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await replay.click();
+    await nextPaint(page);
+    assert.equal(
+      await sting.getAttribute('data-state'),
+      'ended',
+      `${browserName}: reduced motion must show the lockup at once`,
+    );
+    assert.ok(
+      (await pictureDifference(page, lockup, await sting.screenshot())) < 0.6,
+      `${browserName}: reduced motion must show the same lockup`,
+    );
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.evaluate(() => document.documentElement.setAttribute('data-lg-reduce-motion', '1'));
+    await replay.click();
+    await nextPaint(page);
+    assert.equal(
+      await sting.getAttribute('data-state'),
+      'ended',
+      `${browserName}: the site preference must show the lockup at once`,
+    );
+    await page.evaluate(() => document.documentElement.removeAttribute('data-lg-reduce-motion'));
     assert.deepEqual(runtimeErrors, [], `${browserName}: installed examples must not throw`);
 
     const installedHeader = page.locator('[data-installed-example="header"]');

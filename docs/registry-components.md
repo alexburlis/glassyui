@@ -1,6 +1,6 @@
 # Registry components
 
-The registry exposes 36 source-copy component items. Install an item by URL
+The registry exposes 37 source-copy component items. Install an item by URL
 without a Glassy UI namespace mapping:
 
 ```bash
@@ -521,6 +521,35 @@ Purpose: draws the surfaces, panels, buttons and drops inside it as thick
 bevelled glass that bends and splits a backdrop image and melts together, with
 WebGL2. Without it, and under reduced transparency or increased contrast, every
 piece keeps its CSS glass.
+
+### `glass-logo-reveal`
+
+Files:
+
+- `registry/glassyui/glass-logo-reveal.tsx`
+- `registry/glassyui/lib/logo-reveal-renderer.ts`
+- `registry/glassyui/styles/logo-reveal.css`
+
+Package dependencies: `clsx`.
+
+Registry dependencies: none.
+
+Purpose: a logo sting drawn by one WebGL2 fragment shader. On a dark stage a
+capsule of thick glass glides in over the mark on `--lg-ease-out`, lighting it
+only through the glass; its leading end springs out across the name, and its end
+cap stretches the letters it reaches, split into colour. The glass then relaxes,
+one highlight runs along it, the stage lights come up and it lands exactly on
+the real lockup, which the page lays out and keeps. The capsule magnifies across
+its spine, as a rod of glass does, so type grows taller under it without
+sliding. Refraction samples seven wavelengths at high quality, five at medium
+and three at low, and the glass thickness preference widens the rim, bends
+further and splits more.
+
+`markSrc` is an image from your origin or served with CORS and `name` is the
+text beside it, set in the figure's font and colour. The figure's background is
+the stage. `play` starts it once on screen or on mount, `progress` holds a
+moment, and a new `key` plays it again. Reduced motion and reduced transparency
+show the lockup at once; without WebGL2 the lockup shows without the glass.
 
 ## Mockups
 

@@ -107,6 +107,7 @@ import { LensExample } from '@/components/examples/lens-example';
 import { SceneExample } from '@/components/examples/scene-example';
 import { SpeakerGlyph } from '@/components/site/glyphs';
 import { LaptopShowcase } from '@/components/site/laptop-showcase';
+import { LogoRevealShowcase } from '@/components/site/logo-reveal-showcase';
 import { PhoneDuoShowcase } from '@/components/site/phone-duo-showcase';
 
 type ReleaseFeedbackContextValue = {
@@ -1121,6 +1122,13 @@ function PhoneDuoDemo() {
   return <PhoneDuoShowcase quiet={quiet} />;
 }
 
+// The reveal plays once as it comes into view; a gallery tile shows it without its timeline.
+function LogoRevealDemo() {
+  const quiet = useContext(QuietDemos);
+
+  return <LogoRevealShowcase quiet={quiet} />;
+}
+
 const DEMOS = {
   'glass-accordion': AccordionDemo,
   'glass-alert': AlertDemo,
@@ -1137,6 +1145,7 @@ const DEMOS = {
   'glass-kbd': KbdDemo,
   'glass-lens': LensExample,
   'glass-laptop': LaptopDemo,
+  'glass-logo-reveal': LogoRevealDemo,
   'glass-menu': MenuDemo,
   'glass-pagination': PaginationDemo,
   'glass-panel': PanelDemo,

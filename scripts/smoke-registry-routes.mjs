@@ -25,6 +25,7 @@ const expectedItems = [
   'glass-menu',
   'glass-lens',
   'glass-scene',
+  'glass-logo-reveal',
   'glass-laptop',
   'glass-phone-duo',
   'glass-checkbox',

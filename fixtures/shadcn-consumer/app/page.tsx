@@ -18,6 +18,7 @@ import {
 } from '@/components/glassyui/glass-menu';
 import { GlassPanel } from '@/components/glassyui/glass-panel';
 import { GlassHeader } from '@/components/glassyui/glass-header';
+import { GlassLogoReveal } from '@/components/glassyui/glass-logo-reveal';
 import { GlassPhoneDuo } from '@/components/glassyui/glass-phone-duo';
 import { GlassSheet, GlassSheetContent, GlassSheetTitle } from '@/components/glassyui/glass-sheet';
 
@@ -25,10 +26,13 @@ const duoScreen = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://w
 
 const duoCover = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="466" height="678"><path fill="#183c61" d="M0 0h466v678H0z"/><text x="35" y="330" fill="white" font-size="48">Cover screen</text></svg>')}`;
 
+const revealMark = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="9" y="9" width="46" height="46" rx="14" fill="none" stroke="white" stroke-width="9"/><path fill="#00ff00" d="M36 46h16v9H36z"/></svg>')}`;
+
 export default function InstalledRegistryFixture() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [duoOpen, setDuoOpen] = useState(true);
   const [duoAngle, setDuoAngle] = useState<number>();
+  const [revealRun, setRevealRun] = useState(0);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
 
   return (
@@ -103,6 +107,19 @@ export default function InstalledRegistryFixture() {
         </button>
         <button onClick={() => setDuoAngle(120)} type="button">
           Pose hinge
+        </button>
+      </section>
+      <section className="grid w-full max-w-xl gap-4" data-installed-example="logo-reveal">
+        <GlassLogoReveal
+          key={revealRun}
+          className="bg-black text-white"
+          duration={1200}
+          markSrc={revealMark}
+          name="Installed reveal"
+          play="mount"
+        />
+        <button onClick={() => setRevealRun(revealRun + 1)} type="button">
+          Replay reveal
         </button>
       </section>
     </main>
