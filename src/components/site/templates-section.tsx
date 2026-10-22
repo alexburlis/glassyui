@@ -10,7 +10,7 @@ export function TemplatesSection() {
     >
       <h2 id="templates-title">Coming in Pro</h2>
       <div className="template-cards">
-        <a className="template-card" href={PRO_ORIGIN}>
+        <a className="template-card" data-analytics-source="template" href={PRO_ORIGIN}>
           <span className="template-card-window">
             <span aria-hidden className="home-template-bar">
               <i />

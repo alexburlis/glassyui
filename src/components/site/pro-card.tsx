@@ -167,7 +167,7 @@ function ProCardArt() {
 /** The Pro card beside the gallery: what Pro is, what it costs today and the way in. */
 export function ProCard() {
   return (
-    <a className="pro-card" href={PRO_ORIGIN}>
+    <a className="pro-card" data-analytics-source="banner" href={PRO_ORIGIN}>
       <ProCardArt />
       <span className="pro-card-body">
         <span className="pro-card-title">

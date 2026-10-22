@@ -1,5 +1,7 @@
 'use client';
 
+import { captureAction, captureSearchResult } from '@/lib/analytics/browser';
+
 import { useCommandState } from 'cmdk';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
@@ -174,10 +176,14 @@ export function SiteSearch() {
   }, []);
 
   useEffect(() => {
-    if (open) load();
+    if (open) {
+      captureAction({ source: 'search', action: 'search_open', outcome: 'opened' });
+      load();
+    }
   }, [load, open]);
 
   const go = (href: string) => {
+    captureSearchResult(href);
     setOpen(false);
     router.push(href);
   };
@@ -241,6 +247,12 @@ export function SiteSearch() {
                 keywords={['appearance', 'dark', 'light', 'mode']}
                 onSelect={() => {
                   setOpen(false);
+                  captureAction({
+                    source: 'search',
+                    action: 'theme',
+                    outcome: 'selected',
+                    choice: light ? 'dark' : 'light',
+                  });
                   changeTheme(() => setPreferences({ theme: light ? 'dark' : 'light' }));
                 }}
                 value="Switch appearance action"
@@ -258,6 +270,7 @@ export function SiteSearch() {
                 keywords={['source', 'repository', 'code']}
                 onSelect={() => {
                   setOpen(false);
+                  captureSearchResult(REPOSITORY);
                   window.open(REPOSITORY, '_blank', 'noopener');
                 }}
                 value="Open GitHub action"

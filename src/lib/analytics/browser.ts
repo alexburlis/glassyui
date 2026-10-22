@@ -1,4 +1,11 @@
 import type { PostHog, Properties } from 'posthog-js';
+import {
+  INTERACTION_EVENTS,
+  captureLink,
+  interactionProperties,
+  listenForLinks,
+  type SiteAction,
+} from './interactions';
 import type { AnalyticsConfig } from './config';
 import {
   CONSENT_COOKIE,
@@ -21,6 +28,23 @@ const OPTIONAL_STORAGE = [
 ];
 
 let sdk: PostHog | null = null;
+
+let activeConfig: AnalyticsConfig | null = null;
+
+let removeLinks: (() => void) | null = null;
+
+function captureInteraction(event: (typeof INTERACTION_EVENTS)[number], properties: Properties) {
+  if (!sdk || !trackingAllowed(activeConfig)) return;
+  sdk.capture(event, interactionProperties(properties, pagePath));
+}
+
+export function captureAction(action: SiteAction) {
+  captureInteraction('site_action', action);
+}
+
+export function captureSearchResult(href: string) {
+  captureLink(href, 'search', captureInteraction, pagePath);
+}
 
 let generation = 0;
 
@@ -109,6 +133,9 @@ function clearOptionalStorage() {
 
 export function stopAnalytics() {
   generation += 1;
+  activeConfig = null;
+  removeLinks?.();
+  removeLinks = null;
   starting = false;
   lastPage = null;
   pending.forEach((controller) => controller.abort());
@@ -290,7 +317,7 @@ export async function startAnalytics(config: AnalyticsConfig) {
           !event ||
           currentGeneration !== generation ||
           !trackingAllowed(config) ||
-          !['$pageview', '$pageleave', '$web_vitals', 'pro_checkout_click'].includes(event.event)
+          !['$pageview', '$pageleave', '$web_vitals', ...INTERACTION_EVENTS].includes(event.event)
         )
           return null;
 
@@ -310,7 +337,7 @@ export async function startAnalytics(config: AnalyticsConfig) {
           referrerPolicy: 'no-referrer',
           headers: { 'Content-Type': 'application/json' },
           signal: controller.signal,
-          keepalive: event.event === '$pageleave' || event.event === '$web_vitals',
+          keepalive: event.event !== '$pageview',
           body: JSON.stringify({
             api_key: config.token,
             event: event.event,
@@ -318,6 +345,7 @@ export async function startAnalytics(config: AnalyticsConfig) {
             timestamp: new Date().toISOString(),
             properties: {
               ...webAnalyticsProperties(event.properties),
+              ...interactionProperties(event.properties, pagePath),
               $lib_custom_api_host: `${location.origin}${config.host}`,
               $current_url: `${origin}${path}`,
               $pathname: path,
@@ -344,6 +372,8 @@ export async function startAnalytics(config: AnalyticsConfig) {
     });
     instance.opt_in_capturing({ captureEventName: false });
     sdk = instance;
+    activeConfig = config;
+    removeLinks = listenForLinks(captureInteraction, pagePath);
     // Navigation can finish while the SDK chunk loads. Remember the page actually captured.
     capturePage(config, location.pathname);
   } finally {

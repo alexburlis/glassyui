@@ -90,7 +90,7 @@ export default function Home() {
       <main className="home" id="main-content">
         <KeynoteOpener>
           <section aria-labelledby="home-title" className="home-hero">
-            <Link className="home-announce" href="/mobile">
+            <Link className="home-announce" data-analytics-source="announcement" href="/mobile">
               <span className="home-announce-tag">New</span>
               <span className="home-announce-text">
                 <span className="home-announce-long">Glassy UI for React Native apps</span>

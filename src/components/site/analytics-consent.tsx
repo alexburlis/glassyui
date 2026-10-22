@@ -231,8 +231,8 @@ export function AnalyticsConsent({ children }: { children: React.ReactNode }) {
             <h2 className="analytics-consent-title">Help improve Glassy UI</h2>
             <p className="analytics-consent-ask">
               {defaultOn
-                ? 'Burlis Management GmbH measures page visits, performance and Pro checkout clicks in your region.'
-                : 'May Burlis Management GmbH measure page visits, performance and Pro checkout clicks?'}{' '}
+                ? 'Burlis Management GmbH measures page visits, site interactions and performance in your region.'
+                : 'May Burlis Management GmbH measure page visits, site interactions and performance?'}{' '}
               <a href="https://glassyui.com/privacy">Privacy</a>
             </p>
             {(signal || config?.signal) && (

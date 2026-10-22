@@ -346,7 +346,7 @@ async function openSession(options = {}) {
 async function go(session, url = `${MAIN}/privacy`) {
   const count = session.configCount();
 
-  await session.page.goto(url, { waitUntil: 'networkidle' });
+  await session.page.goto(url, { waitUntil: 'domcontentloaded' });
   await until(() => session.configCount() > count, 'first-party configuration request');
 }
 
@@ -429,7 +429,16 @@ async function assertImplicitPermission(session) {
 function assertMinimalEvents(events) {
   for (const event of events) {
     assert.ok(
-      ['$pageview', '$pageleave', '$web_vitals', 'pro_checkout_click'].includes(event.event),
+      [
+        '$pageview',
+        '$pageleave',
+        '$web_vitals',
+        'pro_checkout_click',
+        'pro_banner_click',
+        'pro_link_click',
+        'site_link_click',
+        'site_action',
+      ].includes(event.event),
       `Unapproved event ${event.event}`,
     );
     const encoded = JSON.stringify(event.properties);
@@ -514,6 +523,170 @@ function preference(decision, overrides = {}) {
 }
 
 try {
+  for (const width of [1280, 390]) {
+    await scenario(
+      `interaction coverage: controls at ${width}px`,
+      async (session) => {
+        await go(
+          session,
+          `${MAIN}/components/glass-button?email=alice%40example.com#private-fragment`,
+        );
+        await accept(session);
+        await until(() => session.events.length === 1, 'permission ready');
+
+        const action = (name, outcome) =>
+          session.allEvents.filter(
+            (event) =>
+              event.event === 'site_action' &&
+              event.properties.action === name &&
+              (!outcome || event.properties.outcome === outcome),
+          );
+
+        await session.page.evaluate(() => {
+          Object.defineProperty(navigator, 'clipboard', {
+            configurable: true,
+            value: {
+              writeText: async () => {},
+            },
+          });
+        });
+        await session.page.locator('.docs-copy-button').first().click();
+        await until(() => action('install_copy', 'succeeded').length === 1, 'actual copy success');
+        await session.page
+          .locator('.docs-code-block:not(.docs-command-block) .docs-copy-button:visible')
+          .first()
+          .click();
+        await until(() => action('source_copy', 'succeeded').length === 1, 'actual source copy');
+        await session.page.evaluate(() => {
+          navigator.clipboard.writeText = async () => {
+            throw new Error('Synthetic clipboard refusal');
+          };
+        });
+        await session.page.locator('.docs-copy-button').first().click();
+        await until(() => action('install_copy', 'failed').length === 1, 'actual copy refusal');
+        await session.page.getByRole('radio', { name: 'React Native', exact: true }).click();
+        await until(() => action('platform', 'selected').length === 1, 'platform choice');
+        assert.equal(action('platform')[0].properties.choice, 'react-native');
+        await session.page.getByRole('button', { name: 'Search', exact: true }).click();
+        await until(() => action('search_open', 'opened').length === 1, 'search opened');
+        const search = session.page.getByRole('dialog');
+        await search.getByRole('combobox').fill('private-email alice@example.com');
+        await search.getByRole('combobox').fill('Getting started');
+        await search.getByRole('option', { name: 'Getting started', exact: true }).click();
+        await until(
+          () =>
+            session.allEvents.some(
+              (event) =>
+                event.event === 'site_link_click' &&
+                event.properties.source === 'search' &&
+                event.properties.destination === '/docs',
+            ),
+          'search selection without query text',
+        );
+        await session.page.getByRole('button', { name: 'Change appearance' }).click();
+        await until(() => action('theme', 'selected').length === 1, 'theme action');
+        let status = 200;
+        await session.context.route('**/api/updates', (route) =>
+          route.fulfill({
+            status,
+            contentType: 'application/json',
+            body: '{}',
+          }),
+        );
+        const signup = session.page.locator('.updates-signup');
+        await signup.getByRole('textbox').fill('alice@example.com');
+        await signup.getByRole('button', { name: 'Subscribe', exact: true }).click();
+        await until(() => action('signup', 'accepted').length === 1, 'signup request accepted');
+        status = 503;
+        await signup.locator('.updates-signup-change').click();
+        await signup.getByRole('button', { name: 'Subscribe', exact: true }).click();
+        await until(() => action('signup', 'failed').length === 1, 'signup request failed');
+        assert.equal(action('signup', 'requested').length, 2);
+        await session.page.locator('footer a[href="/privacy"]').last().click();
+        await until(
+          () =>
+            session.allEvents.some(
+              (event) =>
+                event.event === 'site_link_click' &&
+                event.properties.source === 'footer' &&
+                event.properties.destination === '/privacy',
+            ),
+          'Next navigation intent',
+        );
+        await reopen(session);
+        await reject(session);
+        const before = session.allEvents.length;
+        await session.page.getByRole('button', { name: 'Change appearance' }).click();
+        await quiet(session.page);
+        assert.equal(session.allEvents.length, before, 'Actions stop after withdrawal');
+      },
+      { width },
+    );
+  }
+
+  await scenario('interaction coverage: refusal blocks actions', async (session) => {
+    await go(session, `${MAIN}/components/glass-button`);
+    await session.page.getByRole('radio', { name: 'React Native', exact: true }).click();
+    await session.page.getByRole('button', { name: 'Change appearance' }).click();
+    await noCollection(session, 'Actions before permission');
+    await reject(session);
+    await session.page.getByRole('button', { name: 'Change appearance' }).click();
+    await noCollection(session, 'Actions after refusal');
+  });
+  await scenario('interaction coverage: banner primary and middle click', async (session) => {
+    await go(session, `${MAIN}/components`);
+    await accept(session);
+    await until(() => session.events.length === 1, 'permission ready');
+    await session.page.locator('a.pro-card').click({ button: 'middle' });
+    await until(
+      () => session.allEvents.some((event) => event.event === 'pro_banner_click'),
+      'middle click intent',
+    );
+    assert.equal(session.allEvents.filter((event) => event.event === 'pro_banner_click').length, 1);
+  });
+  await scenario(
+    'interaction coverage: deliberate Pro navigation and checkout',
+    async (session) => {
+      if (!proBase) return;
+      await go(session, `${MAIN}/privacy`);
+      await accept(session);
+      await until(() => session.events.length === 1, 'permission ready');
+      await session.page.locator('footer a[href="https://pro.glassyui.com"]').first().click();
+      await until(
+        () => session.allEvents.some((event) => event.event === 'pro_link_click'),
+        'Pro footer intent',
+      );
+      const click = session.allEvents.find((event) => event.event === 'pro_link_click');
+      assert.equal(click.properties.source, 'footer');
+      await until(
+        () => session.events.filter((event) => event.event === '$pageview').length === 2,
+        'Pro ready',
+      );
+      await session.page.locator('a.pro-checkout').click();
+      await until(
+        () => session.allEvents.some((event) => event.event === 'pro_checkout_click'),
+        'checkout navigation intent',
+      );
+      const checkouts = session.allEvents.filter((event) => event.event === 'pro_checkout_click');
+      assert.equal(checkouts.length, 1);
+      assert.equal(checkouts[0].properties.source, 'hero');
+      assert.equal(checkouts[0].properties.destination, 'checkout');
+    },
+  );
+  await scenario('interaction coverage: attributed Pro banner', async (session) => {
+    await go(session, `${MAIN}/components`);
+    await accept(session);
+    await until(() => session.events.length === 1, 'consented page');
+    await session.page.locator('a.pro-card').click();
+    await until(
+      () => session.allEvents.some((event) => event.event === 'pro_banner_click'),
+      'attributed banner event survives navigation',
+    );
+    const clicks = session.allEvents.filter((event) => event.event === 'pro_banner_click');
+    assert.equal(clicks.length, 1, 'One banner click emits one intent');
+    assert.equal(clicks[0].properties.source, 'banner');
+    assert.equal(clicks[0].properties.destination, 'pro');
+  });
   await scenario(
     `fresh opt-in visit: no collection on ${proBase ? 'either host' : 'the free host'}`,
     async (session) => {

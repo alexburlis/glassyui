@@ -89,7 +89,7 @@ export function DocsShell({ children, contribute, current, rail, toc = [] }: Doc
       <DocsMobileNav groups={mobileNavGroups} />
 
       <div className={`docs-layout${hasToc || hasRail ? '' : ' docs-layout--no-toc'}`}>
-        <aside className="docs-sidebar" aria-label="Documentation">
+        <aside className="docs-sidebar" data-analytics-source="sidebar" aria-label="Documentation">
           <GlassScrollArea className="docs-sidebar-scroll">
             <div className="docs-sidebar-groups">
               <DocsSidebarCurrent current={current} />
