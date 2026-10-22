@@ -90,12 +90,12 @@ try {
 
   const hero = page.locator('.home-hero');
   const browse = hero.getByRole('link', { name: 'Browse components', exact: true });
-  const star = hero.getByRole('link', { name: 'Star on GitHub', exact: true });
+  const templates = hero.getByRole('link', { name: 'Browse Templates', exact: true });
   assert.equal(await browse.getAttribute('href'), '/components');
-  assert.equal(await star.getAttribute('href'), 'https://github.com/alexburlis/glassyui');
+  assert.equal(await templates.getAttribute('href'), 'https://pro.glassyui.com');
   assert.ok(
-    (await star.boundingBox()).x > (await browse.boundingBox()).x,
-    'secondary GitHub button is on the right',
+    (await templates.boundingBox()).x > (await browse.boundingBox()).x,
+    'secondary templates button is on the right',
   );
   assert.equal(await hero.locator('.copy-chip').count(), 0, 'hero leads with discovery');
   await capture('01-hero');

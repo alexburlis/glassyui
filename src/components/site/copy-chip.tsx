@@ -1,6 +1,6 @@
 'use client';
 
-import { captureAction } from '@/lib/analytics/browser';
+import { actionOutcome } from '@/lib/analytics/browser';
 
 import { useEffect, useRef, useState } from 'react';
 
@@ -20,21 +20,20 @@ export function CopyChip({ command, label = 'Copy install command' }: CopyChipPr
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
   const settle = (next: CopyState) => {
-    captureAction({
-      source: 'hero',
-      action: 'install_copy',
-      outcome: next === 'copied' ? 'succeeded' : 'failed',
-    });
     setState(next);
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setState('idle'), 2000);
   };
 
   const copy = async () => {
+    const recordOutcome = actionOutcome({ source: 'hero', action: 'install_copy' });
+
     try {
       await navigator.clipboard.writeText(command);
+      recordOutcome('succeeded');
       settle('copied');
     } catch {
+      recordOutcome('failed');
       // Say so, and leave the command selected so it can be copied by hand.
       const selection = window.getSelection();
 
