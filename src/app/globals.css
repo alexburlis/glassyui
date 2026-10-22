@@ -486,18 +486,6 @@ main :focus {
   margin-top: 0;
 }
 
-/* One outline star leads the secondary action. Its points sit back from the rim, so the star's
-   side takes 4 px less padding than the label's. */
-.home-actions .github-star-button {
-  padding-inline-start: 20px;
-}
-
-.github-star-button-glyph {
-  flex: none;
-  width: 18px;
-  height: 18px;
-}
-
 /* Stacked on a phone, the two actions share the wider one's width. */
 @media (max-width: 440px) {
   .home-hero .home-actions {
