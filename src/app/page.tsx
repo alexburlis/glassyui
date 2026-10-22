@@ -11,7 +11,6 @@ import { KeynoteTurn } from '@/components/keynote/keynote-turn';
 import { GlassButton } from '@/components/liquid';
 import { ComponentGrid, ReleaseFeedbackProvider } from '@/components/site/component-grid';
 import { GithubMark } from '@/components/site/github-mark';
-import { GithubStarButton } from '@/components/site/github-star-button';
 import { JsonLd } from '@/components/site/json-ld';
 import { Desk } from '@/components/site/desk';
 import { FeatureBento } from '@/components/site/feature-bento';
@@ -23,7 +22,7 @@ import { SiteNav } from '@/components/site/site-nav';
 import { AlertsTile, CommandTile, NavigationTile } from '@/components/site/showcase-tiles';
 import { HOME_CARD, shareMetadata } from '@/lib/share';
 import { siteDescription } from '@/lib/site-description';
-import { GITHUB, SITE_URL } from '@/lib/site-links';
+import { GITHUB, PRO_ORIGIN, SITE_URL } from '@/lib/site-links';
 import nativeRegistry from '../../registry-native.json';
 
 // Tiles without a custom demo use their component's docs example.
@@ -109,7 +108,9 @@ export default function Home() {
               <GlassButton asChild size="lg" variant="prominent">
                 <Link href="/components">Browse components</Link>
               </GlassButton>
-              <GithubStarButton />
+              <GlassButton asChild size="lg" variant="primary">
+                <a href={PRO_ORIGIN}>Browse Templates</a>
+              </GlassButton>
             </div>
             <KeynoteReplay />
           </section>

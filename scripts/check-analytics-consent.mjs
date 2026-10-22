@@ -310,7 +310,9 @@ async function openSession(options = {}) {
       });
     } catch (error) {
       routingErrors.push(error.message);
-      await route.abort('failed');
+      await route.abort('failed').catch((abortError) => {
+        routingErrors.push(abortError.message);
+      });
     }
   });
 
@@ -496,14 +498,15 @@ async function scenario(name, run, options = {}) {
       .catch(() => {});
   } finally {
     session.releaseImport();
-    // Drain real route callbacks before disposing their request context. Closing
-    // first can reject fulfill and then abort the same already-handled request.
-    await session.context.unrouteAll({ behavior: 'wait' });
+    // Assertions above cover the active scenario. Detach handlers before closing;
+    // waiting for cancelled navigation/prefetch callbacks can deadlock teardown.
+    await session.context.unrouteAll({ behavior: 'ignoreErrors' });
     evidence.push({
       name,
       requests: session.requests,
       events: session.allEvents,
       pageErrors: session.pageErrors,
+      routingErrors: session.routingErrors,
     });
     await session.context.close();
   }
@@ -523,6 +526,111 @@ function preference(decision, overrides = {}) {
 }
 
 try {
+  for (const initiallyAllowed of [false, true]) {
+    await scenario(
+      `async consent window: ${initiallyAllowed ? 'withdraw then reaccept' : 'grant during copy'}`,
+      async (session) => {
+        await go(session, `${MAIN}/components/glass-button`);
+
+        if (initiallyAllowed) {
+          await accept(session);
+          await until(() => session.events.length === 1, 'initial permission');
+        }
+
+        await session.page.evaluate(() => {
+          Object.defineProperty(navigator, 'clipboard', {
+            configurable: true,
+            value: {
+              writeText: () =>
+                new Promise((resolve) => {
+                  window.finishControlledCopy = resolve;
+                }),
+            },
+          });
+        });
+        await session.page.locator('.docs-copy-button').first().click();
+
+        if (initiallyAllowed) {
+          await reopen(session);
+          await reject(session);
+          await reopen(session);
+        }
+
+        await accept(session);
+        await until(
+          () =>
+            session.events.filter((event) => event.event === '$pageview').length ===
+            (initiallyAllowed ? 2 : 1),
+          'new permission',
+        );
+        await session.page.evaluate(() => window.finishControlledCopy());
+        await session.page.locator('.docs-copy-button[data-state="copied"]').first().waitFor();
+        await quiet(session.page);
+        assert.equal(
+          session.allEvents.filter((event) => event.properties.action === 'install_copy').length,
+          0,
+          'A delayed action cannot cross permission windows',
+        );
+      },
+    );
+  }
+
+  for (const initiallyAllowed of [false, true]) {
+    await scenario(
+      `async consent window: signup ${initiallyAllowed ? 'withdraw then reaccept' : 'grant during request'}`,
+      async (session) => {
+        await go(session, `${MAIN}/privacy`);
+
+        if (initiallyAllowed) {
+          await accept(session);
+          await until(() => session.events.length === 1, 'initial permission');
+        }
+
+        let finish;
+        let started = false;
+
+        const responseGate = new Promise((resolve) => {
+          finish = resolve;
+        });
+
+        await session.context.route('**/api/updates', async (route) => {
+          started = true;
+          await responseGate;
+          await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+        });
+        const signup = session.page.locator('.updates-signup');
+        await signup.getByRole('textbox').fill('alice@example.com');
+        await signup.getByRole('button', { name: 'Subscribe', exact: true }).click();
+        await until(() => started, 'actual signup request pending');
+
+        if (initiallyAllowed) {
+          await reopen(session);
+          await reject(session);
+          await reopen(session);
+        }
+
+        await accept(session);
+        await until(
+          () =>
+            session.events.filter((event) => event.event === '$pageview').length ===
+            (initiallyAllowed ? 2 : 1),
+          'new permission',
+        );
+        finish();
+        await signup.locator('.updates-signup-accepted').waitFor();
+        await quiet(session.page);
+        assert.equal(
+          session.allEvents.filter(
+            (event) =>
+              event.properties.action === 'signup' && event.properties.outcome === 'accepted',
+          ).length,
+          0,
+          'A signup result cannot cross permission windows',
+        );
+      },
+    );
+  }
+
   for (const width of [1280, 390]) {
     await scenario(
       `interaction coverage: controls at ${width}px`,

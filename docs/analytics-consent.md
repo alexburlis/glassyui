@@ -208,3 +208,8 @@ explicit owners. No search terms, email addresses, copied content, labels, query
 strings or fragments are collected. Signup acceptance does not mean double
 opt-in confirmation. Checkout means link intent, never payment. Memory
 identities do not establish unique people across reloads.
+
+Copy and signup results are bound to the SDK permission window where the action
+began. Granting consent during a pending action, or withdrawing and accepting
+again, does not revive that action for measurement. The requested copy/signup
+itself still works.
