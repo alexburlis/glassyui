@@ -310,7 +310,7 @@ Glass Button, React Native (8 files; `expo-blur`, `expo-glass-effect`):
 | Glass Provider · Shared with other components | `glass-provider.tsx`, `lib/preferences.ts`, `lib/tokens.ts`, `lib/use-controllable-state.ts` |
 | Glass Surface · Shared with other components  | `glass-surface.tsx`, `glass-backdrop.tsx`, `lib/material.ts`                                 |
 
-Glass Provider is in the closure of 34 of the 36 web components; every native
+Glass Provider is in the closure of 34 of the 37 web components; every native
 item includes the native provider and 19 include Glass Surface.
 
 ### Styles, provider and aliases
@@ -418,7 +418,7 @@ are 44 px tall.
 | Shown                          | Source                                                                                                                         |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
 | Name, category, description    | `componentDocContent` in `src/components/docs/component-docs-data.ts`                                                          |
-| Hero component count           | `componentDocs.length` (36)                                                                                                    |
+| Hero component count           | `componentDocs.length` (37)                                                                                                    |
 | React closure, files, packages | `getRegistryClosure` over `registry.json`, exposed as `installedFiles` and `installedDependencies`, plus the per-item grouping |
 | Native closure                 | The same resolver over `registry-native.json` (new; `getNativeUsage` lists imports, not the closure)                           |
 | File text                      | The page's own payload in `public/r/` or `public/r/native/`, fetched in Manual                                                 |

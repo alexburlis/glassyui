@@ -49,6 +49,7 @@ const components = [
   'glass-breadcrumb',
   'glass-pagination',
   'glass-scene',
+  'glass-logo-reveal',
   'glass-laptop',
   'glass-phone-duo',
 ];

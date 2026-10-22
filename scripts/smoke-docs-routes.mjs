@@ -52,6 +52,7 @@ const checks = [
     ['glass-breadcrumb', 'Glass Breadcrumb'],
     ['glass-pagination', 'Glass Pagination'],
     ['glass-scene', 'Glass Scene'],
+    ['glass-logo-reveal', 'Glass Logo Reveal'],
     ['glass-laptop', 'Glass Laptop'],
     ['glass-phone-duo', 'Glass Phone Duo'],
   ].map(([id, name]) => ({

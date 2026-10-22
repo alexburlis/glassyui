@@ -2093,6 +2093,37 @@
       "type": "registry:ui"
     },
     {
+      "name": "glass-logo-reveal",
+      "title": "Glass Logo Reveal",
+      "description": "A WebGL2 logo sting: a capsule of thick glass carries your mark and name into view and lands on the real lockup.",
+      "dependencies": [
+        "clsx"
+      ],
+      "files": [
+        {
+          "path": "registry/glassyui/glass-logo-reveal.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-logo-reveal.tsx"
+        },
+        {
+          "path": "registry/glassyui/lib/logo-reveal-renderer.ts",
+          "type": "registry:lib",
+          "target": "components/glassyui/lib/logo-reveal-renderer.ts"
+        },
+        {
+          "path": "registry/glassyui/styles/logo-reveal.css",
+          "type": "registry:file",
+          "target": "components/glassyui/styles/logo-reveal.css"
+        }
+      ],
+      "meta": {
+        "sourceModules": [
+          "logo-reveal"
+        ]
+      },
+      "type": "registry:ui"
+    },
+    {
       "name": "glass-laptop",
       "title": "Glass Laptop",
       "description": "A CSS 3D laptop mockup whose screen shows your screenshot or React content.",

@@ -1,6 +1,6 @@
 # Registry installation
 
-Glassy UI is a shadcn-compatible source registry with 36 components. It installs
+Glassy UI is a shadcn-compatible source registry with 37 components. It installs
 component source into a consumer app; it is not a Glassy UI runtime package.
 
 ## Hosted registry
@@ -118,6 +118,7 @@ preference-guard and dialog/menu/sheet checks.
 - `glass-menu`
 - `glass-lens`
 - `glass-scene`
+- `glass-logo-reveal`
 - `glass-laptop`
 - `glass-phone-duo`
 - `glass-checkbox`

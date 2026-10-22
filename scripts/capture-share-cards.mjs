@@ -192,6 +192,18 @@ try {
         await page.waitForTimeout(1200);
       }
 
+      // The reveal's card holds the glass mid-pass, on the demo's own timeline: Home, then 38
+      // steps of 1%.
+      if (id === 'glass-logo-reveal') {
+        await frame.locator('.lg-logo-reveal[data-renderer="webgl"]').waitFor();
+        await frame.getByRole('slider', { name: 'Moment' }).focus();
+        await page.keyboard.press('Home');
+
+        for (let step = 0; step < 38; step++) await page.keyboard.press('ArrowRight');
+
+        await frame.locator('.lg-logo-reveal[data-state="held"]').waitFor();
+      }
+
       if (OPENED.has(id)) {
         const trigger = frame
           .locator('.docs-release-demo button, .docs-release-demo [role="combobox"]')
