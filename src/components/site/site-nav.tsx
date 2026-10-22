@@ -1,5 +1,7 @@
 'use client';
 
+import { captureAction } from '@/lib/analytics/browser';
+
 import clsx from 'clsx';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -27,6 +29,7 @@ function NavigationLinks({ pathname }: { pathname: string }) {
       {NAV_LINKS.map((link) => (
         <Link
           key={link.href}
+          data-analytics-source="navigation"
           aria-current={isCurrentSection(pathname, link.href) ? 'page' : undefined}
           href={link.href}
         >
@@ -52,6 +55,12 @@ function ThemeToggle({ className }: { className?: string }) {
   const toggleTheme = () => {
     const light = document.documentElement.getAttribute('data-lg-theme') === 'light';
 
+    captureAction({
+      source: 'navigation',
+      action: 'theme',
+      outcome: 'selected',
+      choice: light ? 'dark' : 'light',
+    });
     changeTheme(() => setPreferences({ theme: light ? 'dark' : 'light' }));
   };
 

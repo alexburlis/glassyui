@@ -1,5 +1,7 @@
 'use client';
 
+import { captureAction } from '@/lib/analytics/browser';
+
 import { useSyncExternalStore, type ReactNode } from 'react';
 import { GlassSegmentedControl, GlassSegmentedControlItem } from '@/components/liquid';
 
@@ -70,6 +72,7 @@ function subscribe(listener: () => void) {
 }
 
 function choosePlatform(platform: DocsPlatform) {
+  captureAction({ source: 'docs', action: 'platform', outcome: 'selected', choice: platform });
   chosen = platform;
   remember(platform);
   listeners.forEach((listener) => listener());

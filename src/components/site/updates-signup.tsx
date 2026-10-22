@@ -1,5 +1,7 @@
 'use client';
 
+import { captureAction } from '@/lib/analytics/browser';
+
 import Link from 'next/link';
 import { useEffect, useId, useRef, useState } from 'react';
 import { GlassButton } from '@/components/liquid/button';
@@ -63,6 +65,7 @@ export function UpdatesSignup() {
       return;
     }
 
+    captureAction({ source: 'footer', action: 'signup', outcome: 'requested' });
     setState({ kind: 'sending' });
 
     try {
@@ -75,11 +78,13 @@ export function UpdatesSignup() {
 
       // The route answers 200 only for an accepted request.
       if (response.status === 200) {
+        captureAction({ source: 'footer', action: 'signup', outcome: 'accepted' });
         setState({ kind: 'accepted' });
 
         return;
       }
 
+      captureAction({ source: 'footer', action: 'signup', outcome: 'failed' });
       setState({
         kind: 'error',
         message: failureMessage(response.status),
@@ -88,6 +93,7 @@ export function UpdatesSignup() {
 
       if (response.status === 400) input.focus();
     } catch {
+      captureAction({ source: 'footer', action: 'signup', outcome: 'failed' });
       setState({ kind: 'error', message: UPDATES_LABELS.failed, invalid: false });
     }
   }

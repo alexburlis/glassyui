@@ -1,10 +1,10 @@
 # Optional PostHog analytics
 
 This integration adds one optional purpose to `glassyui.com` and
-`pro.glassyui.com`: public-page usage and Pro checkout-link clicks. It does not
-change checkout, pricing, eligibility, licensing, delivery or appearance
-settings. It does not establish completed purchases. `/thanks` is only a page
-view.
+`pro.glassyui.com`: public-page usage, site interactions and Pro checkout-link
+clicks. It does not change checkout, pricing, eligibility, licensing, delivery
+or appearance settings. It does not establish completed purchases. `/thanks` is
+only a page view.
 
 The two origins are built from separate repositories. This public repository
 owns the free-site integration; the private Pro app preserves the same purpose,
@@ -12,8 +12,9 @@ choice cookie and SDK privacy contract.
 
 ## Collection contract
 
-- `$pageview`, `$pageleave`, `$web_vitals` and `pro_checkout_click` events are
-  permitted. Pageviews and SPA exits are manual; document exits and
+- `$pageview`, `$pageleave`, `$web_vitals`, `pro_checkout_click`,
+  `pro_banner_click`, `pro_link_click`, `site_link_click` and `site_action`
+  events are permitted. Pageviews and SPA exits are manual; document exits and
   non-attributed Web Vitals use the pinned SDK.
 - The SDK is lazy-loaded after the permission gate permits collection. No events
   from a disallowed period are queued or replayed after acceptance.
@@ -33,10 +34,10 @@ choice cookie and SDK privacy contract.
 - The SDK's public `before_send` hook replaces SDK delivery with one abortable
   request and always returns `null`. The SDK receives no events to batch, retry
   or flush on shutdown. The application transport has no retry or unload beacon.
-  Exit/vitals requests use fetch keepalive so document closure need not cancel
-  delivery; withdrawal still aborts them. The first-party `/api/pulse/i/v0/e`
-  route rewrites only to EU ingestion. SDK assets are bundled locally, with no
-  remote configuration or dependency requests.
+  Interaction/exit/vitals requests use fetch keepalive so document closure need
+  not cancel delivery; withdrawal still aborts them. The first-party
+  `/api/pulse/i/v0/e` route rewrites only to EU ingestion. SDK assets are
+  bundled locally, with no remote configuration or dependency requests.
 - Withdrawal closes the gate synchronously, invalidates pending SDK loads,
   aborts in-flight application requests and clears optional PostHog storage.
   Already transmitted data cannot be recalled by aborting a browser request.
@@ -192,3 +193,18 @@ silently reuse the free server as Pro.
 
 To rerun one browser scenario, pass its name as a fourth argument. Use an empty
 third argument for a focused free-only check.
+
+## Interaction coverage
+
+`interactions.ts` owns fixed source/action/outcome/choice categories and safe
+destinations. The existing permission lifecycle attaches one delegated link
+listener and removes it on withdrawal. Banner, template, announcement,
+navigation, footer, sidebar and search placement are distinguishable. Primary
+and middle clicks emit one intent; context-menu navigation and browser UI are
+outside page instrumentation. Demo content is excluded. Install/source copy
+emits success or failure from the clipboard boundary. Platform and theme
+choices, search opening/result selection and signup request outcomes have
+explicit owners. No search terms, email addresses, copied content, labels, query
+strings or fragments are collected. Signup acceptance does not mean double
+opt-in confirmation. Checkout means link intent, never payment. Memory
+identities do not establish unique people across reloads.

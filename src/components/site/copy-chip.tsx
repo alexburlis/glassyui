@@ -1,5 +1,7 @@
 'use client';
 
+import { captureAction } from '@/lib/analytics/browser';
+
 import { useEffect, useRef, useState } from 'react';
 
 type CopyChipProps = {
@@ -18,6 +20,11 @@ export function CopyChip({ command, label = 'Copy install command' }: CopyChipPr
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
   const settle = (next: CopyState) => {
+    captureAction({
+      source: 'hero',
+      action: 'install_copy',
+      outcome: next === 'copied' ? 'succeeded' : 'failed',
+    });
     setState(next);
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setState('idle'), 2000);

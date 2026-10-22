@@ -75,7 +75,7 @@ export function DocsMobileNav({ groups }: DocsMobileNavProps) {
         Browse docs
         <span>{currentLink?.label ?? 'Getting Started'}</span>
       </summary>
-      <nav aria-label="Mobile documentation navigation" ref={list}>
+      <nav data-analytics-source="sidebar" aria-label="Mobile documentation navigation" ref={list}>
         {groups.map((group) => (
           <div className="docs-sidebar-section" key={group.label}>
             <p className="docs-sidebar-label">{group.label}</p>
