@@ -228,6 +228,10 @@ void main() {
     // Thick glass absorbs warm light first, so its depths read cool and blue.
     through.rgb *= mix(vec3(1.0), vec3(0.82, 0.9, 1.05), clamp(thickness * 0.25, 0.0, 1.0));
     through.rgb += vec3(0.004, 0.008, 0.016) * dark * share;
+    // Light scattered in the glass lifts its depths to a milky navy, brighter towards the key
+    // light up and to the left.
+    float milk = (0.035 + 0.04 * smoothstep(1.2, -0.6, local.x + local.y)) * mix(1.6, 1.0, 1.0 - rounding);
+    through.rgb += vec3(0.55, 0.65, 0.85) * milk * glass * dark * share;
     vec4 glow = (markAt(centre + local * extent * 0.8, 4.0) * 0.5 + markAt(centre + local * extent * 0.7, 6.0) * 0.5);
     through.rgb += glow.rgb * haze * dark * share;
     vec3 reflection = mirror / covered;
@@ -247,13 +251,18 @@ void main() {
   float streak = exp(-pow((outline - 0.12) / 0.035, 2.0)) * pow(abs(g.x), 10.0) * 0.22;
   float walls = (exp(-pow((outline - 0.035) / 0.008, 2.0)) + 0.6 * exp(-pow((outline - 0.085) / 0.014, 2.0))) * (1.0 - rounding) * 1.8 * 0.1;
   float ring = exp(-pow((outline + 0.07) / 0.012, 2.0)) * rounding * 0.18;
-  vec3 aura = vec3(0.7, 0.8, 0.95) * (halo * exposure + streak + walls + ring) * glass;
+  // The polished edge catches the studio all the way round, brightest where it faces the key.
+  float facing = 0.55 + 0.45 * dot(g, normalize(vec2(-0.6, -0.8)));
+  float edgeLine = exp(-pow((outline + 0.012) / 0.009, 2.0)) * (0.35 + 0.65 * facing) * 0.75;
+  vec3 aura = vec3(0.7, 0.8, 0.95) * (halo * exposure + streak + walls + ring) * glass +
+    mix(vec3(1.0, 0.86, 0.7), vec3(0.75, 0.9, 1.0), facing) * edgeLine * glass;
 
   vec4 c = mix(through, over(stillAt(p)), rest);
   c.rgb += aura * dark * (1.0 - rest);
   c.a = max(c.a, dot(aura, vec3(0.333)) * dark);
   float noise = fract(sin(dot(gl_FragCoord.xy + seed, vec2(12.9898, 78.233))) * 43758.5453);
-  c.rgb += (noise - 0.5) / 255.0 * c.a;
+  // Fine grain while the glass is there, as a lens would record it; none once it lands.
+  c.rgb += (noise - 0.5) * mix(1.0, 5.0, glass * (1.0 - rest)) / 255.0 * c.a;
   colour = clamp(c, 0.0, 1.0);
 }`;
 
