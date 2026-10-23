@@ -120,7 +120,7 @@ try {
 
       for (const [name, runner] of Object.entries(runners)) {
         await manager(name);
-        const expected = `${runner} shadcn@4.14.1 add https://glassyui.com/r/${native ? 'native/' : ''}glass-button.json${native ? ' && npx expo install --fix' : ''}`;
+        const expected = `${runner} shadcn@4.14.1 add @glassyui${native ? '-native' : ''}/glass-button${native ? ' && npx expo install --fix' : ''}`;
         await commandEquals(expected);
         await noOverflow();
       }
@@ -336,8 +336,7 @@ try {
     'manager is shared with example blocks',
   );
   assert.ok(
-    ((await example.locator('code').textContent()).match(/https:\/\/glassyui.com\/r\//g) ?? [])
-      .length > 1,
+    ((await example.locator('code').textContent()).match(/@glassyui\//g) ?? []).length > 1,
     'example includes all additional components',
   );
 
@@ -372,7 +371,7 @@ try {
     .click();
   await page.waitForURL(new URL('/components/glass-menu?platform=react-native', baseUrl).href);
   await waitForCommand(
-    'pnpm dlx shadcn@4.14.1 add https://glassyui.com/r/native/glass-menu.json && npx expo install --fix',
+    'pnpm dlx shadcn@4.14.1 add @glassyui-native/glass-menu && npx expo install --fix',
   );
   assert.equal(
     await page.getByRole('radio', { name: 'React Native' }).getAttribute('aria-checked'),
@@ -381,7 +380,7 @@ try {
   await checkNativeReference('menu');
   await capture('05-linked-native-menu');
   await page.getByRole('radio', { exact: true, name: 'React' }).click();
-  await waitForCommand('pnpm dlx shadcn@4.14.1 add https://glassyui.com/r/glass-menu.json');
+  await waitForCommand('pnpm dlx shadcn@4.14.1 add @glassyui/glass-menu');
   assert.ok(
     await page
       .locator('#examples')
@@ -396,13 +395,13 @@ try {
     .locator('.mobile-components a[href="/components/glass-menu?platform=react-native"]')
     .click();
   await waitForCommand(
-    'pnpm dlx shadcn@4.14.1 add https://glassyui.com/r/native/glass-menu.json && npx expo install --fix',
+    'pnpm dlx shadcn@4.14.1 add @glassyui-native/glass-menu && npx expo install --fix',
   );
   await page.getByRole('radio', { exact: true, name: 'React' }).click();
-  await waitForCommand('pnpm dlx shadcn@4.14.1 add https://glassyui.com/r/glass-menu.json');
+  await waitForCommand('pnpm dlx shadcn@4.14.1 add @glassyui/glass-menu');
   await page.locator('a[href="/components/glass-button"]:visible').first().click();
   await page.waitForURL(new URL('/components/glass-button', baseUrl).href);
-  await waitForCommand('pnpm dlx shadcn@4.14.1 add https://glassyui.com/r/glass-button.json');
+  await waitForCommand('pnpm dlx shadcn@4.14.1 add @glassyui/glass-button');
   assert.ok(await page.locator('#api').getByText('ButtonProps', { exact: true }).isVisible());
   await page.getByRole('radio', { name: 'React Native' }).click();
   await checkNativeReference('button');
@@ -415,12 +414,12 @@ try {
     .getByRole('link', { exact: true, name: 'Button' })
     .click();
   await waitForCommand(
-    'pnpm dlx shadcn@4.14.1 add https://glassyui.com/r/native/glass-button.json && npx expo install --fix',
+    'pnpm dlx shadcn@4.14.1 add @glassyui-native/glass-button && npx expo install --fix',
   );
   await checkNativeReference('button');
   await capture('expo-linked-native-button');
   await page.getByRole('radio', { exact: true, name: 'React' }).click();
-  await waitForCommand('pnpm dlx shadcn@4.14.1 add https://glassyui.com/r/glass-button.json');
+  await waitForCommand('pnpm dlx shadcn@4.14.1 add @glassyui/glass-button');
   await page.goto(new URL('/components/glass-picker', baseUrl).href, { waitUntil: 'networkidle' });
   await installation.waitFor();
   assert.equal(
@@ -430,7 +429,7 @@ try {
   );
   assert.match(
     await cliBlock().locator('code').textContent(),
-    /\/r\/native\/glass-picker.json.*npx expo install --fix/,
+    /add @glassyui-native\/glass-picker && npx expo install --fix$/,
   );
   await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
   await page.evaluate(() => {

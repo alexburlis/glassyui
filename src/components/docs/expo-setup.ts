@@ -8,13 +8,6 @@ export const expoComponentsJson = `{
   "aliases": { "components": "@/components", "utils": "@/lib/utils" }
 }`;
 
-/** Optional shorthand for apps that already use registry namespaces. */
-export const expoRegistryMapping = `{
-  "registries": {
-    "@glassyui-native": "https://glassyui.com/r/native/{name}.json"
-  }
-}`;
-
 /** Merge into tsconfig.json when the installed components live at the app root. */
 export const expoTsconfigPaths = `{
   "compilerOptions": {

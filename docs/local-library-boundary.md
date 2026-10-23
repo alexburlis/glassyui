@@ -11,24 +11,16 @@ Neither is a published npm package.
 - `registry/glassyui/*` owns the editable registry source.
 - `public/r/*` contains generated static registry payloads.
 
-A consumer adds the hosted registry namespace to `components.json`:
-
-```json
-{
-  "registries": {
-    "@glassyui": "https://glassyui.com/r/{name}.json"
-  }
-}
-```
-
-It can then add an item with the pinned CLI:
+The shadcn registry directory maps the hosted `@glassyui` namespace, so a
+consumer adds an item with the pinned CLI and no `registries` mapping:
 
 ```bash
 pnpm dlx shadcn@4.14.1 add @glassyui/glass-button
 ```
 
-For unpublished local changes, substitute the loopback registry URL
-`http://127.0.0.1:3000/r/{name}.json` while the local docs app is running.
+For unpublished local changes, map `@glassyui` in `components.json` to the
+loopback registry URL `http://127.0.0.1:3000/r/{name}.json` while the local docs
+app is running.
 
 The registry's `glass-provider` file imports its delivered stylesheet.
 Namespaced dependencies pull that provider into higher-level component installs,
