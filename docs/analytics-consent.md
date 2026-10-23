@@ -13,9 +13,10 @@ choice cookie and SDK privacy contract.
 ## Collection contract
 
 - `$pageview`, `$pageleave`, `$web_vitals`, `pro_checkout_click`,
-  `pro_banner_click`, `pro_link_click`, `site_link_click` and `site_action`
-  events are permitted. Pageviews and SPA exits are manual; document exits and
-  non-attributed Web Vitals use the pinned SDK.
+  `pro_banner_click`, `pro_banner_impression`, `pro_link_click`,
+  `site_link_click` and `site_action` events are permitted. Pageviews and SPA
+  exits are manual; document exits and non-attributed Web Vitals use the pinned
+  SDK.
 - The SDK is lazy-loaded after the permission gate permits collection. No events
   from a disallowed period are queued or replayed after acceptance.
 - Events carry a known public path or coarse route family, the canonical Glassy
@@ -213,3 +214,26 @@ Copy and signup results are bound to the SDK permission window where the action
 began. Granting consent during a pending action, or withdrawing and accepting
 again, does not revive that action for measurement. The requested copy/signup
 itself still works.
+
+## Pro gallery banner impressions and click-through rate
+
+`pro_banner_impression` means at least 50% of the gallery's Pro card intersects
+its viewport while the document is visible. It fires once per pageview after
+analytics permission, including when a streamed card appears or the layout
+changes. Scrolling away and back does not add another impression. A hidden
+mobile card, background tab, rejected choice, GPC or DNT produces no impression.
+Navigation or withdrawal disconnects the observer; a new gallery pageview can
+record a new exposure. This measures viewable placement, not attention or all
+people visiting the site.
+
+Both impression and click events use `source: banner`, `destination: pro` and
+the existing session, pageview and memory-only visitor IDs. No new identifiers,
+storage, text or personal properties are added. CTR starts with this deployment;
+older clicks have no impression denominator and must not be mixed into it.
+
+For viewer CTR, count distinct memory visitor IDs that have a banner impression,
+then the subset with a banner click on an exposed pageview in the same window.
+Divide clicking viewers by viewers and multiply by 100. Show no rate when the
+denominator is zero. Reloads can count the same person again because IDs are
+held in document memory. Pageview CTR uses exposed pageviews and the subset with
+a click; repeated clicks on one pageview count only once.

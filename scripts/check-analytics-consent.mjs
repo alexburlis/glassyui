@@ -438,6 +438,7 @@ function assertMinimalEvents(events) {
         '$web_vitals',
         'pro_checkout_click',
         'pro_banner_click',
+        'pro_banner_impression',
         'pro_link_click',
         'site_link_click',
         'site_action',
@@ -742,6 +743,88 @@ try {
     await session.page.getByRole('button', { name: 'Change appearance' }).click();
     await noCollection(session, 'Actions after refusal');
   });
+  await scenario(
+    'banner impressions: visibility, deduplication and permission',
+    async (session) => {
+      await go(session, `${MAIN}/components`);
+      await noCollection(session, 'Visible banner before permission');
+      await session.page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await accept(session);
+      await until(() => session.events.length === 1, 'consented gallery page');
+
+      const impressions = () =>
+        session.allEvents.filter((event) => event.event === 'pro_banner_impression');
+
+      await quiet(session.page);
+      assert.equal(impressions().length, 0, 'An offscreen banner is not an impression');
+      await session.page.evaluate(() => {
+        Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      await session.page.locator('a.pro-card').scrollIntoViewIfNeeded();
+
+      await quiet(session.page);
+      assert.equal(impressions().length, 0, 'An inactive document is not an impression');
+      await session.page.evaluate(() => {
+        Object.defineProperty(document, 'visibilityState', {
+          configurable: true,
+          value: 'visible',
+        });
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      await until(() => impressions().length === 1, 'visible banner impression');
+      const impression = impressions()[0];
+      const view = session.events.find((event) => event.event === '$pageview');
+      assert.equal(impression.properties.source, 'banner');
+      assert.equal(impression.properties.destination, 'pro');
+      assert.equal(impression.properties.$pageview_id, view.properties.$pageview_id);
+      await session.page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await session.page.locator('a.pro-card').scrollIntoViewIfNeeded();
+      await quiet(session.page);
+      assert.equal(impressions().length, 1, 'Scrolling back does not inflate impressions');
+      await session.page.locator('footer a[href="/privacy"]').first().click();
+      await session.page.locator('footer a[href="/components"]').first().click();
+      await session.page.locator('a.pro-card').scrollIntoViewIfNeeded();
+      await until(
+        () => impressions().length === 2,
+        'a new gallery pageview can have an impression',
+      );
+      assert.notEqual(
+        impressions()[0].properties.$pageview_id,
+        impressions()[1].properties.$pageview_id,
+      );
+      await reopen(session);
+      await reject(session);
+      await session.page.locator('footer a[href="/privacy"]').first().click();
+      await session.page.locator('footer a[href="/components"]').first().click();
+      await session.page.locator('a.pro-card').scrollIntoViewIfNeeded();
+      await quiet(session.page);
+      assert.equal(impressions().length, 2, 'Withdrawal removes the impression observer');
+    },
+  );
+  await scenario(
+    'banner impressions: hidden mobile card',
+    async (session) => {
+      await go(session, `${MAIN}/components`);
+      await accept(session);
+      await until(() => session.events.length === 1, 'consented mobile gallery');
+
+      const impressions = () =>
+        session.allEvents.filter((event) => event.event === 'pro_banner_impression');
+
+      assert.equal(await session.page.locator('a.pro-card').isVisible(), false);
+
+      await quiet(session.page);
+      assert.equal(impressions().length, 0, 'A responsive hidden card is not an impression');
+      await session.page.setViewportSize({ width: 1280, height: 900 });
+      await session.page.locator('a.pro-card').scrollIntoViewIfNeeded();
+      await until(
+        () => impressions().length === 1,
+        'resizing to a visible banner records an impression',
+      );
+    },
+    { width: 390 },
+  );
   await scenario('interaction coverage: banner primary and middle click', async (session) => {
     await go(session, `${MAIN}/components`);
     await accept(session);
