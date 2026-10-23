@@ -2,7 +2,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { createRequire } from 'node:module';
 import { chromium, expect } from 'playwright/test';
+
+const require = createRequire(import.meta.url);
+
+require('./register-tsx.mjs');
+
+const { remarkHeadingIds } = require('../src/lib/blog-headings.ts');
 
 const [baseUrl, evidenceDirectory] = process.argv.slice(2);
 
@@ -133,6 +140,139 @@ async function checkDemo() {
   return { variant, timer: 'advanced', solid: 'opaque', keyboard: 'passed' };
 }
 
+/**
+ * The article contract (docs/blog-authoring.md): byline, TL;DR, one table of contents and one
+ * components card at each width, and structured data that matches what the page shows.
+ */
+async function checkArticleContract(slug, canonical, viewport) {
+  const main = page.locator('main');
+  const byline = main.locator('.blog-byline');
+  await expect(byline.getByText('Written by', { exact: true })).toBeVisible();
+  const name = byline.getByRole('link', { name: 'Alex Burlis', exact: true });
+  await expect(name).toHaveAttribute('href', '#author');
+  await expect(byline.getByText('Founder of Glassy UI', { exact: true })).toBeVisible();
+  await expect(byline.getByRole('img', { name: 'Alex Burlis', exact: true })).toBeVisible();
+  await expect(main.locator('#author h2')).toHaveText('About the author');
+  assert.equal(await page.getByText(/reviewed by|expert verified/i).count(), 0, 'No reviewer.');
+
+  // A testing badge needs Alex's own notes in the repository, not an empty file.
+  if (await main.locator('[data-blog-tested]').count()) {
+    const notes = await fs.readFile(
+      new URL(`../docs/testing-evidence/${slug}.md`, import.meta.url),
+      'utf8',
+    );
+
+    assert.ok(notes.trim(), `docs/testing-evidence/${slug}.md must hold Alex's test notes.`);
+  }
+
+  const structured = await page
+    .locator('script[type="application/ld+json"]')
+    .evaluateAll((nodes) => nodes.map((node) => JSON.parse(node.textContent)));
+
+  const posting = structured.find((item) => item['@type'] === 'BlogPosting');
+  assert.ok(posting, 'Articles need BlogPosting data.');
+  assert.ok(!JSON.stringify(structured).includes('reviewedBy'), 'No reviewer in structured data.');
+  assert.equal(posting.mainEntityOfPage, canonical);
+  assert.equal(posting.author['@type'], 'Person');
+  assert.equal(posting.author.name, await name.innerText());
+  assert.equal(posting.author.jobTitle, 'Founder of Glassy UI');
+  assert.deepEqual(posting.author.sameAs, [
+    'https://x.com/AlexBurlis',
+    'https://github.com/alexburlis',
+  ]);
+  assert.equal(
+    await page.locator('meta[property="article:author"]').getAttribute('content'),
+    'Alex Burlis',
+  );
+
+  const [published, updated] = await byline
+    .locator('time')
+    .evaluateAll((nodes) => nodes.map((node) => node.getAttribute('datetime')));
+
+  assert.equal(published, posting.datePublished);
+
+  // An update on a later day shows beside the publish date; a same-day edit keeps one visible day.
+  if (updated) assert.equal(updated, posting.dateModified);
+  else assert.equal(posting.dateModified.slice(0, 10), published.slice(0, 10));
+
+  const crumbs = await main
+    .getByRole('navigation', { name: 'Breadcrumb' })
+    .getByRole('link')
+    .allInnerTexts();
+
+  const trail = structured.find((item) => item['@type'] === 'BreadcrumbList').itemListElement;
+  assert.deepEqual(
+    trail.map((item) => item.name),
+    [...crumbs, await main.locator('h1').innerText()],
+  );
+  assert.equal(trail.at(-1).item, canonical);
+  const tldr = main.locator('[data-blog-tldr]');
+  await expect(tldr).toBeVisible();
+  const points = await tldr.locator('li').count();
+  assert.ok(points >= 2 && points <= 4, 'A TL;DR lists 2 to 4 points.');
+
+  // Exactly one table of contents at any width: the rail's, or the closed card above the TL;DR.
+  const rail = page.locator('.docs-toc-stack nav[aria-label="Table of contents"]');
+  const disclosure = main.locator('details.blog-toc');
+
+  const tocLinks = await page
+    .locator('nav[aria-label="Table of contents"] a')
+    .evaluateAll((links) => [...new Set(links.map((link) => link.getAttribute('href')))]);
+
+  assert.ok(tocLinks.length > 0, 'The table of contents lists the sections.');
+
+  for (const href of tocLinks) {
+    await expect(main.locator(`.blog-prose h2[id="${href.slice(1)}"]`)).toHaveCount(1);
+    await expect(page.locator(`[id="${href.slice(1)}"]`)).toHaveCount(1);
+  }
+
+  if (viewport.width >= 1280) {
+    await expect(rail).toBeVisible();
+    await expect(disclosure).toBeHidden();
+    const second = rail.getByRole('link').nth(1);
+    await second.click();
+    await expect(second).toHaveAttribute('aria-current', 'location');
+
+    // Narrower, the right column would squeeze the article: the column keeps its measure and the
+    // contents and card fold into the article instead.
+    await page.setViewportSize({ width: 1100, height: viewport.height });
+    await expect(rail).toBeHidden();
+    await expect(disclosure).toBeVisible();
+    await expect(page.locator('[data-blog-cta]').filter({ visible: true })).toHaveCount(1);
+
+    const [measure, prose] = await main.evaluate((node) => [
+      getComputedStyle(node).getPropertyValue('--docs-measure'),
+      node.querySelector('.blog-prose').getBoundingClientRect().width,
+    ]);
+
+    assert.equal(prose, Number.parseFloat(measure), 'The article keeps its measure at 1100px.');
+    await page.setViewportSize(viewport);
+  } else {
+    await expect(rail).toBeHidden();
+    await expect(disclosure).toBeVisible();
+    await expect(disclosure).not.toHaveAttribute('open');
+    await disclosure.locator('summary').focus();
+    await page.keyboard.press('Enter');
+    await expect(disclosure).toHaveAttribute('open');
+    await expect(disclosure.getByRole('link').first()).toBeVisible();
+  }
+
+  const cta = page.locator('[data-blog-cta]').filter({ visible: true });
+  await expect(cta).toHaveCount(1);
+  await expect(cta.getByRole('link', { name: 'Browse components', exact: true })).toHaveAttribute(
+    'href',
+    '/components',
+  );
+
+  return {
+    byline: 'passed',
+    tldr: points,
+    toc: tocLinks.length,
+    cta: 'one',
+    personJsonLd: 'passed',
+  };
+}
+
 try {
   const index = await page.goto(new URL('/blog', baseUrl).href, { waitUntil: 'networkidle' });
   assert.equal(index.status(), 200);
@@ -141,6 +281,18 @@ try {
 
   await privacy.getByRole('button', { name: 'Reject analytics', exact: true }).click();
   await privacy.waitFor({ state: 'hidden' });
+
+  // Heading ids come from any heading text. Each must also work as a selector: "#2026-…" does not.
+  const headingIds = [];
+  const heading = (value) => ({ type: 'heading', depth: 2, children: [{ type: 'text', value }] });
+  remarkHeadingIds(headingIds, [])()({
+    type: 'root',
+    children: [heading('3 CSS frosts that work'), heading('2026 browser support')],
+  });
+
+  for (const { href } of headingIds) {
+    await page.evaluate((selector) => document.querySelector(selector), href);
+  }
 
   const articlePaths = await page
     .locator('main h2 a[href^="/blog/"]')
@@ -192,6 +344,8 @@ try {
       );
       assert.ok(rss.includes(`https://glassyui.com${articlePath}`));
       assert.ok(sitemap.includes(`https://glassyui.com${articlePath}`));
+      const slug = articlePath.split('/').at(-1);
+      const contract = await checkArticleContract(slug, canonical, viewport);
       const code = page.locator('main .docs-code-block').first();
       assert.ok(await code.count(), 'Tutorial has a rendered code example.');
       const expectedCode = await code.locator('code').innerText();
@@ -211,7 +365,6 @@ try {
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
         'Article overflows the viewport.',
       );
-      const slug = articlePath.split('/').at(-1);
       const demoResult = await checkDemo();
       await page.locator('main [data-blog-demo]').scrollIntoViewIfNeeded();
       await page.screenshot({
@@ -225,6 +378,7 @@ try {
         canonical,
         copy: 'passed',
         theme: 'passed',
+        contract,
         demo: demoResult,
       });
     }

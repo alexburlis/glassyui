@@ -12,8 +12,9 @@ export function DocsTocLinks({ items }: { items: TocItem[] }) {
   const [active, setActive] = useState<string | undefined>(items[0]?.href);
 
   useEffect(() => {
+    // By id, not as a selector: any id is valid here, including one that starts with a digit.
     const sections = items
-      .map((item) => document.querySelector<HTMLElement>(item.href))
+      .map((item) => document.getElementById(item.href.slice(1)))
       .filter((section): section is HTMLElement => section !== null);
 
     if (sections.length === 0) return;

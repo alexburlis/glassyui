@@ -216,6 +216,443 @@
   font-size: 15px;
 }
 
+/* ------------------------------------------------------------- article */
+
+/* Glassy UI / Blog, in the eyebrow's type. */
+.blog-breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.blog-breadcrumbs li {
+  display: flex;
+  gap: 8px;
+}
+
+.blog-breadcrumbs li > span {
+  color: var(--site-text-3);
+  font-weight: 400;
+}
+
+.blog-breadcrumbs a:hover {
+  text-decoration: underline;
+}
+
+:is(.blog-breadcrumbs, .blog-byline, .blog-toc, .blog-author) a:focus-visible,
+.blog-toc summary:focus-visible {
+  outline: 2px solid var(--lg-focus-ring);
+  outline-offset: 2px;
+}
+
+/* The byline: who wrote the article beside a cut-out portrait that rests on a hairline, with the
+   dates under it. */
+.blog-byline {
+  margin-top: 16px;
+}
+
+.blog-byline-person {
+  display: flex;
+  align-items: flex-end;
+  gap: 24px;
+  border-bottom: 1px solid var(--site-hairline);
+}
+
+.blog-byline-text {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 20px;
+}
+
+.blog-byline-label {
+  color: var(--site-text-3);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+}
+
+.blog-byline-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 6px;
+  font-family: var(--site-font-display);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+
+.blog-byline-name a {
+  color: var(--site-text);
+}
+
+.blog-byline-name a:hover {
+  color: var(--site-link);
+}
+
+.blog-tested-badge {
+  font-family: var(--site-font);
+  letter-spacing: 0;
+}
+
+.blog-tested-icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+.blog-byline-role {
+  margin-top: 2px;
+  color: var(--site-text-2);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.blog-byline-summary {
+  margin-top: 14px;
+  color: var(--site-text-2);
+  font-size: 18px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.blog-byline-portrait {
+  flex: none;
+  width: 120px;
+  height: auto;
+}
+
+.blog-byline-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin-top: 12px;
+  color: var(--site-text-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Where the right column folds away, its table of contents becomes this card, closed at first. */
+.blog-toc {
+  margin-bottom: 16px;
+  border-radius: 16px;
+  background: var(--site-tile);
+}
+
+.blog-toc summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: 16px;
+  font-size: 15px;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.blog-toc summary::-webkit-details-marker {
+  display: none;
+}
+
+.blog-toc summary::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  margin: -4px 4px 0;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition:
+    transform 200ms ease,
+    margin 200ms ease;
+}
+
+.blog-toc[open] summary::after {
+  margin-top: 4px;
+  transform: rotate(-135deg);
+}
+
+.blog-toc nav {
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--site-hairline);
+}
+
+.blog-toc .docs-toc-links a {
+  padding-block: 7px;
+  color: var(--site-text-2);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.blog-toc .docs-toc-links a[aria-current='location'] {
+  color: var(--site-text);
+}
+
+/* The article's short answer, set apart from the white cards in the site's silver fill. A fill,
+   not glass: glass needs something to bend. */
+.blog-tldr {
+  margin-bottom: 36px;
+  padding: 20px 24px 22px;
+  border: 1px solid var(--site-hairline);
+  border-radius: 16px;
+  background: var(--site-fill);
+}
+
+.blog-tldr h2 {
+  color: var(--site-text);
+  font-family: var(--site-font-display);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.blog-tldr ul {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding-left: 20px;
+  color: var(--site-text-2);
+  font-size: 16px;
+  line-height: 1.6;
+  list-style: disc;
+}
+
+.blog-tldr li::marker {
+  color: var(--site-text-3);
+}
+
+/* Headings stop under the fixed header when the table of contents jumps to them. */
+.blog-prose :is(h2, h3)[id] {
+  scroll-margin-top: 84px;
+}
+
+.blog-author {
+  margin-top: 56px;
+  padding: 24px;
+  border: 1px solid var(--site-hairline);
+  border-radius: 16px;
+  background: var(--site-tile);
+  scroll-margin-top: 84px;
+}
+
+.blog-author h2 {
+  color: var(--site-text);
+  font-family: var(--site-font-display);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+
+.blog-author-person {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.blog-author-avatar {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+}
+
+.blog-author-name {
+  color: var(--site-text);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.blog-author-role {
+  color: var(--site-text-2);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.blog-author-bio {
+  margin-top: 14px;
+  color: var(--site-text-2);
+  font-size: 16px;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.blog-author-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  margin: 12px 0 0;
+  padding: 0;
+  font-size: 15px;
+  list-style: none;
+}
+
+.blog-author-links a {
+  color: var(--site-link);
+}
+
+.blog-author-links a:hover {
+  text-decoration: underline;
+}
+
+/* The way to the components: a neutral tile with the standard blue action, in the right column,
+   or once after the article where that column folds away. */
+.blog-cta {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--site-hairline);
+  border-radius: 16px;
+  background: var(--site-tile);
+}
+
+.blog-cta-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-bottom: 1px solid var(--site-hairline);
+}
+
+:root[data-lg-theme='light'] .blog-cta-image[data-theme='dark'],
+:root:not([data-lg-theme='light']) .blog-cta-image[data-theme='light'] {
+  display: none;
+}
+
+.blog-cta-body {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px 16px;
+}
+
+.blog-cta-title {
+  color: var(--site-text);
+  font-family: var(--site-font-display);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+
+.blog-cta-text {
+  color: var(--site-text-2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.blog-cta-points {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 4px;
+  padding: 0;
+  color: var(--site-text);
+  font-size: 13px;
+  line-height: 1.4;
+  list-style: none;
+}
+
+.blog-cta-points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.blog-cta-check {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+}
+
+.blog-cta-inline {
+  margin-top: 24px;
+}
+
+/* After the article the card spans the column, as the author card above it does, with the picture
+   beside the words once there is room. */
+@media (min-width: 560px) {
+  .blog-cta-inline .blog-cta {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr);
+  }
+
+  .blog-cta-inline .blog-cta-image {
+    height: 100%;
+    object-fit: cover;
+    border-right: 1px solid var(--site-hairline);
+    border-bottom: 0;
+  }
+
+  .blog-cta-inline .blog-cta-body {
+    align-content: center;
+    padding: 20px 24px;
+  }
+}
+
+/* From 1280px the right column holds the table of contents and the card (globals.css). */
+@media (min-width: 1280px) {
+  .blog-toc,
+  .blog-cta-inline {
+    display: none;
+  }
+}
+
+/* On a short window the card beside the table of contents keeps its words and button. */
+@media (max-height: 860px) {
+  .docs-toc-rail .blog-cta-image {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .blog-byline-person {
+    gap: 12px;
+  }
+
+  .blog-byline-portrait {
+    width: 96px;
+  }
+
+  .blog-byline-name {
+    font-size: 20px;
+  }
+
+  .blog-byline-summary {
+    font-size: 16px;
+  }
+
+  .blog-tldr,
+  .blog-author {
+    padding: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-lg-reduce-motion='1']) .blog-toc {
+    interpolate-size: allow-keywords;
+  }
+
+  :root:not([data-lg-reduce-motion='1']) .blog-toc::details-content {
+    height: 0;
+    overflow: clip;
+    transition:
+      height 320ms var(--lg-ease-out),
+      content-visibility 320ms allow-discrete;
+  }
+
+  :root:not([data-lg-reduce-motion='1']) .blog-toc[open]::details-content {
+    height: auto;
+  }
+}
+
 @media (max-width: 767px) {
   .blog-post-card {
     grid-template-columns: minmax(0, 1fr);
