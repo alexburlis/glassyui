@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { initialWindowMetrics } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassAvatar } from '../components/glassyui/glass-avatar';
 import { GlassBadge } from '../components/glassyui/glass-badge';
 import { GlassButton } from '../components/glassyui/glass-button';
@@ -16,8 +16,6 @@ import {
 } from '../components/glassyui/glass-segmented-control';
 import { GlassSwitch } from '../components/glassyui/glass-switch';
 
-const INSETS = initialWindowMetrics?.insets ?? { bottom: 0, left: 0, right: 0, top: 0 };
-
 const TABS = [
   { icon: 'today', label: 'Today' },
   { icon: 'calendar', label: 'Plans' },
@@ -28,6 +26,7 @@ const TABS = [
 /** An everyday app screen built only from the library, for showing the components at work. */
 export function TodayScreen({ onExit }: { onExit: () => void }) {
   const { colors } = useGlassTheme();
+  const insets = useSafeAreaInsets();
   const [period, setPeriod] = useState('day');
   const [focus, setFocus] = useState(true);
   const [done, setDone] = useState<ReadonlySet<string>>(() => new Set(['Stretch for ten minutes']));
@@ -49,7 +48,7 @@ export function TodayScreen({ onExit }: { onExit: () => void }) {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: INSETS.bottom + 120, paddingTop: INSETS.top + 20 },
+          { paddingBottom: insets.bottom + 120, paddingTop: insets.top + 20 },
         ]}
       >
         <View style={styles.header}>
@@ -96,7 +95,7 @@ export function TodayScreen({ onExit }: { onExit: () => void }) {
           Start a workout
         </GlassButton>
       </ScrollView>
-      <GlassDock style={[styles.dock, { bottom: INSETS.bottom + 12 }]}>
+      <GlassDock style={[styles.dock, { bottom: insets.bottom + 12 }]}>
         {TABS.map(({ icon, label }) => (
           <GlassDockItem
             active={label === 'Today'}
