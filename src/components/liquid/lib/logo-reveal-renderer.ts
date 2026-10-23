@@ -94,17 +94,19 @@ vec3 normalAt(vec3 p) {
   ));
 }
 
-// A dark studio: one large softbox up and to the left, a thin strip light on the right and a
-// faint floor, so the glass has something to reflect.
+// A dark studio: a large softbox up and to the right, a smaller fill down and to the left, a thin
+// strip on the left and a faint floor, so the glass catches light at opposite corners.
 vec3 studio(vec3 d) {
-  float key = smoothstep(0.35, 0.0, length((d.xy - vec2(-0.55, -0.6)) / vec2(0.5, 0.3)) - 0.6) * step(d.z, 0.2);
-  float strip = smoothstep(0.08, 0.0, abs(d.x - 0.78) - 0.03) * smoothstep(0.6, 0.2, abs(d.y + 0.1)) * step(d.z, 0.3);
+  float key = smoothstep(0.35, 0.0, length((d.xy - vec2(0.55, -0.6)) / vec2(0.5, 0.3)) - 0.6) * step(d.z, 0.2);
+  float fill = smoothstep(0.3, 0.0, length((d.xy - vec2(-0.6, 0.6)) / vec2(0.4, 0.25)) - 0.5) * step(d.z, 0.2);
+  float strip = smoothstep(0.08, 0.0, abs(d.x + 0.78) - 0.03) * smoothstep(0.6, 0.2, abs(d.y + 0.1)) * step(d.z, 0.3);
   float ground = smoothstep(0.1, 0.9, d.y) * 0.05;
   // A soft overhead and a band of light around the horizon catch every grazing edge.
   // Studio lights are many times brighter than the page; glass shows them only in reflection.
   float above = 0.6 * smoothstep(0.2, -0.9, d.y);
   float horizon = 3.0 * exp(-d.z * d.z / 0.05);
-  vec3 light = vec3(1.0, 0.98, 0.95) * key * 9.0 + vec3(0.85, 0.92, 1.0) * strip * 5.0 +
+  vec3 light = vec3(1.0, 0.98, 0.95) * key * 9.0 + vec3(0.95, 0.97, 1.0) * fill * 5.0 +
+    vec3(0.85, 0.92, 1.0) * strip * 3.0 +
     vec3(0.8, 0.86, 0.95) * (above + horizon) + ground;
 
   return mix(vec3(0.94, 0.94, 0.93) - light * 0.5, light, dark);
@@ -248,14 +250,18 @@ void main() {
   vec2 g = normalize(sign(local) * max(plan, vec2(1e-4)) + 1e-6);
   float outside = max(outline, 0.0);
   float halo = exp(-outside / 0.22) * step(0.0, outline) * 0.07;
-  float streak = exp(-pow((outline - 0.12) / 0.035, 2.0)) * pow(abs(g.x), 10.0) * 0.22;
+  float streak = exp(-pow((outline - 0.12) / 0.035, 2.0)) * pow(abs(g.x), 10.0) * (0.18 + 0.3 * rounding);
   float walls = (exp(-pow((outline - 0.035) / 0.008, 2.0)) + 0.6 * exp(-pow((outline - 0.085) / 0.014, 2.0))) * (1.0 - rounding) * 1.8 * 0.1;
-  float ring = exp(-pow((outline + 0.07) / 0.012, 2.0)) * rounding * 0.18;
-  // The polished edge catches the studio all the way round, brightest where it faces the key.
-  float facing = 0.55 + 0.45 * dot(g, normalize(vec2(-0.6, -0.8)));
-  float edgeLine = exp(-pow((outline + 0.012) / 0.009, 2.0)) * (0.35 + 0.65 * facing) * 0.75;
+  float ring = 0.0;
+  // Light focused round the inside of the ball's rim, warm where its colours gather.
+  float caustic = exp(-pow((outline + 0.11) / 0.014, 2.0)) * pow(rounding, 3.0) * 0.45;
+  // The polished edge stays dark except at the corners facing the key and the fill, where it
+  // catches them as bright slivers.
+  float facing = abs(dot(g, normalize(vec2(0.7, -0.7))));
+  float edgeLine = exp(-pow((outline + 0.012) / 0.009, 2.0)) * (0.08 + 0.92 * pow(facing, 6.0)) * 0.9;
   vec3 aura = vec3(0.7, 0.8, 0.95) * (halo * exposure + streak + walls + ring) * glass +
-    mix(vec3(1.0, 0.86, 0.7), vec3(0.75, 0.9, 1.0), facing) * edgeLine * glass;
+    mix(vec3(1.0, 0.86, 0.7), vec3(0.75, 0.9, 1.0), facing) * edgeLine * glass +
+    vec3(1.0, 0.82, 0.25) * caustic * exposure * glass;
 
   vec4 c = mix(through, over(stillAt(p)), rest);
   c.rgb += aura * dark * (1.0 - rest);
@@ -305,8 +311,8 @@ const smooth = (x: number) => x * x * (3 - 2 * x);
 
 const sineInOut = (x: number) => (1 - Math.cos(Math.PI * x)) / 2;
 
-/** A heavy settle: slow, with one small overshoot of about 6%. */
-const spring = (x: number) => (x >= 1 ? 1 : 1 - Math.exp(-4.6 * x) * Math.cos(5 * x));
+/** A heavy, critically damped settle: it arrives without overshoot or bounce. */
+const spring = (x: number) => (1 - (1 + 6 * x) * Math.exp(-6 * x)) / (1 - 7 * Math.exp(-6));
 
 /**
  * Weights for `taps` wavelengths from red to violet. Each channel's weights sum to 1, so plain
@@ -336,12 +342,12 @@ function spectrum(taps: number) {
 function revealFrame(time: number, layout: LogoRevealLayout, thickness: number) {
   const t = clamp(time, 0, LOGO_REVEAL_LENGTH) / PACE;
   const unit = Math.max(layout.width, layout.height, 1);
-  const morph = sineInOut(span(t, 0.22, 0.55));
-  const clear = sineInOut(span(t, 1.0, 1.35));
+  const morph = sineInOut(span(t, 0.2, 0.62));
+  const clear = sineInOut(span(t, 0.98, 1.4));
   const settled = time >= LOGO_REVEAL_LENGTH;
 
   // The glass springs up to size with one small overshoot, then keeps drifting closer.
-  const size = 0.66 + 0.34 * spring(span(t, 0.04, 0.85)) + 0.06 * sineInOut(span(t, 0.7, 1.3));
+  const size = 0.66 + 0.34 * spring(span(t, 0.03, 0.85)) + 0.06 * sineInOut(span(t, 0.55, 1.4));
 
   const pairs = {
     centre: [layout.x, layout.y],
@@ -351,7 +357,7 @@ function revealFrame(time: number, layout: LogoRevealLayout, thickness: number) 
     // Close around the mark, so it fills most of the glass.
     extent: unit * 0.86 * size,
     exposure: smooth(span(t, 0.1, 0.17)),
-    rest: settled ? 1 : span(t, 1.32, 1.5),
+    rest: settled ? 1 : sineInOut(span(t, 1.4, 1.62)),
     // A sphere first, then a slab with rounded corners and edges, as thick as a quarter of it.
     // A domed, lens-like ball first, then a slab a quarter as thick, rounded at corners and edges.
     rounding: mix(1, 0.46, morph),
@@ -363,8 +369,8 @@ function revealFrame(time: number, layout: LogoRevealLayout, thickness: number) 
     ior: settled ? 1 : 1 + 0.5 * (0.8 + 0.2 * thickness) * (1 - clear),
     split: settled ? 0 : 0.035 * (0.6 + 0.4 * thickness),
     gap: 0.04,
-    tilt: 0.12 * (1 - spring(span(t, 0.05, 0.9))),
-    glass: settled ? 0 : smooth(span(t, 0.04, 0.2)) * (1 - span(t, 1.3, 1.55)),
+    tilt: 0,
+    glass: settled ? 0 : smooth(span(t, 0.03, 0.2)) * (1 - sineInOut(span(t, 1.36, 1.66))),
     haze: mix(0.12, 0.08, morph) * (1 - clear),
   } satisfies Record<string, number>;
 
