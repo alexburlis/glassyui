@@ -29,12 +29,12 @@
     --lg-logo-reveal-ink: #222224;
   }
 
-  /* The glass tile grows to a little over twice the mark, so a third of the stage leaves room. */
+  /* The glass tile grows to a little under twice the mark, so nearly half the stage leaves room. */
   .lg-logo-reveal-mark {
     display: block;
     /* The box keeps the mark's own proportions, so nothing drawn from it is ever squashed. */
     width: auto;
-    height: var(--lg-logo-reveal-size, 34cqmin);
+    height: var(--lg-logo-reveal-size, 46cqmin);
   }
 
   .lg-logo-reveal-canvas {

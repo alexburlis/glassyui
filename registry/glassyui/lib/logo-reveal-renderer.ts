@@ -193,6 +193,12 @@ void main() {
 
   bool near = reach <= 1.25;
 
+  // The glass's outline on screen, in its own units: its silhouette, as the camera looks
+  // straight at it.
+  vec2 plan = abs(local) - 1.0 + rounding;
+  float outline = min(max(plan.x, plan.y), 0.0) + length(max(plan, 0.0)) - rounding;
+  float pixel = (stage.x / pixels.x) / extent;
+
   vec3 sum = vec3(0.0);
   float alpha = 0.0;
   float fresnel = 0.0;
@@ -208,7 +214,8 @@ void main() {
     vec4 seen = near ? trace(p, ior * (1.0 + split * shifts[i]), reflected, path) : vec4(p, 0.0, 0.0);
     // A ray that misses the glass sees the dark stage; the mark is lit only through the glass.
     bool missed = dot(reflected, reflected) == 0.0;
-    vec4 behind = missed ? plain : seen.w > 0.5 ? over(markAt(seen.xy, 0.3)) : backdrop;
+    float steep = smoothstep(-0.22, 0.0, outline);
+    vec4 behind = missed ? plain : seen.w > 0.5 ? over(markAt(seen.xy, 0.3 + 3.5 * steep)) : backdrop;
     sum += hues[i] * behind.rgb;
     alpha += behind.a;
     if (dot(reflected, reflected) > 0.0) {
@@ -228,7 +235,7 @@ void main() {
     thickness /= covered;
     // Thick glass absorbs a little and scatters some of the mark's light within it.
     // Thick glass absorbs warm light first, so its depths read cool and blue.
-    through.rgb *= mix(vec3(1.0), vec3(0.82, 0.9, 1.05), clamp(thickness * 0.25, 0.0, 1.0));
+    through.rgb *= mix(vec3(1.0), vec3(0.82, 0.9, 1.05), clamp(thickness * 0.25, 0.0, 1.0) * dark);
     through.rgb += vec3(0.004, 0.008, 0.016) * dark * share;
     // Light scattered in the glass lifts its depths to a milky navy, brighter towards the key
     // light up and to the left.
@@ -245,25 +252,24 @@ void main() {
   // Light around the glass, from its outline on screen: a soft halo, streaks where the side
   // lights catch its left and right walls, the slab's walls as faint rings outside the tile and,
   // on the ball, a second ring where light turns back inside it.
-  vec2 plan = abs(local) - 1.0 + rounding;
-  float outline = min(max(plan.x, plan.y), 0.0) + length(max(plan, 0.0)) - rounding;
   vec2 g = normalize(sign(local) * max(plan, vec2(1e-4)) + 1e-6);
   float outside = max(outline, 0.0);
   float halo = exp(-outside / 0.22) * step(0.0, outline) * 0.07;
   float streak = exp(-pow((outline - 0.12) / 0.035, 2.0)) * pow(abs(g.x), 10.0) * (0.18 + 0.3 * rounding);
-  float walls = (exp(-pow((outline - 0.035) / 0.008, 2.0)) + 0.6 * exp(-pow((outline - 0.085) / 0.014, 2.0))) * (1.0 - rounding) * 1.8 * 0.1;
+  float walls = (exp(-pow((outline - 0.04) / 0.02, 2.0)) + 0.6 * exp(-pow((outline - 0.1) / 0.035, 2.0))) * (1.0 - rounding) * 1.8 * 0.08;
   float ring = 0.0;
   // Light focused round the inside of the ball's rim, warm where its colours gather.
   float caustic = exp(-pow((outline + 0.11) / 0.014, 2.0)) * pow(rounding, 3.0) * 0.45;
   // The polished edge stays dark except at the corners facing the key and the fill, where it
   // catches them as bright slivers.
   float facing = abs(dot(g, normalize(vec2(0.7, -0.7))));
-  float edgeLine = exp(-pow((outline + 0.012) / 0.009, 2.0)) * (0.08 + 0.92 * pow(facing, 6.0)) * 0.9;
+  float edgeLine = exp(-pow((outline + 0.02) / 0.022, 2.0)) * (0.08 + 0.92 * pow(facing, 6.0)) * 0.7;
   vec3 aura = vec3(0.7, 0.8, 0.95) * (halo * exposure + streak + walls + ring) * glass +
     mix(vec3(1.0, 0.86, 0.7), vec3(0.75, 0.9, 1.0), facing) * edgeLine * glass +
     vec3(1.0, 0.82, 0.25) * caustic * exposure * glass;
 
-  vec4 c = mix(through, over(stillAt(p)), rest);
+  float cover = clamp(0.5 - outline / pixel, 0.0, 1.0);
+  vec4 c = mix(mix(plain, through, cover), over(stillAt(p)), rest);
   c.rgb += aura * dark * (1.0 - rest);
   c.a = max(c.a, dot(aura, vec3(0.333)) * dark);
   float noise = fract(sin(dot(gl_FragCoord.xy + seed, vec2(12.9898, 78.233))) * 43758.5453);
