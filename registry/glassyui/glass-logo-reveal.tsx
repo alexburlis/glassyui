@@ -62,7 +62,7 @@ function luminance([r, g, b, a]: readonly number[]) {
  */
 export const GlassLogoReveal = forwardRef<HTMLElement, GlassLogoRevealProps>(
   (
-    { className, duration = 1700, label, markSrc, onComplete, play = 'visible', progress, ...rest },
+    { className, duration = 2200, label, markSrc, onComplete, play = 'visible', progress, ...rest },
     forwardedRef,
   ) => {
     const figureRef = useRef<HTMLElement>(null);

@@ -8,7 +8,11 @@
 // Lengths are fractions of the mark's larger side, so the reveal keeps its proportions at any size.
 
 /** Seconds the reveal takes at its regular pace. */
-export const LOGO_REVEAL_LENGTH = 1.7;
+export const LOGO_REVEAL_LENGTH = 2.2;
+
+// The beats below are written at a quicker pace and played this much slower, so the glass
+// moves with weight.
+const PACE = 1.3;
 
 const VERTEX = `#version 300 es
 void main() {
@@ -196,7 +200,9 @@ void main() {
     vec3 reflected;
     float path;
     vec4 seen = trace(p, ior * (1.0 + split * shifts[i]), reflected, path);
-    vec4 behind = seen.w > 0.5 || seen.z == 0.0 ? over(markAt(seen.xy, 0.3)) : backdrop;
+    // A ray that misses the glass sees the dark stage; the mark is lit only through the glass.
+    bool missed = dot(reflected, reflected) == 0.0;
+    vec4 behind = missed ? plain : seen.w > 0.5 ? over(markAt(seen.xy, 0.3)) : backdrop;
     sum += hues[i] * behind.rgb;
     alpha += behind.a;
     if (dot(reflected, reflected) > 0.0) {
@@ -269,8 +275,8 @@ const smooth = (x: number) => x * x * (3 - 2 * x);
 
 const sineInOut = (x: number) => (1 - Math.cos(Math.PI * x)) / 2;
 
-/** A settle with one small overshoot, about 7%. */
-const spring = (x: number) => (x >= 1 ? 1 : 1 - Math.exp(-6.5 * x) * Math.cos(7.5 * x));
+/** A heavy settle: slow, with one small overshoot of about 6%. */
+const spring = (x: number) => (x >= 1 ? 1 : 1 - Math.exp(-4.6 * x) * Math.cos(5 * x));
 
 /**
  * Weights for `taps` wavelengths from red to violet. Each channel's weights sum to 1, so plain
@@ -298,21 +304,22 @@ function spectrum(taps: number) {
 
 /** Every uniform for one moment of the reveal, for glass `thickness` times regular. */
 function revealFrame(time: number, layout: LogoRevealLayout, thickness: number) {
-  const t = clamp(time, 0, LOGO_REVEAL_LENGTH);
+  const t = clamp(time, 0, LOGO_REVEAL_LENGTH) / PACE;
   const unit = Math.max(layout.width, layout.height, 1);
   const morph = sineInOut(span(t, 0.22, 0.55));
   const clear = sineInOut(span(t, 1.0, 1.35));
-  const settled = t >= LOGO_REVEAL_LENGTH;
+  const settled = time >= LOGO_REVEAL_LENGTH;
 
   // The glass springs up to size with one small overshoot, then keeps drifting closer.
-  const size = 0.4 + 0.62 * spring(span(t, 0.04, 0.72)) + 0.07 * sineInOut(span(t, 0.6, 1.3));
+  const size = 0.66 + 0.34 * spring(span(t, 0.04, 0.85)) + 0.06 * sineInOut(span(t, 0.7, 1.3));
 
   const pairs = {
     centre: [layout.x, layout.y],
   } satisfies Record<string, readonly [number, number]>;
 
   const floats = {
-    extent: unit * 1.09 * size,
+    // Close around the mark, so it fills most of the glass.
+    extent: unit * 0.86 * size,
     exposure: smooth(span(t, 0.1, 0.17)),
     rest: settled ? 1 : span(t, 1.32, 1.5),
     // A sphere first, then a slab with rounded corners and edges, as thick as a quarter of it.
@@ -321,14 +328,14 @@ function revealFrame(time: number, layout: LogoRevealLayout, thickness: number) 
     depth: mix(0.5, 0.3, morph),
     edge: mix(0.5, 0.3, morph),
     // The face bulges most while the glass is new and settles flatter as it comes to rest.
-    dome: mix(0.32, 0.26 - 0.16 * sineInOut(span(t, 0.5, 1.1)), morph) * (1 - clear),
+    dome: mix(0.16, 0.26 - 0.16 * sineInOut(span(t, 0.5, 1.1)), morph) * (1 - clear),
     // The glass clears by losing its index: refraction and reflection fade together.
     ior: settled ? 1 : 1 + 0.5 * (0.8 + 0.2 * thickness) * (1 - clear),
     split: settled ? 0 : 0.012 * (0.6 + 0.4 * thickness),
     gap: 0.04,
     tilt: 0.12 * (1 - spring(span(t, 0.05, 0.9))),
     glass: settled ? 0 : smooth(span(t, 0.04, 0.2)) * (1 - span(t, 1.3, 1.55)),
-    haze: mix(0.25, 0.1, morph) * (1 - clear),
+    haze: mix(0.12, 0.08, morph) * (1 - clear),
   } satisfies Record<string, number>;
 
   return { floats, pairs };
