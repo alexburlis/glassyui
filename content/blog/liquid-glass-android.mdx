@@ -20,6 +20,15 @@ heroImage: '/share/blog/liquid-glass-android.jpg'
 heroImageAlt:
   'A glass switch over ribbon artwork, beside the words: Liquid glass. On
   Android.'
+tldr:
+  - "Apple's glass material is not available to Android apps, so Glassy UI
+    blurs, tints and lights the rim of a backdrop you wrap in GlassBackdrop."
+  - 'Android 12 and later blur that backdrop. Android 11 and earlier, and glass
+    outside any GlassBackdrop, show a translucent tint with no blur.'
+  - 'Dialogs, sheets, menus, selects and popovers open in a separate window, so
+    they show a denser overlay tint instead of a blur.'
+  - 'Glassy UI does not read a reduce-transparency setting on Android, so solid
+    glass appears only when your app sets reduceTransparency itself.'
 ---
 
 To get liquid glass controls in an Android app built with React Native, wrap the

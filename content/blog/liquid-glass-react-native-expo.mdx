@@ -20,6 +20,16 @@ heroImage: '/share/blog/liquid-glass-react-native-expo.jpg'
 heroImageAlt:
   'A glass segmented control over ribbon artwork, beside the words: System
   glass. In Expo.'
+tldr:
+  - "In an Expo app, Apple's Liquid Glass comes from GlassView in
+    expo-glass-effect, which the system draws only on iOS 26 and later."
+  - 'Earlier iOS, Android and the web need a blur of the content behind instead,
+    and Reduce Transparency needs an opaque surface.'
+  - "Check both isLiquidGlassAvailable() and isGlassEffectAPIAvailable() before
+    drawing GlassView. Glassy UI's React Native components pick the material for
+    you."
+  - 'Expo documents that opacity 0 on a GlassView or any of its parents stops
+    the glass from rendering, so reveal glass by moving or scaling it instead.'
 ---
 
 In an Expo app, Apple's Liquid Glass comes from the `GlassView` component in
