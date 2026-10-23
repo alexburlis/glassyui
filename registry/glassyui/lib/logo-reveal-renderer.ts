@@ -48,6 +48,7 @@ uniform float split;
 uniform float glass;
 uniform float glow;
 uniform float haze;
+uniform float shine;
 
 const vec2 KEY = vec2(-0.5547, -0.8321);
 const float TAU = 6.2831853;
@@ -140,9 +141,9 @@ void main() {
     // mark lies nearest the rim.
     vec2 inward = middle - normal * bevel * 0.9 / zoom;
     float near = dot((markAt(inward, 5.0) * exposure).rgb, vec3(0.333));
-    float angle = atan(normal.y, normal.x) / TAU;
-    vec3 band = rainbow(depth * 1.4 + angle * 0.6 + 0.08);
-    glassy.rgb += band * pow(rim, 0.7) * (0.35 + 1.2 * near) * glow * dark;
+    // Hue runs smoothly with depth and the rim's direction, so it has no seam.
+    vec3 band = rainbow(depth * 1.4 + 0.12 * normal.x - 0.08 * normal.y + 0.08);
+    glassy.rgb += band * pow(rim, mix(2.6, 0.9, morph)) * (0.25 + 1.1 * near) * glow * dark;
 
     // A darker band just inside the polished edge, where the bevel looks out at the dark.
     float shade = exp(-pow((d + 0.05 * unit) / (0.03 * unit), 2.0));
@@ -167,11 +168,21 @@ void main() {
 
   // Cool where the rim faces the light, warm on the far side.
   vec3 tint = mix(vec3(1.0, 0.76, 0.46), vec3(0.62, 0.84, 1.0), facing);
-  vec3 spectral = rainbow(atan(normal.y, normal.x) / TAU * 1.5 + 0.1);
+  vec3 spectral = rainbow(0.35 * normal.x + 0.25 * normal.y + 0.1);
   vec3 rimLight = mix(mix(vec3(1.0), tint, 0.5), spectral, 0.45 * glow) * edge * (0.5 + 0.9 * pow(facing, 1.5) + 0.6 * pow(away, 2.0));
   vec3 lines = vec3(0.86, 0.92, 1.0) * (face * (0.05 + 0.1 * facing) + ring * 0.22 + walls * 0.08 * (0.4 + side) + glint * 0.16);
   vec3 bloom = vec3(0.6, 0.72, 0.9) * halo * 0.05 * exposure;
-  vec4 c = light(seen, (rimLight + lines + bloom) * glass);
+
+  // A softbox up and to the left reflects in the face as a soft highlight, on the glass over
+  // the mark.
+  vec2 q = (p - centre) / extent;
+  vec2 key = mat2(0.82, -0.57, 0.57, 0.82) * (q - vec2(-0.42, -0.5));
+  float softbox = exp(-(key.x * key.x / 0.025 + key.y * key.y / 0.006)) * 0.8;
+  // The face reflects more of the room towards its rim and the room is brighter above.
+  float fresnel = pow(1.0 - clamp(-d / extent, 0.0, 1.0), 3.0) * (0.5 + 0.5 * (-q.y));
+  vec3 sheen = vec3(0.92, 0.96, 1.0) * softbox * shine * cover +
+    vec3(0.55, 0.65, 0.8) * fresnel * 0.12 * cover;
+  vec4 c = light(seen, (rimLight + lines + bloom + sheen) * glass);
 
   float noise = fract(sin(dot(gl_FragCoord.xy + seed, vec2(12.9898, 78.233))) * 43758.5453);
   c.rgb += (noise - 0.5) / 255.0 * c.a * step(0.001, glass);
@@ -219,28 +230,8 @@ const easeOut = (x: number) => 1 - (1 - x) ** 3;
 
 const sineInOut = (x: number) => (1 - Math.cos(Math.PI * x)) / 2;
 
-const sineOut = (x: number) => Math.sin((Math.PI * x) / 2);
-
-/** Where the ball's centre looks on the mark, as fractions of the mark's larger side. */
-const VIEW = [
-  [0.12, -0.28, -0.24],
-  [0.42, 0.08, 0.06],
-  [0.95, -0.05, -0.04],
-  [1.25, 0, 0],
-] as const;
-
-function along(t: number) {
-  const next = VIEW.findIndex(([time]) => time > t);
-
-  if (next === 0) return [VIEW[0][1], VIEW[0][2]];
-
-  if (next < 0) return [0, 0];
-
-  const [from, to] = [VIEW[next - 1], VIEW[next]];
-  const x = sineInOut(span(t, from[0], to[0]));
-
-  return [mix(from[1], to[1], x), mix(from[2], to[2], x)];
-}
+/** A settle with one small overshoot, about 7%. */
+const spring = (x: number) => (x >= 1 ? 1 : 1 - Math.exp(-6.5 * x) * Math.cos(7.5 * x));
 
 /**
  * Weights for `taps` wavelengths from red to violet. Each channel's weights sum to 1, so plain
@@ -270,18 +261,21 @@ function spectrum(taps: number) {
 function revealFrame(time: number, layout: LogoRevealLayout, thickness: number) {
   const t = clamp(time, 0, LOGO_REVEAL_LENGTH);
   const unit = Math.max(layout.width, layout.height, 1);
-  const morph = sineInOut(span(t, 0.24, 0.42));
+  const morph = sineInOut(span(t, 0.22, 0.52));
   const clear = sineInOut(span(t, 1.06, 1.3));
-  const grown = 0.42 + 0.5 * easeOut(span(t, 0.1, 0.45)) + 0.17 * sineOut(span(t, 0.42, 1.25));
-  const half = unit * grown;
-  const swell = t < 0.3 ? 1 : 0.85 * Math.exp(-(t - 0.3) / 0.35) + 0.15 * (1 - span(t, 0.3, 1.3));
-  const [viewX, viewY] = along(t);
+
+  // The glass springs up to size with one small overshoot, then keeps drifting closer.
+  const half =
+    unit * (0.4 + 0.66 * spring(span(t, 0.04, 0.7)) + 0.05 * sineInOut(span(t, 0.6, 1.3)));
+
+  // Magnification eases off from the moment the glass appears, never in steps.
+  const swell = 1 - easeOut(span(t, 0.08, 1.3));
   const settled = t >= LOGO_REVEAL_LENGTH;
   const depth = 0.7 + 0.3 * thickness;
 
   const pairs = {
     centre: [layout.x, layout.y],
-    view: [viewX * unit, viewY * unit],
+    view: [0, 0],
   } satisfies Record<string, readonly [number, number]>;
 
   const floats = {
@@ -292,13 +286,14 @@ function revealFrame(time: number, layout: LogoRevealLayout, thickness: number) 
     corner: mix(2, 2.7, morph),
     morph,
     bevel: mix(half, 0.3 * unit, morph) * (0.8 + 0.2 * thickness),
-    zoom: settled ? 1 : mix(1 + 1.5 * depth * swell, 1, clear),
+    zoom: settled ? 1 : mix(1 + 0.32 * depth * swell, 1, clear),
     split: settled ? 0 : 0.06 * depth * (1 - clear),
     glass: settled
       ? 0
       : easeOut(span(t, 0.06, 0.24)) * (1 - 0.75 * clear) * (1 - span(t, 1.32, 1.55)),
     glow: 0.9 * (1 - clear),
     haze: mix(1.0, 0.3, morph) * (1 - clear),
+    shine: smooth(span(t, 0.1, 0.35)) * (1 - clear),
   } satisfies Record<string, number>;
 
   return { floats, pairs };
