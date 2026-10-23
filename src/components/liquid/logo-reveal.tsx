@@ -33,9 +33,10 @@ export type GlassLogoRevealProps = Omit<HTMLAttributes<HTMLElement>, 'children'>
 };
 
 const QUALITY = {
+  // Every wavelength traces the glass, so quality trades colour samples and resolution.
   low: { ratio: 1, taps: 3 },
-  medium: { ratio: 1.5, taps: 5 },
-  high: { ratio: 2, taps: 7 },
+  medium: { ratio: 1.5, taps: 3 },
+  high: { ratio: 2, taps: 5 },
 } as const;
 
 /** Reduced motion or transparency, from the system or the provider's preferences. */
@@ -56,8 +57,8 @@ function luminance([r, g, b, a]: readonly number[]) {
 
 /**
  * A logo sting: a ball of thick glass swells out of the dark in front of the mark, squares into a
- * rounded tile and clears, leaving the real mark, which stays in the page. The glass only moves
- * and uniformly scales the mark; it never stretches it.
+ * rounded tile and clears, leaving the real mark, which stays in the page. The glass is
+ * ray-traced, so it bends the mark as real glass would.
  */
 export const GlassLogoReveal = forwardRef<HTMLElement, GlassLogoRevealProps>(
   (

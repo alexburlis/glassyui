@@ -1,11 +1,9 @@
-// The reveal is one fragment shader over the stage. A ball of thick glass swells out of the dark
-// in front of the mark and magnifies it; the ball squares into a rounded tile and slowly comes
-// closer while the magnification relaxes; then the glass clears, the tile fades to an outline
-// and goes, leaving the mark exactly where the page has it.
-//
-// The glass only ever moves and uniformly scales the mark, never stretches or bends it: colour
-// splits because each wavelength is scaled a touch differently, and the rim's colour is light
-// the bevel catches, not displaced pixels.
+// The reveal is a ray-traced glass solid over the stage. Each pixel's ray meets the glass, bends
+// in through its front surface, crosses it (bouncing once if light cannot leave), bends out of
+// its back and lands on the plane of the mark just behind it, so the mark warps only as real
+// glass would warp it. Each wavelength traces its own index, which splits colour; Fresnel
+// reflections show a studio of softboxes. The body morphs from a domed lens into a thick
+// rounded tile, then clears by losing its refractive index, so the last frame is the mark itself.
 //
 // Lengths are fractions of the mark's larger side, so the reveal keeps its proportions at any size.
 
@@ -38,37 +36,31 @@ uniform float exposure;
 uniform float rest;
 uniform vec2 centre;
 uniform float extent;
-uniform float radius;
-uniform float corner;
-uniform float morph;
-uniform float bevel;
-uniform float zoom;
-uniform vec2 view;
+uniform float rounding;
+uniform float depth;
+uniform float edge;
+uniform float dome;
+uniform float ior;
 uniform float split;
+uniform float gap;
+uniform float tilt;
 uniform float glass;
-uniform float glow;
 uniform float haze;
-uniform float shine;
 
-const vec2 KEY = vec2(-0.5547, -0.8321);
-const float TAU = 6.2831853;
-
+// Lengths in the shader are in units of the glass's half size, so marching tolerances scale.
 float unit;
-float px;
 
 vec4 over(vec4 content) {
   return content + backdrop * (1.0 - content.a);
 }
 
-// The mark as act one sees it: from the high-resolution picture, at its page rectangle.
 vec4 markAt(vec2 point, float bias) {
   vec2 uv = (point - markRect.xy) / markRect.zw + 0.5;
   vec2 inside = step(vec2(0.0), uv) * step(uv, vec2(1.0));
 
-  return texture(mark, uv, bias) * (inside.x * inside.y);
+  return texture(mark, uv, bias) * (inside.x * inside.y) * exposure;
 }
 
-// The mark exactly as the page draws it, for the moment the glass has gone.
 vec4 stillAt(vec2 point) {
   vec2 uv = point / stage;
   vec2 inside = step(vec2(0.0), uv) * step(uv, vec2(1.0));
@@ -76,116 +68,165 @@ vec4 stillAt(vec2 point) {
   return texture(still, uv, 0.0) * (inside.x * inside.y);
 }
 
-vec4 light(vec4 base, vec3 amount) {
-  vec3 lit = mix(base.rgb * (1.0 - 0.55 * amount), base.rgb + amount, dark);
-  float alpha = max(base.a, dark * min(max(amount.r, max(amount.g, amount.b)), 1.0));
+// The glass: a rounded rectangle in plan, extruded to a slab whose edges are rounded too, with a
+// slight dome on both faces. Radius = 1 and depth = edge = 1 make it a sphere.
+float body(vec3 p) {
+  vec2 q = abs(p.xy) - 1.0 + rounding;
+  float plan = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - rounding;
+  float r2 = clamp(dot(p.xy, p.xy), 0.0, 1.0);
+  float thick = depth + dome * (1.0 - r2);
+  vec2 w = vec2(plan + edge, abs(p.z) - thick + edge);
 
-  return vec4(lit, alpha);
+  return min(max(w.x, w.y), 0.0) + length(max(w, 0.0)) - edge;
 }
 
-// A circle when the radius is half the size and the corner exponent 2; a rounded square with
-// continuously curving corners as the radius falls and the exponent rises.
-float body(vec2 p) {
-  vec2 q = abs(p - centre) - extent + radius;
-  vec2 m = max(q, 0.0);
-  float rounded = pow(pow(m.x, corner) + pow(m.y, corner), 1.0 / corner);
+vec3 normalAt(vec3 p) {
+  vec2 e = vec2(0.0015, 0.0);
 
-  return min(max(q.x, q.y), 0.0) + rounded - radius;
+  return normalize(vec3(
+    body(p + e.xyy) - body(p - e.xyy),
+    body(p + e.yxy) - body(p - e.yxy),
+    body(p + e.yyx) - body(p - e.yyx)
+  ));
 }
 
-vec3 rainbow(float x) {
-  return 0.5 + 0.5 * cos(TAU * (x + vec3(0.0, 0.33, 0.67)));
+// A dark studio: one large softbox up and to the left, a thin strip light on the right and a
+// faint floor, so the glass has something to reflect.
+vec3 studio(vec3 d) {
+  float key = smoothstep(0.35, 0.0, length((d.xy - vec2(-0.55, -0.6)) / vec2(0.5, 0.3)) - 0.6) * step(d.z, 0.2);
+  float strip = smoothstep(0.08, 0.0, abs(d.x - 0.78) - 0.03) * smoothstep(0.6, 0.2, abs(d.y + 0.1)) * step(d.z, 0.3);
+  float ground = smoothstep(0.1, 0.9, d.y) * 0.05;
+  // A soft overhead and a band of light around the horizon catch every grazing edge.
+  // Studio lights are many times brighter than the page; glass shows them only in reflection.
+  float above = 0.6 * smoothstep(0.2, -0.9, d.y);
+  float horizon = 3.0 * exp(-d.z * d.z / 0.05);
+  vec3 light = vec3(1.0, 0.98, 0.95) * key * 9.0 + vec3(0.85, 0.92, 1.0) * strip * 5.0 +
+    vec3(0.8, 0.86, 0.95) * (above + horizon) + ground;
+
+  return mix(vec3(0.94, 0.94, 0.93) - light * 0.5, light, dark);
+}
+
+mat2 turn(float a) {
+  float c = cos(a);
+  float s = sin(a);
+
+  return mat2(c, -s, s, c);
+}
+
+// Where a camera ray through stage point p meets the mark's plane after passing the glass, for
+// refractive index n. Returns the plane point and, in z, the Fresnel reflectance at entry.
+vec4 trace(vec2 p, float n, out vec3 reflected, out float path) {
+  vec3 o = vec3((p - centre) / extent, -4.0);
+  vec3 d = vec3(0.0, 0.0, 1.0);
+  o.xz = turn(tilt) * o.xz;
+  d.xz = turn(tilt) * d.xz;
+  reflected = vec3(0.0);
+  path = 0.0;
+  float t = 0.0;
+  bool hit = false;
+
+  for (int i = 0; i < 64; i++) {
+    float h = body(o + d * t);
+    if (h < 0.0008) { hit = true; break; }
+    t += h;
+    if (t > 8.0) break;
+  }
+
+  if (!hit) return vec4(p, 0.0, 0.0);
+
+  vec3 a = o + d * t;
+  vec3 na = normalAt(a);
+  float cosi = clamp(-dot(d, na), 0.0, 1.0);
+  float f0 = pow((n - 1.0) / (n + 1.0), 2.0);
+  float fresnel = f0 + (1.0 - f0) * pow(1.0 - cosi, 5.0);
+  reflected = reflect(d, na);
+  vec3 r = refract(d, na, 1.0 / n);
+  vec3 q = a - na * 0.003;
+
+  // Inside the glass: march to the far surface, bounce off it once if light cannot leave.
+  for (int bounce = 0; bounce < 2; bounce++) {
+    float s = 0.004;
+    for (int i = 0; i < 48; i++) {
+      float h = -body(q + r * s);
+      if (h < 0.0008) break;
+      s += max(h, 0.004);
+      if (s > 6.0) break;
+    }
+    path += s;
+    q += r * s;
+    vec3 nb = normalAt(q);
+    vec3 out_ = refract(r, -nb, n);
+    if (dot(out_, out_) > 0.0) { r = out_; break; }
+    r = reflect(r, -nb);
+    q -= nb * 0.003;
+  }
+
+  // Back to the stage and on to the mark's plane, just behind the glass.
+  q.xz = turn(-tilt) * q.xz;
+  r.xz = turn(-tilt) * r.xz;
+  float plane = depth + dome + gap;
+  float k = r.z > 0.02 ? (plane - q.z) / r.z : 0.0;
+  vec2 land = q.xy + r.xy * max(k, 0.0);
+
+  return vec4(centre + land * extent, fresnel, r.z > 0.02 ? 1.0 : 0.0);
 }
 
 void main() {
-  unit = max(markRect.z, markRect.w) / 1.8;
-  px = stage.x / pixels.x;
+  unit = extent;
   vec2 p = vec2(gl_FragCoord.x, pixels.y - gl_FragCoord.y) * (stage / pixels);
-  vec2 e = vec2(0.5, 0.0);
-  vec2 slope = vec2(body(p + e.xy) - body(p - e.xy), body(p + e.yx) - body(p - e.yx));
-  float steep = max(length(slope), 1e-5);
-  vec2 normal = slope / steep;
-  float d = body(p) / steep;
-  float cover = clamp(0.5 - d / px, 0.0, 1.0) * step(0.001, glass);
-
-  // Outside the glass the stage is dark until the glass has gone.
   vec4 plain = over(stillAt(p) * rest);
-  vec4 seen = plain;
+  vec2 local = (p - centre) / extent;
 
-  if (cover > 0.0) {
-    float depth = clamp(-d / bevel, 0.0, 1.0);
-    float rim = (1.0 - depth) * (1.0 - depth);
-    vec2 rel = p - centre;
-    vec3 sum = vec3(0.0);
-    float alpha = 0.0;
-
-    // Each wavelength sees the mark scaled a touch differently, so edges split into colour
-    // while the mark keeps its shape.
-    for (int i = 0; i < 8; i++) {
-      if (i >= taps) break;
-      float k = 1.0 + split * shifts[i];
-      vec2 point = centre + view + rel / (zoom * k);
-      vec4 through = over(markAt(point, 0.25 + 1.2 * rim) * exposure);
-      sum += hues[i] * through.rgb;
-      alpha += through.a;
-    }
-
-    vec4 glassy = vec4(sum, alpha / float(taps));
-    vec2 middle = centre + view + rel / zoom;
-
-    // Thick glass scatters some of what it magnifies, so it glows from within.
-    vec4 scatter = (markAt(middle, 3.5) * 0.4 + markAt(middle, 5.5) * 0.6) * exposure;
-    glassy.rgb += scatter.rgb * haze * dark;
-
-    // The bevel catches the mark's light as colour: a soft spectral band, brightest where the
-    // mark lies nearest the rim.
-    vec2 inward = middle - normal * bevel * 0.9 / zoom;
-    float near = dot((markAt(inward, 5.0) * exposure).rgb, vec3(0.333));
-    // Hue runs smoothly with depth and the rim's direction, so it has no seam.
-    vec3 band = rainbow(depth * 1.4 + 0.12 * normal.x - 0.08 * normal.y + 0.08);
-    glassy.rgb += band * pow(rim, mix(2.6, 0.9, morph)) * (0.25 + 1.1 * near) * glow * dark;
-
-    // A darker band just inside the polished edge, where the bevel looks out at the dark.
-    float shade = exp(-pow((d + 0.05 * unit) / (0.03 * unit), 2.0));
-    glassy.rgb *= 1.0 - 0.5 * shade * glass * dark;
-
-    // Once the glass has relaxed, hand over to the page's own picture of the mark.
-    glassy = mix(glassy, over(stillAt(p)), rest);
-    seen = mix(plain, glassy, cover);
+  // Only pixels near the glass are traced.
+  if (glass <= 0.0 || max(abs(local.x), abs(local.y)) > 1.25) {
+    colour = plain;
+    return;
   }
 
-  float facing = max(dot(normal, KEY), 0.0);
-  float away = max(dot(normal, -KEY), 0.0);
-  float side = pow(abs(normal.x), 6.0);
-  float w = 0.004 * unit + px;
-  float edge = exp(-pow((d + w) / w, 2.0));
-  float face = exp(-pow((d + bevel * 0.42) / (0.006 * unit + px), 2.0)) * morph;
-  float walls = (exp(-pow((d - 0.025 * unit) / (0.005 * unit + px), 2.0)) +
-    0.5 * exp(-pow((d - 0.065 * unit) / (0.012 * unit), 2.0))) * morph;
-  float ring = exp(-pow((d + 0.06 * extent) / (0.01 * unit + px), 2.0)) * (1.0 - morph);
-  float glint = exp(-pow((d - 0.16 * unit) / (0.04 * unit), 2.0)) * side * (1.0 - 0.6 * morph);
-  float halo = exp(-max(d, 0.0) / (0.18 * unit)) * (1.0 - cover);
+  vec3 sum = vec3(0.0);
+  float alpha = 0.0;
+  float fresnel = 0.0;
+  vec3 mirror = vec3(0.0);
+  float covered = 0.0;
+  float thickness = 0.0;
 
-  // Cool where the rim faces the light, warm on the far side.
-  vec3 tint = mix(vec3(1.0, 0.76, 0.46), vec3(0.62, 0.84, 1.0), facing);
-  vec3 spectral = rainbow(0.35 * normal.x + 0.25 * normal.y + 0.1);
-  vec3 rimLight = mix(mix(vec3(1.0), tint, 0.5), spectral, 0.45 * glow) * edge * (0.5 + 0.9 * pow(facing, 1.5) + 0.6 * pow(away, 2.0));
-  vec3 lines = vec3(0.86, 0.92, 1.0) * (face * (0.05 + 0.1 * facing) + ring * 0.22 + walls * 0.08 * (0.4 + side) + glint * 0.16);
-  vec3 bloom = vec3(0.6, 0.72, 0.9) * halo * 0.05 * exposure;
+  // Each wavelength sees a slightly different index, so the glass splits colour where it bends.
+  for (int i = 0; i < 8; i++) {
+    if (i >= taps) break;
+    vec3 reflected;
+    float path;
+    vec4 seen = trace(p, ior * (1.0 + split * shifts[i]), reflected, path);
+    vec4 behind = seen.w > 0.5 || seen.z == 0.0 ? over(markAt(seen.xy, 0.3)) : backdrop;
+    sum += hues[i] * behind.rgb;
+    alpha += behind.a;
+    if (dot(reflected, reflected) > 0.0) {
+      covered += 1.0;
+      fresnel += seen.z;
+      mirror += hues[i] * studio(reflected);
+      thickness += path;
+    }
+  }
 
-  // A softbox up and to the left reflects in the face as a soft highlight, on the glass over
-  // the mark.
-  vec2 q = (p - centre) / extent;
-  vec2 key = mat2(0.82, -0.57, 0.57, 0.82) * (q - vec2(-0.42, -0.5));
-  float softbox = exp(-(key.x * key.x / 0.025 + key.y * key.y / 0.006)) * 0.8;
-  // The face reflects more of the room towards its rim and the room is brighter above.
-  float fresnel = pow(1.0 - clamp(-d / extent, 0.0, 1.0), 3.0) * (0.5 + 0.5 * (-q.y));
-  vec3 sheen = vec3(0.92, 0.96, 1.0) * softbox * shine * cover +
-    vec3(0.55, 0.65, 0.8) * fresnel * 0.12 * cover;
-  vec4 c = light(seen, (rimLight + lines + bloom + sheen) * glass);
+  float count = float(taps);
+  vec4 through = vec4(sum, alpha / count);
 
+  if (covered > 0.0) {
+    float share = covered / count;
+    fresnel /= covered;
+    thickness /= covered;
+    // Thick glass absorbs a little and scatters some of the mark's light within it.
+    through.rgb *= mix(vec3(1.0), vec3(0.9, 0.95, 1.0), clamp(thickness * 0.15, 0.0, 1.0));
+    vec4 glow = (markAt(centre + local * extent * 0.8, 4.0) * 0.5 + markAt(centre + local * extent * 0.7, 6.0) * 0.5);
+    through.rgb += glow.rgb * haze * dark * share;
+    vec3 reflection = mirror / covered;
+    // Reflection adds light; a soft shoulder keeps bright studio light from clipping hard.
+    vec3 lit = through.rgb * (1.0 - fresnel * glass * share) + reflection * fresnel * glass * share;
+    through.rgb = mix(lit / (1.0 + max(lit - 1.0, 0.0)), through.rgb, 1.0 - dark);
+  }
+
+  vec4 c = mix(through, over(stillAt(p)), rest);
   float noise = fract(sin(dot(gl_FragCoord.xy + seed, vec2(12.9898, 78.233))) * 43758.5453);
-  c.rgb += (noise - 0.5) / 255.0 * c.a * step(0.001, glass);
+  c.rgb += (noise - 0.5) / 255.0 * c.a;
   colour = clamp(c, 0.0, 1.0);
 }`;
 
@@ -226,8 +267,6 @@ const mix = (a: number, b: number, x: number) => a + (b - a) * x;
 
 const smooth = (x: number) => x * x * (3 - 2 * x);
 
-const easeOut = (x: number) => 1 - (1 - x) ** 3;
-
 const sineInOut = (x: number) => (1 - Math.cos(Math.PI * x)) / 2;
 
 /** A settle with one small overshoot, about 7%. */
@@ -261,39 +300,35 @@ function spectrum(taps: number) {
 function revealFrame(time: number, layout: LogoRevealLayout, thickness: number) {
   const t = clamp(time, 0, LOGO_REVEAL_LENGTH);
   const unit = Math.max(layout.width, layout.height, 1);
-  const morph = sineInOut(span(t, 0.22, 0.52));
-  const clear = sineInOut(span(t, 1.06, 1.3));
+  const morph = sineInOut(span(t, 0.22, 0.55));
+  const clear = sineInOut(span(t, 1.0, 1.35));
+  const settled = t >= LOGO_REVEAL_LENGTH;
 
   // The glass springs up to size with one small overshoot, then keeps drifting closer.
-  const half =
-    unit * (0.4 + 0.66 * spring(span(t, 0.04, 0.7)) + 0.05 * sineInOut(span(t, 0.6, 1.3)));
-
-  // Magnification eases off from the moment the glass appears, never in steps.
-  const swell = 1 - easeOut(span(t, 0.08, 1.3));
-  const settled = t >= LOGO_REVEAL_LENGTH;
-  const depth = 0.7 + 0.3 * thickness;
+  const size = 0.4 + 0.62 * spring(span(t, 0.04, 0.72)) + 0.07 * sineInOut(span(t, 0.6, 1.3));
 
   const pairs = {
     centre: [layout.x, layout.y],
-    view: [0, 0],
   } satisfies Record<string, readonly [number, number]>;
 
   const floats = {
-    exposure: smooth(span(t, 0.12, 0.17)),
-    rest: settled ? 1 : span(t, 1.3, 1.5),
-    extent: half,
-    radius: mix(half, 0.46 * half, morph),
-    corner: mix(2, 2.7, morph),
-    morph,
-    bevel: mix(half, 0.3 * unit, morph) * (0.8 + 0.2 * thickness),
-    zoom: settled ? 1 : mix(1 + 0.32 * depth * swell, 1, clear),
-    split: settled ? 0 : 0.06 * depth * (1 - clear),
-    glass: settled
-      ? 0
-      : easeOut(span(t, 0.06, 0.24)) * (1 - 0.75 * clear) * (1 - span(t, 1.32, 1.55)),
-    glow: 0.9 * (1 - clear),
-    haze: mix(1.0, 0.3, morph) * (1 - clear),
-    shine: smooth(span(t, 0.1, 0.35)) * (1 - clear),
+    extent: unit * 1.09 * size,
+    exposure: smooth(span(t, 0.1, 0.17)),
+    rest: settled ? 1 : span(t, 1.32, 1.5),
+    // A sphere first, then a slab with rounded corners and edges, as thick as a quarter of it.
+    // A domed, lens-like ball first, then a slab a quarter as thick, rounded at corners and edges.
+    rounding: mix(1, 0.46, morph),
+    depth: mix(0.5, 0.3, morph),
+    edge: mix(0.5, 0.3, morph),
+    // The face bulges most while the glass is new and settles flatter as it comes to rest.
+    dome: mix(0.32, 0.26 - 0.16 * sineInOut(span(t, 0.5, 1.1)), morph) * (1 - clear),
+    // The glass clears by losing its index: refraction and reflection fade together.
+    ior: settled ? 1 : 1 + 0.5 * (0.8 + 0.2 * thickness) * (1 - clear),
+    split: settled ? 0 : 0.012 * (0.6 + 0.4 * thickness),
+    gap: 0.04,
+    tilt: 0.12 * (1 - spring(span(t, 0.05, 0.9))),
+    glass: settled ? 0 : smooth(span(t, 0.04, 0.2)) * (1 - span(t, 1.3, 1.55)),
+    haze: mix(0.25, 0.1, morph) * (1 - clear),
   } satisfies Record<string, number>;
 
   return { floats, pairs };

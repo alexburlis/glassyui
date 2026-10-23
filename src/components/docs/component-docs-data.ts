@@ -3576,7 +3576,7 @@ return splash ? (
       {
         name: 'GlassLogoReveal',
         description:
-          "A figure with role img: the stage, drawn on a canvas, and the mark it lands on. Its background is the stage; --lg-logo-reveal-size sets the mark's height, a third of the stage by default. The mark is only moved and uniformly scaled, never stretched.",
+          "A figure with role img: the stage, drawn on a canvas, and the mark it lands on. Its background is the stage; --lg-logo-reveal-size sets the mark's height, a third of the stage by default. The glass is ray-traced, so it bends the mark as real glass would and lands on it exactly.",
         extends: 'HTML figure attributes (no children)',
         props: [
           {

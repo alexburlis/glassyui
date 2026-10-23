@@ -540,10 +540,12 @@ with its light; the ball squares into a rounded glass tile that slowly comes
 closer while the magnification relaxes and colour plays along its bevel. The
 glass then clears, the tile fades to an outline and goes, and the reveal lands
 exactly on the real mark, which the page lays out and keeps. The glass only ever
-moves and uniformly scales the mark, never stretches or skews it: colour splits
-because each wavelength is scaled a touch differently. Refraction samples seven
-wavelengths at high quality, five at medium and three at low, and the glass
-thickness preference magnifies further and splits more.
+bends the mark as real glass does: each pixel's ray is traced in through the
+glass, across it and out onto the mark behind it, each wavelength with its own
+index, and Fresnel reflections show a studio of softboxes. The glass clears by
+losing its refractive index, so it lands exactly on the mark. Refraction samples
+seven wavelengths at high quality, five at medium and three at low, and the
+glass thickness preference magnifies further and splits more.
 
 `markSrc` is an image from your origin or served with CORS and `label` its
 accessible name. The figure's background is the stage and
