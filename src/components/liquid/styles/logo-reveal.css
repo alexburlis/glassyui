@@ -1,7 +1,7 @@
 /*
-  Glass Logo Reveal: the stage the reveal is drawn on and the lockup it lands on. The lockup is
-  the real one, laid out by the page; the canvas paints over it while the glass moves and steps
-  aside once it has landed. Size the lockup with font-size: the mark follows the name.
+  Glass Logo Reveal: the stage the reveal is drawn on and the mark it lands on. The mark is the
+  real image, laid out by the page; the canvas paints over it while the glass moves and steps
+  aside once it has landed. Size the mark with --lg-logo-reveal-size.
 */
 
 /* Preserve Tailwind's order even when the reveal loads before global CSS. */
@@ -19,7 +19,7 @@
     aspect-ratio: 16 / 9;
     margin: 0;
     overflow: hidden;
-    container-type: inline-size;
+    container-type: size;
     background-color: var(--lg-logo-reveal-stage);
     color: var(--lg-logo-reveal-ink);
   }
@@ -29,29 +29,12 @@
     --lg-logo-reveal-ink: #222224;
   }
 
-  .lg-logo-reveal-lockup {
-    display: flex;
-    align-items: center;
-    gap: 0.42em;
-    font-size: clamp(1rem, 6.5cqi, 4.5rem);
-    font-weight: 600;
-    letter-spacing: 0.012em;
-    line-height: 1;
-    white-space: nowrap;
-  }
-
+  /* The glass tile grows to a little over twice the mark, so a third of the stage leaves room. */
   .lg-logo-reveal-mark {
     display: block;
+    /* The box keeps the mark's own proportions, so nothing drawn from it is ever squashed. */
     width: auto;
-    height: 1.26em;
-  }
-
-  /* An empty inline block whose top is the name's baseline. */
-  .lg-logo-reveal-baseline {
-    display: inline-block;
-    width: 0;
-    height: 0;
-    vertical-align: baseline;
+    height: var(--lg-logo-reveal-size, 34cqmin);
   }
 
   .lg-logo-reveal-canvas {
@@ -71,14 +54,14 @@
 
   /* With scripting the canvas draws everything until the glass has gone. */
   @media (scripting: enabled) {
-    .lg-logo-reveal:not([data-state='ended']) .lg-logo-reveal-lockup {
+    .lg-logo-reveal:not([data-state='ended']) .lg-logo-reveal-mark {
       visibility: hidden;
     }
   }
 
-  /* Reduced motion and reduced transparency keep the lockup and drop the glass. */
-  html[data-lg-reduce-motion='1'] .lg-logo-reveal-lockup,
-  html[data-lg-reduce-transparency='1'] .lg-logo-reveal-lockup {
+  /* Reduced motion and reduced transparency keep the mark and drop the glass. */
+  html[data-lg-reduce-motion='1'] .lg-logo-reveal-mark,
+  html[data-lg-reduce-transparency='1'] .lg-logo-reveal-mark {
     visibility: visible;
   }
 
@@ -88,7 +71,7 @@
   }
 
   @media (prefers-reduced-motion: reduce), (prefers-reduced-transparency: reduce) {
-    .lg-logo-reveal-lockup {
+    .lg-logo-reveal-mark {
       visibility: visible;
     }
 

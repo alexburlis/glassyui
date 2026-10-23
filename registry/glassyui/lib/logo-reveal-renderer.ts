@@ -1,21 +1,16 @@
-// A capsule of thick glass carries the lockup into view, in three beats, drawn by one fragment
-// shader over the stage.
+// The reveal is one fragment shader over the stage. A ball of thick glass swells out of the dark
+// in front of the mark and magnifies it; the ball squares into a rounded tile and slowly comes
+// closer while the magnification relaxes; then the glass clears, the tile fades to an outline
+// and goes, leaving the mark exactly where the page has it.
 //
-// Arrival: the stage is dark and the lockup is lit only where the glass is. The capsule glides in
-// over the mark on the library's ease-out, magnifying it a little and pulling the strokes nearest
-// its rim out into the bevel, where they split into colour.
+// The glass only ever moves and uniformly scales the mark, never stretches or bends it: colour
+// splits because each wavelength is scaled a touch differently, and the rim's colour is light
+// the bevel catches, not displaced pixels.
 //
-// Pass: the capsule's leading end springs out across the name. While it moves, the end cap
-// stretches the letters it is reaching, split into colour, and lets them go as it passes.
-//
-// Settle: the glass relaxes to plain, one highlight runs along it, the stage lights come up
-// around it and its rim fades, leaving the lockup exactly where the page has it.
-//
-// Lengths are fractions of the capsule's height, which follows the lockup's, so the reveal keeps
-// its proportions at any size.
+// Lengths are fractions of the mark's larger side, so the reveal keeps its proportions at any size.
 
 /** Seconds the reveal takes at its regular pace. */
-export const LOGO_REVEAL_LENGTH = 2.6;
+export const LOGO_REVEAL_LENGTH = 1.7;
 
 const VERTEX = `#version 300 es
 void main() {
@@ -32,43 +27,54 @@ uniform vec2 pixels;
 uniform vec4 backdrop;
 uniform float dark;
 uniform float seed;
-uniform sampler2D lockup;
+uniform sampler2D mark;
+uniform sampler2D still;
 uniform int taps;
 uniform vec3 hues[8];
 uniform float shifts[8];
 
+uniform vec4 markRect;
+uniform float exposure;
+uniform float rest;
 uniform vec2 centre;
-uniform vec2 size;
+uniform float extent;
+uniform float radius;
+uniform float corner;
+uniform float morph;
 uniform float bevel;
 uniform float zoom;
-uniform float bend;
-uniform float smear;
+uniform vec2 view;
 uniform float split;
-uniform float rims;
+uniform float glass;
+uniform float glow;
 uniform float haze;
-uniform float sweep;
-uniform float shine;
-uniform float inside;
-uniform float outside;
-uniform float soft;
-uniform float bloom;
 
 const vec2 KEY = vec2(-0.5547, -0.8321);
+const float TAU = 6.2831853;
 
+float unit;
 float px;
 
 vec4 over(vec4 content) {
   return content + backdrop * (1.0 - content.a);
 }
 
-vec4 lockupAt(vec2 point, float bias) {
-  vec2 uv = point / stage;
-  vec2 within = step(vec2(0.0), uv) * step(uv, vec2(1.0));
+// The mark as act one sees it: from the high-resolution picture, at its page rectangle.
+vec4 markAt(vec2 point, float bias) {
+  vec2 uv = (point - markRect.xy) / markRect.zw + 0.5;
+  vec2 inside = step(vec2(0.0), uv) * step(uv, vec2(1.0));
 
-  return texture(lockup, uv, bias) * (within.x * within.y);
+  return texture(mark, uv, bias) * (inside.x * inside.y);
 }
 
-// Highlights add light on a dark stage and shade on a light one, as glass edges do.
+// The mark exactly as the page draws it, for the moment the glass has gone.
+vec4 stillAt(vec2 point) {
+  vec2 uv = point / stage;
+  vec2 inside = step(vec2(0.0), uv) * step(uv, vec2(1.0));
+
+  return texture(still, uv, 0.0) * (inside.x * inside.y);
+}
+
 vec4 light(vec4 base, vec3 amount) {
   vec3 lit = mix(base.rgb * (1.0 - 0.55 * amount), base.rgb + amount, dark);
   float alpha = max(base.a, dark * min(max(amount.r, max(amount.g, amount.b)), 1.0));
@@ -76,120 +82,125 @@ vec4 light(vec4 base, vec3 amount) {
   return vec4(lit, alpha);
 }
 
-float capsule(vec2 p) {
-  vec2 q = abs(p - centre) - size + size.y;
+// A circle when the radius is half the size and the corner exponent 2; a rounded square with
+// continuously curving corners as the radius falls and the exponent rises.
+float body(vec2 p) {
+  vec2 q = abs(p - centre) - extent + radius;
+  vec2 m = max(q, 0.0);
+  float rounded = pow(pow(m.x, corner) + pow(m.y, corner), 1.0 / corner);
 
-  return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - size.y;
+  return min(max(q.x, q.y), 0.0) + rounded - radius;
+}
+
+vec3 rainbow(float x) {
+  return 0.5 + 0.5 * cos(TAU * (x + vec3(0.0, 0.33, 0.67)));
 }
 
 void main() {
+  unit = max(markRect.z, markRect.w) / 1.8;
   px = stage.x / pixels.x;
   vec2 p = vec2(gl_FragCoord.x, pixels.y - gl_FragCoord.y) * (stage / pixels);
   vec2 e = vec2(0.5, 0.0);
-  vec2 slope = vec2(capsule(p + e.xy) - capsule(p - e.xy), capsule(p + e.yx) - capsule(p - e.yx));
-  vec2 normal = slope / max(length(slope), 1e-5);
-  float d = capsule(p);
-  float cover = clamp(0.5 - d / px, 0.0, 1.0);
-  vec4 plain = over(lockupAt(p, 0.0) * outside);
+  vec2 slope = vec2(body(p + e.xy) - body(p - e.xy), body(p + e.yx) - body(p - e.yx));
+  float steep = max(length(slope), 1e-5);
+  vec2 normal = slope / steep;
+  float d = body(p) / steep;
+  float cover = clamp(0.5 - d / px, 0.0, 1.0) * step(0.001, glass);
+
+  // Outside the glass the stage is dark until the glass has gone.
+  vec4 plain = over(stillAt(p) * rest);
   vec4 seen = plain;
 
   if (cover > 0.0) {
-    // 0 at the rim, 1 where the bevel meets the flat face.
     float depth = clamp(-d / bevel, 0.0, 1.0);
     float rim = (1.0 - depth) * (1.0 - depth);
-    // The ends pull hardest, the long edges gently, and the leading end reaches further back
-    // while it moves.
-    float lead = smoothstep(0.2, 1.0, (p.x - centre.x) / max(size.x, 1.0));
-    float pull = bend * (0.35 + 0.65 * abs(normal.x)) + smear * lead * lead;
-    float bias = soft * (0.3 + 2.0 * rim);
-    // A capsule of glass is a rod: it magnifies across its spine and only rounds out at the ends,
-    // so type under it grows taller without sliding along it.
-    float run = max(size.x - size.y, 0.0);
-    vec2 spine = vec2(clamp(p.x, centre.x - run, centre.x + run), centre.y);
-    vec2 rel = p - spine;
+    vec2 rel = p - centre;
     vec3 sum = vec3(0.0);
     float alpha = 0.0;
 
-    // The bevel pulls the strokes nearest the rim out into it; violet bends further than red.
+    // Each wavelength sees the mark scaled a touch differently, so edges split into colour
+    // while the mark keeps its shape.
     for (int i = 0; i < 8; i++) {
       if (i >= taps) break;
       float k = 1.0 + split * shifts[i];
-      float magnify = 1.0 + (zoom - 1.0) * (1.0 + 0.3 * (k - 1.0));
-      vec2 point = spine + rel / magnify - normal * (pull * rim * k);
-      vec4 through = over(lockupAt(point, bias) * inside);
+      vec2 point = centre + view + rel / (zoom * k);
+      vec4 through = over(markAt(point, 0.25 + 1.2 * rim) * exposure);
       sum += hues[i] * through.rgb;
       alpha += through.a;
     }
 
-    // Thick glass scatters a little of what it magnifies, so it glows from within.
-    vec2 middle = spine + rel / zoom;
-    vec4 scatter = (lockupAt(middle, 3.5) * 0.4 + lockupAt(middle, 5.5) * 0.6) * inside;
-    vec4 glass = vec4(sum + scatter.rgb * haze * dark, alpha / float(taps));
+    vec4 glassy = vec4(sum, alpha / float(taps));
+    vec2 middle = centre + view + rel / zoom;
+
+    // Thick glass scatters some of what it magnifies, so it glows from within.
+    vec4 scatter = (markAt(middle, 3.5) * 0.4 + markAt(middle, 5.5) * 0.6) * exposure;
+    glassy.rgb += scatter.rgb * haze * dark;
+
+    // The bevel catches the mark's light as colour: a soft spectral band, brightest where the
+    // mark lies nearest the rim.
+    vec2 inward = middle - normal * bevel * 0.9 / zoom;
+    float near = dot((markAt(inward, 5.0) * exposure).rgb, vec3(0.333));
+    float angle = atan(normal.y, normal.x) / TAU;
+    vec3 band = rainbow(depth * 1.4 + angle * 0.6 + 0.08);
+    glassy.rgb += band * rim * (0.12 + near) * glow * dark;
 
     // A darker band just inside the polished edge, where the bevel looks out at the dark.
-    float band = exp(-pow((d + 0.09 * size.y) / (0.07 * size.y), 2.0));
-    glass.rgb *= 1.0 - 0.45 * band * rims * dark;
-    seen = mix(plain, glass, cover);
+    float shade = exp(-pow((d + 0.05 * unit) / (0.03 * unit), 2.0));
+    glassy.rgb *= 1.0 - 0.5 * shade * glass * dark;
+
+    // Once the glass has relaxed, hand over to the page's own picture of the mark.
+    glassy = mix(glassy, over(stillAt(p)), rest);
+    seen = mix(plain, glassy, cover);
   }
 
   float facing = max(dot(normal, KEY), 0.0);
   float away = max(dot(normal, -KEY), 0.0);
-  float w = 0.012 * size.y + px;
+  float side = pow(abs(normal.x), 6.0);
+  float w = 0.004 * unit + px;
   float edge = exp(-pow((d + w) / w, 2.0));
-  float face = exp(-pow((d + bevel * 0.45) / (0.02 * size.y + px), 2.0));
-  float wall = exp(-pow((d - 0.06 * size.y) / (0.018 * size.y + px), 2.0));
-  float halo = exp(-max(d, 0.0) / (0.5 * size.y)) * (1.0 - cover);
-  // One slanted highlight runs along the glass as it settles.
-  float across = p.x - (centre.x - size.x + sweep * 2.0 * size.x) + 0.35 * (p.y - centre.y);
-  float sheen = exp(-pow(across / (0.9 * size.y), 2.0)) * shine * cover;
+  float face = exp(-pow((d + bevel * 0.42) / (0.006 * unit + px), 2.0)) * morph;
+  float walls = (exp(-pow((d - 0.025 * unit) / (0.005 * unit + px), 2.0)) +
+    0.5 * exp(-pow((d - 0.065 * unit) / (0.012 * unit), 2.0))) * morph;
+  float ring = exp(-pow((d + 0.06 * extent) / (0.01 * unit + px), 2.0)) * (1.0 - morph);
+  float glint = exp(-pow((d - 0.16 * unit) / (0.04 * unit), 2.0)) * side * (1.0 - 0.6 * morph);
+  float halo = exp(-max(d, 0.0) / (0.18 * unit)) * (1.0 - cover);
 
   // Cool where the rim faces the light, warm on the far side.
   vec3 tint = mix(vec3(1.0, 0.76, 0.46), vec3(0.62, 0.84, 1.0), facing);
-  vec3 rimLight = mix(vec3(1.0), tint, 0.45) * edge * (0.3 + 0.6 * pow(facing, 1.5) + 0.35 * pow(away, 2.0));
-  vec3 lines = vec3(0.86, 0.92, 1.0) * (face * (0.05 + 0.1 * facing) + wall * 0.06);
-  vec3 glow = vec3(0.6, 0.72, 0.9) * halo * 0.05;
-  // The lockup glows only where it can be seen: through the glass, just past its rim, or once
-  // the stage lights come up.
-  float shown = max(outside, inside * max(cover, exp(-max(d, 0.0) / (0.4 * size.y))));
-  vec3 amount = (rimLight + lines + glow) * rims + vec3(sheen * mix(0.12, 0.32, dark)) +
-    textureLod(lockup, p / stage, 4.5).rgb * bloom * shown;
-  vec4 c = light(seen, amount);
+  vec3 rimLight = mix(vec3(1.0), tint, 0.5) * edge * (0.3 + 0.6 * pow(facing, 1.5) + 0.35 * pow(away, 2.0));
+  vec3 lines = vec3(0.86, 0.92, 1.0) * (face * (0.05 + 0.1 * facing) + ring * 0.22 + walls * 0.08 * (0.4 + side) + glint * 0.16);
+  vec3 bloom = vec3(0.6, 0.72, 0.9) * halo * 0.05 * exposure;
+  vec4 c = light(seen, (rimLight + lines + bloom) * glass);
 
-  // Half a level of noise keeps the soft glows from banding while the glass is there.
   float noise = fract(sin(dot(gl_FragCoord.xy + seed, vec2(12.9898, 78.233))) * 43758.5453);
-  c.rgb += (noise - 0.5) / 255.0 * c.a * step(0.001, rims + bloom + shine);
+  c.rgb += (noise - 0.5) / 255.0 * c.a * step(0.001, glass);
   colour = clamp(c, 0.0, 1.0);
 }`;
 
-/** The finished lockup's box and its mark's horizontal extent, in stage pixels. */
-type LogoRevealLayout = {
-  left: number;
-  right: number;
-  top: number;
-  bottom: number;
-  markLeft: number;
-  markRight: number;
-};
+/** The mark's rectangle on the stage: its centre and size, in stage pixels. */
+type LogoRevealLayout = { x: number; y: number; width: number; height: number };
 
 type LogoRevealStage = {
   /** The stage colour, premultiplied, 0 to 1. */
   backdrop: [number, number, number, number];
   /** Whether highlights add light (a dark stage) or shade (a light one). */
   dark: boolean;
-  /** The glass thickness preference: 1 is regular, thicker glass bends and splits more. */
+  /** The glass thickness preference: 1 is regular; thicker glass magnifies and splits more. */
   thickness: number;
 };
 
 export type LogoRevealRenderer = {
   /** Draws the reveal `time` seconds in. */
   draw: (time: number) => void;
-  /** The finished lockup at the canvas's own resolution. */
-  setLockup: (source: TexImageSource, layout: LogoRevealLayout) => void;
+  /** The mark at high resolution, for the glass to magnify. */
+  setMark: (source: TexImageSource) => void;
+  /** The mark as the page draws it, at the canvas's own resolution, and where it sits. */
+  setStill: (source: TexImageSource, layout: LogoRevealLayout) => void;
   setStage: (stage: LogoRevealStage) => void;
   /** Wavelengths sampled per pixel, from 3 to 8. */
   setTaps: (taps: number) => void;
   resize: (width: number, height: number, ratio: number) => void;
-  /** The largest canvas side the GPU accepts. */
+  /** The largest texture side the GPU accepts. */
   limit: number;
   dispose: () => void;
 };
@@ -203,37 +214,36 @@ const mix = (a: number, b: number, x: number) => a + (b - a) * x;
 
 const smooth = (x: number) => x * x * (3 - 2 * x);
 
+const easeOut = (x: number) => 1 - (1 - x) ** 3;
+
 const sineInOut = (x: number) => (1 - Math.cos(Math.PI * x)) / 2;
 
-/** A CSS cubic-bezier timing function, solved for x by bisection. */
-function bezier(x1: number, y1: number, x2: number, y2: number) {
-  const curve = (t: number, a: number, b: number) =>
-    3 * a * t * (1 - t) ** 2 + 3 * b * t * t * (1 - t) + t ** 3;
+const sineOut = (x: number) => Math.sin((Math.PI * x) / 2);
 
-  return (x: number) => {
-    let low = 0;
-    let high = 1;
+/** Where the ball's centre looks on the mark, as fractions of the mark's larger side. */
+const VIEW = [
+  [0.12, -0.28, -0.24],
+  [0.42, 0.08, 0.06],
+  [0.95, -0.05, -0.04],
+  [1.25, 0, 0],
+] as const;
 
-    for (let step = 0; step < 24; step++) {
-      const t = (low + high) / 2;
+function along(t: number) {
+  const next = VIEW.findIndex(([time]) => time > t);
 
-      if (curve(t, x1, x2) < x) low = t;
-      else high = t;
-    }
+  if (next === 0) return [VIEW[0][1], VIEW[0][2]];
 
-    return curve((low + high) / 2, y1, y2);
-  };
+  if (next < 0) return [0, 0];
+
+  const [from, to] = [VIEW[next - 1], VIEW[next]];
+  const x = sineInOut(span(t, from[0], to[0]));
+
+  return [mix(from[1], to[1], x), mix(from[2], to[2], x)];
 }
-
-/** The library's arrival curve, --lg-ease-out. */
-const easeOut = bezier(0.32, 0.72, 0, 1);
-
-/** A settle with one small overshoot, about 9%. */
-const spring = (x: number) => (x >= 1 ? 1 : 1 - Math.exp(-6 * x) * Math.cos(8 * x));
 
 /**
  * Weights for `taps` wavelengths from red to violet. Each channel's weights sum to 1, so plain
- * glass passes white unchanged and only bending separates the colours.
+ * glass passes white unchanged and only scaling separates the colours.
  */
 function spectrum(taps: number) {
   const bump = (x: number, middle: number, width: number) =>
@@ -256,58 +266,41 @@ function spectrum(taps: number) {
 }
 
 /** Every uniform for one moment of the reveal, for glass `thickness` times regular. */
-function revealFrame(time: number, height: number, layout: LogoRevealLayout, thickness: number) {
+function revealFrame(time: number, layout: LogoRevealLayout, thickness: number) {
   const t = clamp(time, 0, LOGO_REVEAL_LENGTH);
-  const tall = capsuleHeight(layout, height);
-  const half = tall / 2;
-  const middle = (layout.top + layout.bottom) / 2;
-  const mark = (layout.markLeft + layout.markRight) / 2;
-  // Long enough to carry the mark with a margin of glass on either side.
-  const pill = Math.max(tall * 1.25, layout.markRight - layout.markLeft + tall * 0.7);
-  const reach = layout.right + tall * 0.3;
-
-  // The arriving capsule's centre, then its leading end once it springs out across the name.
-  const arrival = mix(layout.left - tall * 1.4, mark, easeOut(span(t, 0.04, 0.95)));
-
-  const end = (at: number) =>
-    mix(mark + pill / 2, reach, spring(span(at, 0.82, 1.9))) + Math.min(arrival - mark, 0);
-
-  const left = arrival - pill / 2;
-  const right = Math.max(end(t), arrival + pill / 2);
-  const speed = Math.abs(end(t + 0.01) - end(t - 0.01)) / 0.02;
+  const unit = Math.max(layout.width, layout.height, 1);
+  const morph = sineInOut(span(t, 0.24, 0.42));
+  const clear = sineInOut(span(t, 1.06, 1.3));
+  const grown = 0.42 + 0.5 * easeOut(span(t, 0.1, 0.45)) + 0.17 * sineOut(span(t, 0.42, 1.25));
+  const half = unit * grown;
+  const swell = t < 0.3 ? 1 : 0.9 * Math.exp(-(t - 0.3) / 0.3) + 0.1 * (1 - span(t, 0.3, 1.3));
+  const [viewX, viewY] = along(t);
   const settled = t >= LOGO_REVEAL_LENGTH;
-  const relax = sineInOut(span(t, 1.7, 2.3));
+  const depth = 0.7 + 0.3 * thickness;
 
   const pairs = {
-    centre: [(left + right) / 2, middle],
-    size: [(right - left) / 2, half],
+    centre: [layout.x, layout.y],
+    view: [viewX * unit, viewY * unit],
   } satisfies Record<string, readonly [number, number]>;
 
   const floats = {
-    bevel: half * 0.5 * (0.75 + 0.25 * thickness),
-    zoom: settled ? 1 : 1 + 0.42 * (0.7 + 0.3 * thickness) * (1 - sineInOut(span(t, 0.35, 2.3))),
-    bend: settled ? 0 : half * 0.6 * (0.6 + 0.4 * thickness) * (1 - relax),
-    // The end cap reaches back hardest at the pass's fastest moment.
-    smear: settled
+    exposure: smooth(span(t, 0.12, 0.17)),
+    rest: settled ? 1 : span(t, 1.3, 1.5),
+    extent: half,
+    radius: mix(half, 0.46 * half, morph),
+    corner: mix(2, 2.7, morph),
+    morph,
+    bevel: mix(half, 0.3 * unit, morph) * (0.8 + 0.2 * thickness),
+    zoom: settled ? 1 : mix(1 + 1.0 * depth * swell, 1, clear),
+    split: settled ? 0 : 0.035 * depth * (1 - clear),
+    glass: settled
       ? 0
-      : clamp(speed / (tall * 6)) * tall * 0.55 * (0.6 + 0.4 * thickness) * (1 - relax),
-    split: settled ? 0 : 0.14 * (0.5 + 0.5 * thickness) * (1 - sineInOut(span(t, 1.8, 2.3))),
-    rims: settled ? 0 : easeOut(span(t, 0, 0.3)) * (1 - span(t, 2.15, 2.55)),
-    haze: settled ? 0 : 0.3 * smooth(span(t, 0.1, 0.5)) * (1 - span(t, 1.6, 2.2)),
-    sweep: mix(-0.3, 1.3, span(t, 1.85, 2.45)),
-    shine: settled ? 0 : Math.sin(Math.PI * span(t, 1.85, 2.45)),
-    inside: smooth(span(t, 0.1, 0.45)),
-    outside: settled ? 1 : sineInOut(span(t, 1.75, 2.35)),
-    soft: settled ? 0 : 1 - span(t, 2.2, LOGO_REVEAL_LENGTH),
-    bloom: settled ? 0 : 0.12 * smooth(span(t, 0.3, 0.6)) * (1 - span(t, 1.9, 2.4)),
+      : easeOut(span(t, 0.06, 0.24)) * (1 - 0.75 * clear) * (1 - span(t, 1.32, 1.55)),
+    glow: 0.9 * (1 - clear),
+    haze: mix(0.6, 0.15, morph) * (1 - clear),
   } satisfies Record<string, number>;
 
   return { floats, pairs };
-}
-
-/** The capsule's height: a little over the lockup's, kept inside the stage. */
-function capsuleHeight(layout: LogoRevealLayout, height: number) {
-  return Math.max(Math.min((layout.bottom - layout.top) * 2, height * 0.86), 1);
 }
 
 function compile(gl: WebGL2RenderingContext, type: number, source: string) {
@@ -347,7 +340,7 @@ export function createLogoRevealRenderer(canvas: HTMLCanvasElement): LogoRevealR
   if (!program) throw new Error('The logo reveal could not create a program.');
 
   const shaders: WebGLShader[] = [];
-  let texture: WebGLTexture | null = null;
+  const textures: WebGLTexture[] = [];
   let vertices: WebGLVertexArrayObject | null = null;
 
   const releaseShaders = () => {
@@ -370,7 +363,7 @@ export function createLogoRevealRenderer(canvas: HTMLCanvasElement): LogoRevealR
     gl.bindTexture(gl.TEXTURE_2D, null);
     gl.bindVertexArray(null);
 
-    if (texture) gl.deleteTexture(texture);
+    for (const texture of textures) gl.deleteTexture(texture);
 
     if (vertices) gl.deleteVertexArray(vertices);
 
@@ -412,32 +405,50 @@ export function createLogoRevealRenderer(canvas: HTMLCanvasElement): LogoRevealR
     const pair = (name: string, [x, y]: readonly [number, number]) =>
       gl.uniform2f(location(name), x, y);
 
-    texture = gl.createTexture();
+    const texture = (unit: number, name: string) => {
+      const created = gl.createTexture();
 
-    if (!texture) throw new Error('The logo reveal could not create a texture.');
+      if (!created) throw new Error('The logo reveal could not create a texture.');
 
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    // An empty pixel until the lockup is drawn.
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
-    gl.generateMipmap(gl.TEXTURE_2D);
-    gl.uniform1i(location('lockup'), 0);
+      textures.push(created);
+      gl.activeTexture(gl.TEXTURE0 + unit);
+      gl.bindTexture(gl.TEXTURE_2D, created);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      // An empty pixel until the mark is drawn.
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA,
+        1,
+        1,
+        0,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        new Uint8Array(4),
+      );
+      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.uniform1i(location(name), unit);
 
-    let height = 1;
-    let thickness = 1;
-
-    let layout: LogoRevealLayout = {
-      left: 0,
-      right: 0,
-      top: 0,
-      bottom: 0,
-      markLeft: 0,
-      markRight: 0,
+      return created;
     };
+
+    const markTexture = texture(0, 'mark');
+    const stillTexture = texture(1, 'still');
+
+    const upload = (unit: number, target: WebGLTexture, source: TexImageSource) => {
+      gl.activeTexture(gl.TEXTURE0 + unit);
+      gl.bindTexture(gl.TEXTURE_2D, target);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+      gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+      gl.generateMipmap(gl.TEXTURE_2D);
+    };
+
+    let thickness = 1;
+    let layout: LogoRevealLayout = { x: 0, y: 0, width: 0, height: 0 };
 
     const setTaps = (taps: number) => {
       const count = Math.round(clamp(taps, 3, 8));
@@ -456,13 +467,12 @@ export function createLogoRevealRenderer(canvas: HTMLCanvasElement): LogoRevealR
 
     return {
       limit: Math.min(largest, 4096),
-      setLockup(source, next) {
+      setMark(source) {
+        upload(0, markTexture, source);
+      },
+      setStill(source, next) {
         layout = next;
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-        gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
-        gl.generateMipmap(gl.TEXTURE_2D);
+        upload(1, stillTexture, source);
       },
       setStage(stage) {
         const [r, g, b, a] = stage.backdrop;
@@ -472,23 +482,29 @@ export function createLogoRevealRenderer(canvas: HTMLCanvasElement): LogoRevealR
         thickness = stage.thickness;
       },
       setTaps,
-      resize(width, nextHeight, ratio) {
-        height = nextHeight;
+      resize(width, height, ratio) {
         canvas.width = Math.max(1, Math.round(width * ratio));
-        canvas.height = Math.max(1, Math.round(nextHeight * ratio));
+        canvas.height = Math.max(1, Math.round(height * ratio));
         gl.viewport(0, 0, canvas.width, canvas.height);
-        pair('stage', [width, nextHeight]);
+        pair('stage', [width, height]);
         pair('pixels', [canvas.width, canvas.height]);
       },
       draw(time) {
         if (gl.isContextLost()) return;
 
-        const { floats, pairs } = revealFrame(time, height, layout, thickness);
+        const { floats, pairs } = revealFrame(time, layout, thickness);
 
         for (const [name, value] of Object.entries(floats)) float(name, value);
 
         for (const [name, value] of Object.entries(pairs)) pair(name, value);
 
+        gl.uniform4f(
+          location('markRect'),
+          layout.x,
+          layout.y,
+          Math.max(layout.width, 1) * (1 + MARGIN * 2),
+          Math.max(layout.height, 1) * (1 + MARGIN * 2),
+        );
         float('seed', (time * 61.7) % 97);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
       },
@@ -499,6 +515,9 @@ export function createLogoRevealRenderer(canvas: HTMLCanvasElement): LogoRevealR
     throw error;
   }
 }
+
+// The sharp picture's clear margin, as a fraction of the mark on each side.
+const MARGIN = 0.4;
 
 /** Reads any CSS colour as sRGB through a one-pixel canvas, premultiplied, 0 to 1. */
 export function readColour(value: string): [number, number, number, number] {
@@ -517,41 +536,39 @@ export function readColour(value: string): [number, number, number, number] {
   return [(r / 255) * alpha, (g / 255) * alpha, (b / 255) * alpha, alpha];
 }
 
-type LogoRevealParts = {
-  figure: HTMLElement;
-  mark: HTMLImageElement;
-  /** The name's element. Its last child is the text. */
-  name: HTMLElement;
-  /** An empty inline block at the name's baseline. */
-  baseline: HTMLElement;
-};
-
 /**
- * The finished lockup as the page lays it out, drawn at the canvas's resolution: the mark where
- * its image sits and each character of the name where the browser placed it, so the last frame
- * lands on the real lockup.
+ * Pictures of the mark: one as the page lays it out, at the canvas's resolution, so the last
+ * frame lands on the real mark; and one `detail` times sharper at the mark's own aspect, for the
+ * glass to magnify. An SVG rasterises sharp at either size.
  */
-export function paintLockup(
-  { baseline, figure, mark, name }: LogoRevealParts,
+export function paintMark(
+  figure: HTMLElement,
+  mark: HTMLImageElement,
   pixelWidth: number,
   pixelHeight: number,
+  detail: number,
+  limit: number,
 ) {
   const box = figure.getBoundingClientRect();
-  const canvas = document.createElement('canvas');
-  canvas.width = pixelWidth;
-  canvas.height = pixelHeight;
-  const ink = canvas.getContext('2d');
-
-  if (!ink || !box.width || !box.height)
-    throw new Error('The logo reveal could not draw its lockup.');
-
-  // Client rectangles are in the page's (possibly scaled) pixels; the stage uses the figure's own.
-  const toStage = figure.clientWidth / box.width;
   const markBox = mark.getBoundingClientRect();
-  const nameBox = name.getBoundingClientRect();
-  const style = getComputedStyle(name);
-  const text = name.lastChild;
-  const rtl = style.direction === 'rtl';
+
+  if (!box.width || !box.height || !markBox.width || !markBox.height)
+    throw new Error('The logo reveal could not measure its mark.');
+
+  const still = document.createElement('canvas');
+  still.width = pixelWidth;
+  still.height = pixelHeight;
+  const ink = still.getContext('2d');
+  const scale = pixelWidth / box.width;
+  const sharp = document.createElement('canvas');
+  // A clear margin around the sharp picture lets its blurred glow fade out before its edge.
+  const room = 1 + MARGIN * 2;
+  const fit = Math.min(detail, limit / (Math.max(markBox.width, markBox.height) * scale * room));
+  sharp.width = Math.max(1, Math.round(markBox.width * scale * fit * room));
+  sharp.height = Math.max(1, Math.round(markBox.height * scale * fit * room));
+  const pen = sharp.getContext('2d');
+
+  if (!ink || !pen) throw new Error('The logo reveal could not draw its mark.');
 
   ink.scale(pixelWidth / box.width, pixelHeight / box.height);
   ink.drawImage(
@@ -561,56 +578,25 @@ export function paintLockup(
     markBox.width,
     markBox.height,
   );
-  ink.font = [
-    style.fontStyle,
-    style.fontVariantCaps === 'small-caps' ? 'small-caps' : '',
-    style.fontWeight,
-    style.fontSize,
-    style.fontFamily,
-  ]
-    .filter(Boolean)
-    .join(' ');
-  ink.fillStyle = style.color;
-  ink.textAlign = rtl ? 'right' : 'left';
-  ink.textBaseline = 'alphabetic';
+  pen.drawImage(
+    mark,
+    (sharp.width * MARGIN) / room,
+    (sharp.height * MARGIN) / room,
+    sharp.width / room,
+    sharp.height / room,
+  );
 
-  // Browsers paint a line's text from whole device pixels, so the canvas does too.
-  const across = pixelWidth / box.width;
-  const down = pixelHeight / box.height;
-  const snapX = (x: number) => Math.round(x * across) / across;
-  const snapY = (y: number) => Math.round(y * down) / down;
-
-  if (text?.nodeType === Node.TEXT_NODE && text.textContent) {
-    const range = document.createRange();
-    const y = snapY(baseline.getBoundingClientRect().top - box.top);
-    let index = 0;
-
-    for (const { segment } of new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(
-      text.textContent,
-    )) {
-      range.setStart(text, index);
-      range.setEnd(text, index + segment.length);
-      index += segment.length;
-
-      const glyph = range.getClientRects()[0];
-
-      if (glyph && segment.trim())
-        ink.fillText(segment, snapX((rtl ? glyph.right : glyph.left) - box.left), y);
-    }
-  }
-
-  const stageX = (x: number) => (x - box.left) * toStage;
-  const stageY = (y: number) => (y - box.top) * toStage;
+  // Client rectangles are in the page's (possibly scaled) pixels; the stage uses the figure's own.
+  const toStage = figure.clientWidth / box.width;
 
   return {
-    canvas,
+    still,
+    sharp,
     layout: {
-      left: stageX(Math.min(markBox.left, nameBox.left)),
-      right: stageX(Math.max(markBox.right, nameBox.right)),
-      top: stageY(Math.min(markBox.top, nameBox.top)),
-      bottom: stageY(Math.max(markBox.bottom, nameBox.bottom)),
-      markLeft: stageX(markBox.left),
-      markRight: stageX(markBox.right),
+      x: (markBox.left + markBox.width / 2 - box.left) * toStage,
+      y: (markBox.top + markBox.height / 2 - box.top) * toStage,
+      width: markBox.width * toStage,
+      height: markBox.height * toStage,
     } satisfies LogoRevealLayout,
   };
 }

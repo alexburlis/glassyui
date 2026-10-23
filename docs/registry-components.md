@@ -535,21 +535,22 @@ Package dependencies: `clsx`.
 Registry dependencies: none.
 
 Purpose: a logo sting drawn by one WebGL2 fragment shader. On a dark stage a
-capsule of thick glass glides in over the mark on `--lg-ease-out`, lighting it
-only through the glass; its leading end springs out across the name, and its end
-cap stretches the letters it reaches, split into colour. The glass then relaxes,
-one highlight runs along it, the stage lights come up and it lands exactly on
-the real lockup, which the page lays out and keeps. The capsule magnifies across
-its spine, as a rod of glass does, so type grows taller under it without
-sliding. Refraction samples seven wavelengths at high quality, five at medium
-and three at low, and the glass thickness preference widens the rim, bends
-further and splits more.
+ball of thick glass swells out in front of the mark, magnifying it and glowing
+with its light; the ball squares into a rounded glass tile that slowly comes
+closer while the magnification relaxes and colour plays along its bevel. The
+glass then clears, the tile fades to an outline and goes, and the reveal lands
+exactly on the real mark, which the page lays out and keeps. The glass only ever
+moves and uniformly scales the mark, never stretches or skews it: colour splits
+because each wavelength is scaled a touch differently. Refraction samples seven
+wavelengths at high quality, five at medium and three at low, and the glass
+thickness preference magnifies further and splits more.
 
-`markSrc` is an image from your origin or served with CORS and `name` is the
-text beside it, set in the figure's font and colour. The figure's background is
-the stage. `play` starts it once on screen or on mount, `progress` holds a
-moment, and a new `key` plays it again. Reduced motion and reduced transparency
-show the lockup at once; without WebGL2 the lockup shows without the glass.
+`markSrc` is an image from your origin or served with CORS and `label` its
+accessible name. The figure's background is the stage and
+`--lg-logo-reveal-size` sets the mark's height. `play` starts it once on screen
+or on mount, `progress` holds a moment, and a new `key` plays it again. Reduced
+motion and reduced transparency show the mark at once; without WebGL2 the mark
+shows without the glass.
 
 ## Mockups
 

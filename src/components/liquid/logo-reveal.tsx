@@ -7,7 +7,7 @@ import type { HTMLAttributes } from 'react';
 import {
   createLogoRevealRenderer,
   LOGO_REVEAL_LENGTH,
-  paintLockup,
+  paintMark,
   readColour,
 } from './lib/logo-reveal-renderer';
 import type { LogoRevealRenderer } from './lib/logo-reveal-renderer';
@@ -20,15 +20,15 @@ type RevealState = 'waiting' | 'playing' | 'held' | 'ended';
 export type GlassLogoRevealProps = Omit<HTMLAttributes<HTMLElement>, 'children'> & {
   /** The mark, from your origin or served with CORS. An SVG stays sharp under the glass. */
   markSrc: string;
-  /** The name set beside the mark, in the figure's font and colour. Also its accessible name. */
-  name: string;
+  /** The mark's accessible name, such as your product's name. */
+  label: string;
   /** Plays once: when the figure is mostly on screen, or as soon as it mounts. */
   play?: GlassLogoRevealPlay;
-  /** Holds one moment, from 0 (the dark stage) to 1 (the lockup). Clearing it plays on. */
+  /** Holds one moment, from 0 (the dark stage) to 1 (the mark at rest). Clearing it plays on. */
   progress?: number;
-  /** Milliseconds from the dark stage to the lockup. */
+  /** Milliseconds from the dark stage to the mark at rest. */
   duration?: number;
-  /** Called once the lockup has landed. */
+  /** Called once the mark has landed. */
   onComplete?: () => void;
 };
 
@@ -55,19 +55,18 @@ function luminance([r, g, b, a]: readonly number[]) {
 }
 
 /**
- * A logo sting: a capsule of thick glass carries the mark and then the name into view, bending
- * and splitting them at its rim, and lands exactly on the real lockup, which stays in the page.
+ * A logo sting: a ball of thick glass swells out of the dark in front of the mark, squares into a
+ * rounded tile and clears, leaving the real mark, which stays in the page. The glass only moves
+ * and uniformly scales the mark; it never stretches it.
  */
 export const GlassLogoReveal = forwardRef<HTMLElement, GlassLogoRevealProps>(
   (
-    { className, duration = 2600, markSrc, name, onComplete, play = 'visible', progress, ...rest },
+    { className, duration = 1700, label, markSrc, onComplete, play = 'visible', progress, ...rest },
     forwardedRef,
   ) => {
     const figureRef = useRef<HTMLElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const markRef = useRef<HTMLImageElement>(null);
-    const nameRef = useRef<HTMLSpanElement>(null);
-    const baselineRef = useRef<HTMLSpanElement>(null);
     const [state, setState] = useState<RevealState>('waiting');
     const [error, setError] = useState<string>();
     const latest = useRef({ duration, onComplete, play, progress });
@@ -83,19 +82,18 @@ export const GlassLogoReveal = forwardRef<HTMLElement, GlassLogoRevealProps>(
 
     useLayoutEffect(() => {
       controls.current?.paint();
-    }, [markSrc, name]);
+    }, [markSrc]);
 
     useLayoutEffect(() => {
       const figure = figureRef.current!;
       const canvas = canvasRef.current!;
       const mark = markRef.current!;
-      const parts = { figure, mark, name: nameRef.current!, baseline: baselineRef.current! };
       let renderer: LogoRevealRenderer;
 
       try {
         renderer = createLogoRevealRenderer(canvas);
       } catch {
-        // Without WebGL2 the lockup simply shows.
+        // Without WebGL2 the mark simply shows.
         figure.dataset.renderer = 'none';
         setState('ended');
 
@@ -198,7 +196,7 @@ export const GlassLogoReveal = forwardRef<HTMLElement, GlassLogoRevealProps>(
         draw();
       };
 
-      // Draws the lockup as the page lays it out, in the figure's colours, at the device's
+      // Draws the mark as the page lays it out, in the figure's colours, at the device's
       // resolution within the quality preference.
       const paint = () => {
         painting = 0;
@@ -235,9 +233,17 @@ export const GlassLogoReveal = forwardRef<HTMLElement, GlassLogoRevealProps>(
         });
 
         try {
-          const lockup = paintLockup(parts, canvas.width, canvas.height);
+          const pictures = paintMark(
+            figure,
+            mark,
+            canvas.width,
+            canvas.height,
+            2.5,
+            renderer.limit,
+          );
 
-          renderer.setLockup(lockup.canvas, lockup.layout);
+          renderer.setMark(pictures.sharp);
+          renderer.setStill(pictures.still, pictures.layout);
         } catch {
           setError('The mark needs permission to load across origins.');
           finish();
@@ -338,27 +344,22 @@ export const GlassLogoReveal = forwardRef<HTMLElement, GlassLogoRevealProps>(
     return (
       <figure
         ref={figureRef}
-        aria-label={name}
+        aria-label={label}
         className={clsx('lg-logo-reveal', className)}
         data-state={state}
         role="img"
         {...rest}
       >
         <canvas ref={canvasRef} aria-hidden className="lg-logo-reveal-canvas" />
-        <span aria-hidden className="lg-logo-reveal-lockup">
-          <img
-            ref={markRef}
-            alt=""
-            className="lg-logo-reveal-mark"
-            crossOrigin="anonymous"
-            draggable={false}
-            src={markSrc}
-          />
-          <span ref={nameRef} className="lg-logo-reveal-name">
-            <span ref={baselineRef} className="lg-logo-reveal-baseline" />
-            {name}
-          </span>
-        </span>
+        <img
+          ref={markRef}
+          alt=""
+          aria-hidden
+          className="lg-logo-reveal-mark"
+          crossOrigin="anonymous"
+          draggable={false}
+          src={markSrc}
+        />
         {error ? <figcaption className="lg-logo-reveal-error">{error}</figcaption> : null}
       </figure>
     );
