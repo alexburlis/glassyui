@@ -12,15 +12,13 @@ already have a `components.json`:
 pnpm dlx shadcn@4.14.1 init
 ```
 
-Then configure the Glassy UI namespace in `components.json`:
-
-```json
-{
-  "registries": {
-    "@glassyui": "https://glassyui.com/r/{name}.json"
-  }
-}
-```
+Glassy UI is listed in the
+[shadcn registry directory](https://ui.shadcn.com/docs/directory), which maps
+`@glassyui` to `https://glassyui.com/r/{name}.json` and `@glassyui-native` to
+`https://glassyui.com/r/native/{name}.json`. The CLI resolves both with no
+`registries` mapping, and saves the mapping into `components.json` on the first
+install. A mapping already in `components.json` takes precedence over the
+directory.
 
 Add the component you need:
 
@@ -63,9 +61,9 @@ the docs app before installing unpublished local changes:
 pnpm exec next dev -H 127.0.0.1 -p 3000
 ```
 
-Temporarily replace the public namespace URL with
+Temporarily map `@glassyui` in `components.json` to
 `http://127.0.0.1:3000/r/{name}.json`, using the actual loopback port of the
-local server.
+local server; the mapping overrides the directory.
 
 ## Local verification
 
@@ -145,7 +143,7 @@ install only the items the consumer uses.
 restyles the stock shadcn/ui components an app already has:
 
 ```bash
-pnpm dlx shadcn@4.14.1 add https://glassyui.com/r/glassy-theme.json
+pnpm dlx shadcn@4.14.1 add @glassyui/glassy-theme
 ```
 
 The CLI writes its `--glassy-*` tokens into `:root` and `.dark`, its easing
@@ -169,7 +167,7 @@ alert, badge, input, textarea, select, checkbox, radio group, switch, slider,
 tabs, dropdown menu, popover, dialog and sheet.
 
 ```bash
-pnpm dlx shadcn@4.14.1 add https://glassyui.com/r/glassy-ui-new-york.json --overwrite
+pnpm dlx shadcn@4.14.1 add @glassyui/glassy-ui-new-york --overwrite
 ```
 
 Each drop-in is shadcn/ui's stock file for that style, with the same exports,
@@ -192,19 +190,12 @@ sources are in `registry/glassyui-shadcn`; `pnpm theme:build` writes them and
 `public/r/native` under the `@glassyui-native` namespace. `shadcn init` does not
 set up Expo apps, so an Expo consumer writes its own `components.json`; see
 [`fixtures/expo-consumer/components.json`](../fixtures/expo-consumer/components.json)
-for a minimal one. Map the namespace to the hosted or loopback payloads.
+for a minimal one. The directory resolves the hosted payloads; map the namespace
+only to test loopback payloads.
 
 Match the `@/` imports in `tsconfig.json`: retain an existing mapping or set
 `"paths": { "@/*": ["./*"] }` under `compilerOptions` for an app-root install.
 Use `./src/*` for a `src` install.
-
-```json
-{
-  "registries": {
-    "@glassyui-native": "https://glassyui.com/r/native/{name}.json"
-  }
-}
-```
 
 ```bash
 npx shadcn@4.14.1 add @glassyui-native/glass-button

@@ -3890,12 +3890,6 @@ export const glassThemeRoot = `<html lang="en" data-lg-theme="light">
   <body>{children}</body>
 </html>`;
 
-export const publicRegistryMapping = `{
-  "registries": {
-    "@glassyui": "https://glassyui.com/r/{name}.json"
-  }
-}`;
-
 export const componentCategories: ComponentCategory[] = [
   'Core',
   'Surfaces',

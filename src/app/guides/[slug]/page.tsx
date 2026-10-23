@@ -8,15 +8,10 @@ import {
   getComponentDoc,
   glassThemeRoot,
   initializeShadcn,
-  publicRegistryMapping,
 } from '@/components/docs/component-docs-data';
 import { CopyCodeBlock } from '@/components/docs/copy-code-block';
 import { DocsShell } from '@/components/docs/docs-shell';
-import {
-  expoComponentsJson,
-  expoRegistryMapping,
-  expoTsconfigPaths,
-} from '@/components/docs/expo-setup';
+import { expoComponentsJson, expoTsconfigPaths } from '@/components/docs/expo-setup';
 import { getGuide, guides } from '@/components/docs/guide-data';
 import { nativeInstallCommand } from '@/lib/native-usage-source';
 import { installCommand } from '@/lib/install-command';
@@ -76,8 +71,9 @@ function InstallationGuide() {
           language="shell"
         />
         <p>
-          The full URL needs no registry mapping. Each component page also offers pnpm, yarn and bun
-          commands, plus a Manual tab with the packages and complete source files.
+          Glassy UI is in the shadcn registry directory, so <code>@glassyui</code> needs no setup.
+          Each component page also offers pnpm, yarn and bun commands, plus a Manual tab with the
+          packages and complete source files.
         </p>
         <p>
           Set <code>data-lg-theme="light"</code> on a light app&rsquo;s root element, or{' '}
@@ -129,28 +125,14 @@ function InstallationGuide() {
           <Link href="/docs">installation reference</Link> explains the shared files and optional
           provider.
         </p>
-        <details>
-          <summary>Optional registry shorthand</summary>
-          <p>
-            To keep using names such as <code>@glassyui/glass-button</code>, merge this mapping into
-            your existing <code>components.json</code>. Keep its aliases, style and other
-            registries.
-          </p>
-          <CopyCodeBlock
-            code={publicRegistryMapping}
-            label="Optional registry mapping"
-            language="json"
-          />
-        </details>
       </section>
     </>
   );
 }
 
-const themeInstall = 'pnpm dlx shadcn@4.14.1 add https://glassyui.com/r/glassy-theme.json';
+const themeInstall = 'pnpm dlx shadcn@4.14.1 add @glassyui/glassy-theme';
 
-const dropinInstall =
-  'pnpm dlx shadcn@4.14.1 add https://glassyui.com/r/glassy-ui-new-york.json --overwrite';
+const dropinInstall = 'pnpm dlx shadcn@4.14.1 add @glassyui/glassy-ui-new-york --overwrite';
 
 const themeTokens = `:root {
   --glassy-tint: 84%;    /* tinted buttons, badges and checked controls */
@@ -210,12 +192,7 @@ function ShadcnThemeGuide() {
           command in a shadcn/ui app on Tailwind CSS 4:
         </p>
         <CopyCodeBlock code={themeInstall} label="Install the Glassy UI theme" language="shell" />
-        <p>
-          If your <code>components.json</code> already maps <code>@glassyui</code> (see{' '}
-          <Link href="/guides/shadcn">the shadcn guide</Link>), the item is also{' '}
-          <code>@glassyui/glassy-theme</code>. The command was tested with shadcn CLI 4.14.1 and
-          4.21.0.
-        </p>
+        <p>The command was tested with shadcn CLI 4.14.1.</p>
         <p>
           Before it writes anything, the CLI warns that a theme overwrites existing CSS variables
           and components. This one changes neither, so answer yes. It writes CSS only: it adds{' '}
@@ -356,9 +333,9 @@ function ShadcnThemeGuide() {
           language="shell"
         />
         <p>
-          On base-nova, which uses Base UI, install <code>glassy-ui-base-nova.json</code> instead.
-          Each drop-in keeps shadcn/ui&rsquo;s exports, props and data attributes for your style, so
-          your imports and call sites stay as they are, Server Components included. Glassy
+          On base-nova, which uses Base UI, install <code>@glassyui/glassy-ui-base-nova</code>{' '}
+          instead. Each drop-in keeps shadcn/ui&rsquo;s exports, props and data attributes for your
+          style, so your imports and call sites stay as they are, Server Components included. Glassy
           UI&rsquo;s blue becomes your palette&rsquo;s primary colour. The engine goes into{' '}
           <code>components/glassyui</code>; only Chromium draws the lens, and Safari and Firefox
           keep the frost. Tune the glass of menus, selects, popovers, dialogs and sheets with{' '}
@@ -631,8 +608,9 @@ function ExpoGuide() {
         <h2>Set up the CLI</h2>
         <p>
           <code>shadcn init</code> does not set up Expo apps, so add a <code>components.json</code>{' '}
-          at the root of your app. If you already have one, keep its aliases and settings. Direct
-          URL commands need no registry mapping.
+          at the root of your app. If you already have one, keep its aliases and settings. The CLI
+          finds <code>@glassyui-native</code> in the shadcn registry directory, so it needs no
+          registry mapping.
         </p>
         <CopyCodeBlock code={expoComponentsJson} label="components.json" language="json" />
         <p>
@@ -646,18 +624,6 @@ function ExpoGuide() {
           it installs as if it were a list of Tailwind classes, which breaks colour values such as{' '}
           <code>rgba(255, 255, 255, 0.12)</code>.
         </p>
-        <details>
-          <summary>Optional registry shorthand</summary>
-          <p>
-            Existing commands such as <code>@glassyui-native/glass-button</code> still work with
-            this mapping merged into <code>components.json</code>.
-          </p>
-          <CopyCodeBlock
-            code={expoRegistryMapping}
-            label="Optional Expo registry mapping"
-            language="json"
-          />
-        </details>
       </section>
       <section className="docs-section">
         <h2>Install the screen&rsquo;s components</h2>
