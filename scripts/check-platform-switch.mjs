@@ -189,7 +189,7 @@ try {
       (count) => document.querySelectorAll('#installation .docs-install-file').length === count,
       payload.files.length,
     );
-    assert.equal(payload.files.length, native ? 8 : 10);
+    assert.equal(payload.files.length, native ? 11 : 10);
 
     for (const file of payload.files) {
       const entry = installation.locator(`.docs-install-file[data-target="${file.target}"]`);
@@ -286,7 +286,7 @@ try {
   await platform('React Native');
   await page.waitForFunction(
     () =>
-      document.querySelectorAll('#installation .docs-install-file').length === 8 &&
+      document.querySelectorAll('#installation .docs-install-file').length === 11 &&
       document
         .querySelector('#installation .docs-install-file code')
         ?.textContent.includes('react-native'),

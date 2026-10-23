@@ -52,7 +52,7 @@ const glassPackages = [...new Set(registry.items.flatMap((item) => item.dependen
 // read from the source folder, not from the payloads under test.
 const expectedFiles = fs
   .readdirSync(sourceDirectory, { recursive: true })
-  .filter((entry) => /\.tsx?$/.test(entry))
+  .filter((entry) => /\.(tsx?|java|cjs)$/.test(entry))
   .map((entry) => path.join('components', 'glassyui', entry))
   .sort();
 
@@ -129,7 +129,13 @@ async function checkManualButton() {
   assert.equal(response.status, 200, 'native Manual source must load');
   const payload = await response.json();
   assert.equal(payload.registryDependencies, undefined, 'native button needs no registry mapping');
-  assert.equal(payload.files.length, 8, 'native button must include provider and surface');
+  const buttonFiles = new Set(payload.files.map((file) => file.target));
+
+  for (const asset of ['SharedBlurView.java', 'SharedBlurController.java', 'with-glassy-blur.cjs'])
+    assert.ok(
+      buttonFiles.has(`components/glassyui/android/${asset}`),
+      `native button omits ${asset}`,
+    );
 
   for (const file of ['package.json', 'components.json', 'tsconfig.json', 'index.ts', 'app.json'])
     fs.copyFileSync(path.join(fixture, file), path.join(manualRoot, file));
@@ -302,6 +308,31 @@ try {
       glassPackages.map((name) => [name, fixedManifest.dependencies[name]]),
     );
 
+    // Execute the installed config plugin against the actual Expo native dependency.
+    run('npx', ['expo', 'prebuild', '--platform', 'android', '--no-install', '--no-clean']);
+
+    const blurRoot = path.join(temporaryRoot, 'node_modules', 'expo-blur');
+
+    assert.ok(
+      fs
+        .readFileSync(
+          path.join(blurRoot, 'android/src/main/java/expo/modules/blur/ExpoBlurView.kt'),
+          'utf8',
+        )
+        .includes('import eightbitlab.com.blurview.SharedBlurView as BlurView'),
+      'Android prebuild must enable the installed shared blur adapter',
+    );
+
+    for (const asset of ['SharedBlurView.java', 'SharedBlurController.java'])
+      assert.equal(
+        fs.readFileSync(
+          path.join(blurRoot, 'android/src/main/java/eightbitlab/com/blurview', asset),
+          'utf8',
+        ),
+        fs.readFileSync(path.join(sourceDirectory, 'android', asset), 'utf8'),
+        `Android prebuild did not stage ${asset}`,
+      );
+    report.androidPrebuild = 'passed';
     run('npx', ['tsc', '--noEmit']);
     run('npx', [
       'expo',
@@ -363,7 +394,7 @@ try {
 
   console.log(
     manualOnly
-      ? `Manual Expo consumer smoke passed: pnpm, SDK matching, 8 source files, type-check and iOS/Android/web bundles. Report: ${path.join(artifactDirectory, 'report.json')}`
+      ? `Manual Expo consumer smoke passed: pnpm, SDK matching, ${Object.keys(report.manual.files).length} source files, type-check and iOS/Android/web bundles. Report: ${path.join(artifactDirectory, 'report.json')}`
       : `Expo consumer smoke passed: ${registry.items.length} items, ${report.installedFiles.length} files and ${glassPackages.length} packages installed with shadcn ${shadcnManifest.version}; type-checked and bundled for iOS, Android and the web. Report: ${path.join(artifactDirectory, 'report.json')}`,
   );
 } catch (error) {

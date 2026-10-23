@@ -169,7 +169,7 @@ function ManualFile({
       <CopyCodeBlock
         code={content ?? ''}
         label={path}
-        language={path.endsWith('.css') ? 'plain' : 'tsx'}
+        language={/\.[cm]?[jt]sx?$/.test(path) ? 'tsx' : 'plain'}
         header={
           <button
             type="button"

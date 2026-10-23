@@ -35,7 +35,7 @@
       "name": "glass-surface",
       "type": "registry:ui",
       "title": "Glass Surface",
-      "description": "The glass material on its own, with the backdrop Android blurs: the system’s own glass on iOS 26 and later, a lit blur elsewhere.",
+      "description": "The glass material on its own, with the backdrop Android blurs: the system\u2019s own glass on iOS 26 and later, a lit blur elsewhere.",
       "dependencies": ["expo-blur", "expo-glass-effect"],
       "registryDependencies": ["@glassyui-native/glass-provider"],
       "files": [
@@ -53,6 +53,21 @@
           "path": "registry/glassyui-native/lib/material.ts",
           "type": "registry:lib",
           "target": "components/glassyui/lib/material.ts"
+        },
+        {
+          "path": "registry/glassyui-native/android/SharedBlurView.java",
+          "type": "registry:file",
+          "target": "components/glassyui/android/SharedBlurView.java"
+        },
+        {
+          "path": "registry/glassyui-native/android/SharedBlurController.java",
+          "type": "registry:file",
+          "target": "components/glassyui/android/SharedBlurController.java"
+        },
+        {
+          "path": "registry/glassyui-native/android/with-glassy-blur.cjs",
+          "type": "registry:file",
+          "target": "components/glassyui/android/with-glassy-blur.cjs"
         }
       ]
     },

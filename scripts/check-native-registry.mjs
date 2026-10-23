@@ -92,7 +92,12 @@ for (const item of registry.items) {
 
   for (const file of item.files) {
     const relative = path.relative(sourceDirectory, path.join(root, file.path));
-    const expectedType = relative.startsWith('lib/') ? 'registry:lib' : 'registry:ui';
+
+    const expectedType = relative.startsWith('android/')
+      ? 'registry:file'
+      : relative.startsWith('lib/')
+        ? 'registry:lib'
+        : 'registry:ui';
 
     coveredFiles.add(relative);
 
@@ -127,7 +132,7 @@ for (const item of registry.items) {
   for (const file of item.files) {
     const fullPath = path.join(root, file.path);
 
-    if (!fs.existsSync(fullPath)) continue;
+    if (!fs.existsSync(fullPath) || !/\.tsx?$/.test(fullPath)) continue;
 
     for (const specifier of readImports(fullPath)) {
       if (
@@ -172,7 +177,7 @@ for (const item of registry.items) {
 }
 
 for (const entry of fs.readdirSync(sourceDirectory, { recursive: true })) {
-  if (!/\.tsx?$/.test(entry)) continue;
+  if (!/\.(tsx?|java|cjs)$/.test(entry)) continue;
 
   if (!coveredFiles.has(entry))
     failures.push(`registry/glassyui-native/${entry} belongs to no registry item`);

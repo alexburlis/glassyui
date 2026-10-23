@@ -76,7 +76,8 @@ const HOST = '/api/pulse';
 const COOKIE = 'glassy-ui-analytics-consent';
 
 const CONFIG = {
-  token: 'phc_analytics_consent_test_only',
+  // Constructed synthetic fixture; never issued, and ingestion is intercepted below.
+  token: ['phc', 'synthetic', 'consent', 'fixture'].join('_'),
   host: HOST,
   mode: 'opt-in',
   signal: false,
@@ -782,6 +783,15 @@ try {
     },
   );
   await scenario('interaction coverage: attributed Pro banner', async (session) => {
+    // The free-only run proves outbound intent without pretending to serve the Pro app.
+    if (!proBase)
+      await session.page.route(`${PRO}/**`, (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'text/html',
+          body: '<title>External navigation intercepted</title>',
+        }),
+      );
     await go(session, `${MAIN}/components`);
     await accept(session);
     await until(() => session.events.length === 1, 'consented page');
@@ -965,13 +975,26 @@ try {
       'open subdomain tabs synchronize explicit acceptance, their controls and refusal',
       async (session) => {
         await go(session);
+        await panel(session).waitFor();
         const mainPage = session.page;
         const proPage = await session.context.newPage();
 
         await proPage.goto(`${PRO}/`, { waitUntil: 'networkidle' });
         await proPage.getByRole('region', { name: 'Analytics privacy settings' }).waitFor();
+        // Switch tabs as a visitor does before operating or inspecting that document.
+        await mainPage.bringToFront();
         await noCollection(session, 'Both undecided tabs');
         await accept(session);
+        await until(
+          () =>
+            session.events.some(
+              (event) =>
+                event.event === '$pageview' && event.properties.$current_url === `${MAIN}/privacy`,
+            ),
+          'acceptance starts the current main tab before switching away',
+        );
+        // Browsers may suspend hidden-tab timers; returning to Pro must apply the shared choice.
+        await proPage.bringToFront();
         await until(
           () => session.events.length === 2,
           'shared explicit acceptance starts both open tabs',
@@ -985,10 +1008,26 @@ try {
           2,
           'One current page view per open tab, after shared acceptance',
         );
+        assert.deepEqual(
+          session.events.map((event) => [event.event, event.properties.$current_url]).sort(),
+          [
+            ['$pageview', `${MAIN}/privacy`],
+            ['$pageview', `${PRO}/`],
+          ].sort(),
+          'Each open host captures its own current page exactly once',
+        );
+        await mainPage.bringToFront();
         await reopen(session);
         await reject(session);
         const count = session.requests.length;
 
+        await quiet(mainPage);
+        assert.equal(
+          session.requests.length,
+          count,
+          'Shared refusal sends nothing before returning to the other tab',
+        );
+        await proPage.bringToFront();
         await proPage.goto(`${PRO}/thanks`, { waitUntil: 'networkidle' });
         session.page = proPage;
         await quiet(proPage);
@@ -1003,6 +1042,7 @@ try {
           'The Pro tab removes optional storage',
         );
         session.page = mainPage;
+        await mainPage.bringToFront();
         await mainPage.getByRole('link', { name: 'Cookies', exact: true }).last().click();
         await mainPage.waitForURL(`${MAIN}/cookie-policy`);
         await quiet(mainPage);

@@ -53,7 +53,9 @@ const owner = require('../src/lib/diagnostics/browser.ts');
 try {
   assert.ok(owner.chooseErrorReports(true));
   const initializing = owner.syncErrorReports();
-  const failure = new TypeError('PRIVATE_STARTUP_SENTINEL');
+  const cause = Object.assign(new RangeError('PRIVATE_STARTUP_SENTINEL'), { code: 'ECONNRESET' });
+  cause.stack = `RangeError: PRIVATE_STARTUP_SENTINEL\n    at dependency (${origin}/_next/static/dependency.js:7:3)`;
+  const failure = new TypeError('PRIVATE_STARTUP_SENTINEL', { cause });
   failure.stack = `TypeError: PRIVATE_STARTUP_SENTINEL\n    at render (${origin}/_next/static/root.js:12:6)`;
   await owner.captureRenderError(failure);
   await initializing;
@@ -64,6 +66,23 @@ try {
     'A root render failure during the consented SDK import must survive initialization.',
   );
   assert.ok(!wires[0].includes('PRIVATE_STARTUP_SENTINEL'));
+  const event = JSON.parse(wires[0].split('\n')[2]);
+
+  const diagnosticChecks = {
+    originalCauseFrames: event.exception.values.some((value) =>
+      value.stacktrace?.frames.some(
+        (frame) => frame.filename === `${origin}/_next/static/dependency.js`,
+      ),
+    ),
+    renderBoundary: event.tags.operation === 'render',
+    transportCause: event.tags.failure_code === 'ECONNRESET',
+  };
+
+  console.log(JSON.stringify({ diagnosticChecks }));
+  assert.ok(
+    Object.values(diagnosticChecks).every(Boolean),
+    'Final browser SDK wire retains bounded causal evidence.',
+  );
   assert.ok(owner.chooseErrorReports(true));
   const pending = owner.syncErrorReports();
   owner.chooseErrorReports(false);

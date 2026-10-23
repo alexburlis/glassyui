@@ -81,7 +81,12 @@ async function session({ accepted = false, gpc = false, dnt = false } = {}) {
     } else if (url.pathname === '/_next/static/error-proof.js') {
       await route.fulfill({
         contentType: 'application/javascript',
-        body: `setTimeout(() => { throw new TypeError(${scriptString(privateMarker)}); }, 0);`,
+        body: `setTimeout(() => {
+          const cause = new RangeError(${scriptString(privateMarker)});
+          cause.stack = 'RangeError: private\\n    at dependency (' + location.origin + '/_next/static/cause-proof.js:7:3)';
+          cause.code = 'ECONNRESET';
+          throw new TypeError(${scriptString(privateMarker)}, { cause });
+        }, 0);`,
       });
     } else if (url.origin === base.origin) {
       await route.continue();
@@ -123,11 +128,28 @@ try {
   assert.match(payload.release, /^glassyui@[0-9a-f]{40}$/);
   assert.equal(payload.tags.runtime, 'browser');
   assert.equal(payload.sdk.settings.infer_ip, 'never');
-  assert.equal(payload.exception.values[0].type, 'TypeError');
+  assert.equal(payload.exception.values.at(-1).type, 'TypeError');
   assert.ok(
-    payload.exception.values[0].stacktrace.frames.some((frame) =>
-      frame.filename?.endsWith('/_next/static/error-proof.js'),
+    payload.exception.values
+      .at(-1)
+      .stacktrace.frames.some((frame) => frame.filename?.endsWith('/_next/static/error-proof.js')),
+  );
+
+  assert.equal(payload.tags.failure_code, 'ECONNRESET');
+  assert.equal(
+    payload.tags.operation,
+    'unknown',
+    'Automatic exception has no attributed app operation.',
+  );
+  assert.ok(
+    payload.exception.values.some(
+      (value) =>
+        value.type === 'RangeError' &&
+        value.stacktrace?.frames.some((frame) =>
+          frame.filename?.endsWith('/_next/static/cause-proof.js'),
+        ),
     ),
+    'The served SDK preserves the original safe cause frame.',
   );
 
   for (const key of ['user', 'request', 'breadcrumbs', 'extra', 'contexts', 'transaction'])
