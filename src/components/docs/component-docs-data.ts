@@ -3610,7 +3610,7 @@ return splash ? (
           {
             name: 'duration',
             type: 'number',
-            default: '2200',
+            default: '2600',
             description: 'Milliseconds from the empty stage to the mark at rest.',
           },
           {

@@ -8,7 +8,7 @@
 // Lengths are fractions of the mark's larger side, so the reveal keeps its proportions at any size.
 
 /** Seconds the reveal takes at its regular pace. */
-export const LOGO_REVEAL_LENGTH = 2.2;
+export const LOGO_REVEAL_LENGTH = 2.6;
 
 // The beats below are written at a quicker pace and played this much slower, so the glass
 // moves with weight.
@@ -315,6 +315,9 @@ const mix = (a: number, b: number, x: number) => a + (b - a) * x;
 
 const smooth = (x: number) => x * x * (3 - 2 * x);
 
+/** Eases in and out with no linear stretch in the middle, for an unhurried ending. */
+const gentle = (x: number) => x * x * x * (x * (6 * x - 15) + 10);
+
 const sineInOut = (x: number) => (1 - Math.cos(Math.PI * x)) / 2;
 
 /** A heavy, critically damped settle: it arrives without overshoot or bounce. */
@@ -349,7 +352,7 @@ function revealFrame(time: number, layout: LogoRevealLayout, thickness: number) 
   const t = clamp(time, 0, LOGO_REVEAL_LENGTH) / PACE;
   const unit = Math.max(layout.width, layout.height, 1);
   const morph = sineInOut(span(t, 0.2, 0.62));
-  const clear = sineInOut(span(t, 0.98, 1.4));
+  const clear = gentle(span(t, 0.98, 1.6));
   const settled = time >= LOGO_REVEAL_LENGTH;
 
   // The glass springs up to size with one small overshoot, then keeps drifting closer.
@@ -363,20 +366,20 @@ function revealFrame(time: number, layout: LogoRevealLayout, thickness: number) 
     // Close around the mark, so it fills most of the glass.
     extent: unit * 0.86 * size,
     exposure: smooth(span(t, 0.1, 0.17)),
-    rest: settled ? 1 : sineInOut(span(t, 1.4, 1.62)),
+    rest: settled ? 1 : gentle(span(t, 1.5, 1.98)),
     // A sphere first, then a slab with rounded corners and edges, as thick as a quarter of it.
     // A domed, lens-like ball first, then a slab a quarter as thick, rounded at corners and edges.
     rounding: mix(1, 0.46, morph),
     depth: mix(0.5, 0.3, morph),
     edge: mix(0.5, 0.3, morph),
     // The face bulges most while the glass is new and settles flatter as it comes to rest.
-    dome: mix(0.16, 0.26 - 0.16 * sineInOut(span(t, 0.5, 1.1)), morph) * (1 - clear),
+    dome: mix(0.2, 0.32 - 0.18 * sineInOut(span(t, 0.5, 1.2)), morph) * (1 - clear),
     // The glass clears by losing its index: refraction and reflection fade together.
     ior: settled ? 1 : 1 + 0.5 * (0.8 + 0.2 * thickness) * (1 - clear),
     split: settled ? 0 : 0.035 * (0.6 + 0.4 * thickness),
     gap: 0.04,
     tilt: 0,
-    glass: settled ? 0 : smooth(span(t, 0.03, 0.2)) * (1 - sineInOut(span(t, 1.36, 1.66))),
+    glass: settled ? 0 : smooth(span(t, 0.03, 0.2)) * (1 - gentle(span(t, 1.42, 1.98))),
     haze: mix(0.12, 0.08, morph) * (1 - clear),
   } satisfies Record<string, number>;
 
