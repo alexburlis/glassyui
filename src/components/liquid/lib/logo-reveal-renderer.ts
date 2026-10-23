@@ -181,11 +181,15 @@ void main() {
   vec4 plain = over(stillAt(p) * rest);
   vec2 local = (p - centre) / extent;
 
-  // Only pixels near the glass are traced.
-  if (glass <= 0.0 || max(abs(local.x), abs(local.y)) > 1.25) {
+  // Only pixels near the glass are traced; a wider band around it carries its glow.
+  float reach = max(abs(local.x), abs(local.y));
+
+  if (glass <= 0.0 || reach > 1.7) {
     colour = plain;
     return;
   }
+
+  bool near = reach <= 1.25;
 
   vec3 sum = vec3(0.0);
   float alpha = 0.0;
@@ -197,9 +201,9 @@ void main() {
   // Each wavelength sees a slightly different index, so the glass splits colour where it bends.
   for (int i = 0; i < 8; i++) {
     if (i >= taps) break;
-    vec3 reflected;
-    float path;
-    vec4 seen = trace(p, ior * (1.0 + split * shifts[i]), reflected, path);
+    vec3 reflected = vec3(0.0);
+    float path = 0.0;
+    vec4 seen = near ? trace(p, ior * (1.0 + split * shifts[i]), reflected, path) : vec4(p, 0.0, 0.0);
     // A ray that misses the glass sees the dark stage; the mark is lit only through the glass.
     bool missed = dot(reflected, reflected) == 0.0;
     vec4 behind = missed ? plain : seen.w > 0.5 ? over(markAt(seen.xy, 0.3)) : backdrop;
@@ -221,7 +225,9 @@ void main() {
     fresnel /= covered;
     thickness /= covered;
     // Thick glass absorbs a little and scatters some of the mark's light within it.
-    through.rgb *= mix(vec3(1.0), vec3(0.9, 0.95, 1.0), clamp(thickness * 0.15, 0.0, 1.0));
+    // Thick glass absorbs warm light first, so its depths read cool and blue.
+    through.rgb *= mix(vec3(1.0), vec3(0.82, 0.9, 1.05), clamp(thickness * 0.25, 0.0, 1.0));
+    through.rgb += vec3(0.004, 0.008, 0.016) * dark * share;
     vec4 glow = (markAt(centre + local * extent * 0.8, 4.0) * 0.5 + markAt(centre + local * extent * 0.7, 6.0) * 0.5);
     through.rgb += glow.rgb * haze * dark * share;
     vec3 reflection = mirror / covered;
@@ -230,7 +236,22 @@ void main() {
     through.rgb = mix(lit / (1.0 + max(lit - 1.0, 0.0)), through.rgb, 1.0 - dark);
   }
 
+  // Light around the glass, from its outline on screen: a soft halo, streaks where the side
+  // lights catch its left and right walls, the slab's walls as faint rings outside the tile and,
+  // on the ball, a second ring where light turns back inside it.
+  vec2 plan = abs(local) - 1.0 + rounding;
+  float outline = min(max(plan.x, plan.y), 0.0) + length(max(plan, 0.0)) - rounding;
+  vec2 g = normalize(sign(local) * max(plan, vec2(1e-4)) + 1e-6);
+  float outside = max(outline, 0.0);
+  float halo = exp(-outside / 0.22) * step(0.0, outline) * 0.07;
+  float streak = exp(-pow((outline - 0.12) / 0.035, 2.0)) * pow(abs(g.x), 10.0) * 0.22;
+  float walls = (exp(-pow((outline - 0.035) / 0.008, 2.0)) + 0.6 * exp(-pow((outline - 0.085) / 0.014, 2.0))) * (1.0 - rounding) * 1.8 * 0.1;
+  float ring = exp(-pow((outline + 0.07) / 0.012, 2.0)) * rounding * 0.18;
+  vec3 aura = vec3(0.7, 0.8, 0.95) * (halo * exposure + streak + walls + ring) * glass;
+
   vec4 c = mix(through, over(stillAt(p)), rest);
+  c.rgb += aura * dark * (1.0 - rest);
+  c.a = max(c.a, dot(aura, vec3(0.333)) * dark);
   float noise = fract(sin(dot(gl_FragCoord.xy + seed, vec2(12.9898, 78.233))) * 43758.5453);
   c.rgb += (noise - 0.5) / 255.0 * c.a;
   colour = clamp(c, 0.0, 1.0);
@@ -331,7 +352,7 @@ function revealFrame(time: number, layout: LogoRevealLayout, thickness: number) 
     dome: mix(0.16, 0.26 - 0.16 * sineInOut(span(t, 0.5, 1.1)), morph) * (1 - clear),
     // The glass clears by losing its index: refraction and reflection fade together.
     ior: settled ? 1 : 1 + 0.5 * (0.8 + 0.2 * thickness) * (1 - clear),
-    split: settled ? 0 : 0.012 * (0.6 + 0.4 * thickness),
+    split: settled ? 0 : 0.035 * (0.6 + 0.4 * thickness),
     gap: 0.04,
     tilt: 0.12 * (1 - spring(span(t, 0.05, 0.9))),
     glass: settled ? 0 : smooth(span(t, 0.04, 0.2)) * (1 - span(t, 1.3, 1.55)),
