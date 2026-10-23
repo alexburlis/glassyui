@@ -1,3 +1,7 @@
+# Consumer fixtures and the film engine keep their own lockfiles.
+packages:
+  - '.'
+
 minimumReleaseAgeExclude:
   - next@16.4.1
   - eslint-config-next@16.4.1

@@ -17,13 +17,14 @@ if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
           'InboundFilters',
           'FunctionToString',
           'Dedupe',
+          'LinkedErrors',
           'RewriteFrames',
           'DistDirRewriteFrames',
           'OnUncaughtException',
           'OnUnhandledRejection',
         ].includes(integration.name),
       ),
-    beforeSend: (event) => sanitizeErrorEvent(event, 'server'),
+    beforeSend: (event, hint) => sanitizeErrorEvent(event, 'server', hint),
   });
 
   client?.on('beforeEnvelope', (envelope) => {

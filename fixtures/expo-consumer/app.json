@@ -13,6 +13,17 @@
     "android": {
       "package": "com.glassyui.expoconsumer"
     },
-    "plugins": [["expo-build-properties", { "ios": { "enableSceneSupport": true } }]]
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "enableSceneSupport": true
+          }
+        }
+      ],
+      "./components/glassyui/android/with-glassy-blur.cjs"
+    ],
+    "scheme": "glassyui-proof"
   }
 }

@@ -59,7 +59,7 @@
     "smoke:registry-install": "node scripts/smoke-registry-install.mjs",
     "smoke:expo-consumer": "node scripts/smoke-expo-consumer.mjs",
     "smoke:release-ui": "node scripts/smoke-release-ui.mjs",
-    "lint:anti-slop": "oxlint --deny-warnings --format=agent",
+    "lint:anti-slop": "oxlint --threads=2 --deny-warnings --format=agent",
     "smoke:launch": "node scripts/smoke-launch.mjs",
     "format:check": "oxfmt --check",
     "test:error-reports": "node scripts/test-server-error-reports.mjs",

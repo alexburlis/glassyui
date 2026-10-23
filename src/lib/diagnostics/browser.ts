@@ -140,10 +140,11 @@ async function initialize(current: number, choice: string) {
             'BrowserApiErrors',
             'GlobalHandlers',
             'Dedupe',
+            'LinkedErrors',
           ].includes(integration.name),
         ),
-      beforeSend: (event) =>
-        currentChoice(current, choice) ? sanitizeErrorEvent(event, 'browser') : null,
+      beforeSend: (event, hint) =>
+        currentChoice(current, choice) ? sanitizeErrorEvent(event, 'browser', hint) : null,
       transport: (options) => {
         const transport = Sentry.makeFetchTransport(options, async (url, init) => {
           if (!currentChoice(current, choice)) return new Response(null, { status: 204 });
@@ -209,6 +210,7 @@ export async function captureRenderError(error: Error & { digest?: string }) {
   if (client && currentChoice(current, choice)) {
     const Sentry = await import('@sentry/nextjs');
 
-    if (client && currentChoice(current, choice)) Sentry.captureException(error);
+    if (client && currentChoice(current, choice))
+      Sentry.captureException(error, { tags: { operation: 'render' } });
   }
 }

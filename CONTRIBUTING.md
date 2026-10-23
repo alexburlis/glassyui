@@ -140,7 +140,12 @@ the server setup and smoke commands.
   audit that fails if a viewport scene trails its wallpaper in Chromium, and a
   hash manifest. Add `--magnifier` after the artifact directory to check the
   magnifier's colour separation, pointer and keyboard movement, and preferences
-  in Chrome, WebKit and Firefox at desktop and mobile widths.
+  in Chrome, WebKit and Firefox at desktop and mobile widths. For a bounded
+  rerun, set `GLASS_REFRACTION_SUITES` to a comma-separated subset of
+  `magnifier,window-slab,optics` and `GLASS_ENGINES` to a subset of
+  `chromium,webkit,firefox`. Reports identify selected and completed stages;
+  slab/layout sampling still uses Chromium. Omit both variables for full
+  coverage.
 - **Glass material:**
   `pnpm check:glass-material <base-url> <artifact-directory>` proves every
   frosted component blurs a striped backdrop in Chromium and keeps the CSS frost
@@ -218,8 +223,10 @@ drops the effect at low opacity; move glass with translate or scale instead.
 For changes to native source, `registry-native.json` or the Expo fixture, run
 `pnpm smoke:expo-consumer <base-url> [artifact-directory]`; it installs all
 native items, type-checks source and usage, and bundles iOS, Android and web.
-Bundles establish compile/install compatibility; native glass and haptics need
-the actual device checks.
+The clean consumer also runs Android prebuild and proves that the installed
+plugin stages the shared blur adapter into the actual Expo dependency. Bundles
+establish compile/install compatibility; native glass and haptics need the
+actual device checks.
 
 For a new or changed Expo component:
 

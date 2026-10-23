@@ -67,13 +67,25 @@ same millisecond; that preference identifier is never part of an event.
 `sanitizeErrorEvent` reconstructs an allowlisted event: SDK-generated event
 identity/time, fixed environment/service/channel/runtime, built-in exception
 type, fixed technical summary, bounded source coordinates and valid build Debug
-IDs. It excludes error text, cause content, function names, source context,
-user/request data, cookies, query strings, breadcrumbs, contexts, transactions
-and extras. SDK-rewritten `app:///_next/server/` coordinates remain usable for
-source-map matching. Final envelope handling permits error event items only,
-removes transport trace/SDK metadata and sets `infer_ip: never`. The browser
-transport omits credentials and referrers and has no unload beacon/keepalive.
-The receiving infrastructure still processes connection information.
+IDs. The pinned SDK's `LinkedErrors` integration supplies original cause frames;
+at most four exceptions and forty frames per exception survive. SDK exception
+relationships retain only bounded numeric IDs. A fixed mechanism name and its
+handled flag distinguish a request failure from a browser handler. It excludes
+error text, cause content, function names, source context, user/request data,
+cookies, query strings, breadcrumbs, contexts, transactions and extras. The
+final tags retain only the terminal operation (`render`, `route`, `action`,
+`proxy`, or `unknown`) and a closed transport-code category in addition to the
+existing build/runtime tags. The request hook and React root owner bind
+operation to that capture's SDK hint; global scope is not operation evidence.
+Four object levels with a cycle guard permit known connection, DNS, timeout and
+TLS codes. Unknown, inherited, accessor, private or out-of-bounds values stay
+`unknown`; no error-message inference is used. No request path, filename,
+endpoint or arbitrary metadata is added. SDK-rewritten `app:///_next/server/`
+coordinates remain usable for source-map matching. Final envelope handling
+permits error event items only, removes transport trace/SDK metadata and sets
+`infer_ip: never`. The browser transport omits credentials and referrers and has
+no unload beacon/keepalive. The receiving infrastructure still processes
+connection information.
 
 Usage sessions, replay, tracing, profiling, log ingestion, attachments, feedback
 and broad console capture remain disabled. There is no new support store or
@@ -92,10 +104,13 @@ not configure or verify them.
 
 - `pnpm test:error-reports`: actual Next request-error hook and Node SDK final
   HTTP envelope; private input removed, one event, release identity, and the
-  SDK's production frame rewrite preserved.
+  SDK's production frame rewrite preserved. Checks also cover fixed transport
+  codes, original cause frames, independent request ownership and unknown
+  process failures.
 - `pnpm test:error-startup`: actual browser SDK in an isolated DOM, root capture
   during asynchronous startup, withdrawal during startup and shared-cookie
-  withdrawal/re-acceptance across documents; loopback HTTP only.
+  withdrawal/re-acceptance across documents, original cause frames and bounded
+  render/failure evidence; loopback HTTP only.
 - `pnpm check:error-reports <loopback-url> <artifact-directory>`: real Chrome,
   actual startup, separate choice, refusal/reload, GPC/DNT, and serialized error
   envelopes. All ingestion is intercepted locally. It refuses public targets.
