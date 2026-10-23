@@ -142,7 +142,7 @@ void main() {
     float near = dot((markAt(inward, 5.0) * exposure).rgb, vec3(0.333));
     float angle = atan(normal.y, normal.x) / TAU;
     vec3 band = rainbow(depth * 1.4 + angle * 0.6 + 0.08);
-    glassy.rgb += band * rim * (0.12 + near) * glow * dark;
+    glassy.rgb += band * pow(rim, 0.7) * (0.35 + 1.2 * near) * glow * dark;
 
     // A darker band just inside the polished edge, where the bevel looks out at the dark.
     float shade = exp(-pow((d + 0.05 * unit) / (0.03 * unit), 2.0));
@@ -167,7 +167,8 @@ void main() {
 
   // Cool where the rim faces the light, warm on the far side.
   vec3 tint = mix(vec3(1.0, 0.76, 0.46), vec3(0.62, 0.84, 1.0), facing);
-  vec3 rimLight = mix(vec3(1.0), tint, 0.5) * edge * (0.3 + 0.6 * pow(facing, 1.5) + 0.35 * pow(away, 2.0));
+  vec3 spectral = rainbow(atan(normal.y, normal.x) / TAU * 1.5 + 0.1);
+  vec3 rimLight = mix(mix(vec3(1.0), tint, 0.5), spectral, 0.45 * glow) * edge * (0.5 + 0.9 * pow(facing, 1.5) + 0.6 * pow(away, 2.0));
   vec3 lines = vec3(0.86, 0.92, 1.0) * (face * (0.05 + 0.1 * facing) + ring * 0.22 + walls * 0.08 * (0.4 + side) + glint * 0.16);
   vec3 bloom = vec3(0.6, 0.72, 0.9) * halo * 0.05 * exposure;
   vec4 c = light(seen, (rimLight + lines + bloom) * glass);
@@ -273,7 +274,7 @@ function revealFrame(time: number, layout: LogoRevealLayout, thickness: number) 
   const clear = sineInOut(span(t, 1.06, 1.3));
   const grown = 0.42 + 0.5 * easeOut(span(t, 0.1, 0.45)) + 0.17 * sineOut(span(t, 0.42, 1.25));
   const half = unit * grown;
-  const swell = t < 0.3 ? 1 : 0.9 * Math.exp(-(t - 0.3) / 0.3) + 0.1 * (1 - span(t, 0.3, 1.3));
+  const swell = t < 0.3 ? 1 : 0.85 * Math.exp(-(t - 0.3) / 0.35) + 0.15 * (1 - span(t, 0.3, 1.3));
   const [viewX, viewY] = along(t);
   const settled = t >= LOGO_REVEAL_LENGTH;
   const depth = 0.7 + 0.3 * thickness;
@@ -291,13 +292,13 @@ function revealFrame(time: number, layout: LogoRevealLayout, thickness: number) 
     corner: mix(2, 2.7, morph),
     morph,
     bevel: mix(half, 0.3 * unit, morph) * (0.8 + 0.2 * thickness),
-    zoom: settled ? 1 : mix(1 + 1.0 * depth * swell, 1, clear),
-    split: settled ? 0 : 0.035 * depth * (1 - clear),
+    zoom: settled ? 1 : mix(1 + 1.5 * depth * swell, 1, clear),
+    split: settled ? 0 : 0.06 * depth * (1 - clear),
     glass: settled
       ? 0
       : easeOut(span(t, 0.06, 0.24)) * (1 - 0.75 * clear) * (1 - span(t, 1.32, 1.55)),
     glow: 0.9 * (1 - clear),
-    haze: mix(0.6, 0.15, morph) * (1 - clear),
+    haze: mix(1.0, 0.3, morph) * (1 - clear),
   } satisfies Record<string, number>;
 
   return { floats, pairs };
