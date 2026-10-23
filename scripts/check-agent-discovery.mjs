@@ -26,7 +26,7 @@ function noPrivateContent(body, label) {
   }
 }
 
-async function read(route, accept, method = 'GET', host, extraHeaders = {}) {
+async function read(route, accept, method = 'GET', host, extraHeaders = {}, payload) {
   const headers = { ...extraHeaders };
 
   if (accept) headers.Accept = accept;
@@ -36,6 +36,7 @@ async function read(route, accept, method = 'GET', host, extraHeaders = {}) {
   const options = {
     headers,
     method,
+    body: payload,
     redirect: 'manual',
     signal: AbortSignal.timeout(30_000),
   };
@@ -72,7 +73,7 @@ async function read(route, accept, method = 'GET', host, extraHeaders = {}) {
         });
 
         request.on('error', reject);
-        request.end();
+        request.end(payload);
       })
     : await fetch(url, options);
 
@@ -197,6 +198,67 @@ await check('RSC requests retain their component format under Markdown Accept', 
   const { response } = await read('/?_rsc', 'text/markdown', 'GET', undefined, { RSC: '1' });
   assert.equal(response.status, 200);
   assert.ok(response.headers.get('content-type')?.startsWith('text/x-component'));
+});
+
+// The public site's mutations use API routes, never page Server Actions.
+for (const [route, headers, payload] of [
+  ['/', { 'next-action': 'cachefn' }, '[]'],
+  ['/docs', { 'next-action': 'a'.repeat(40) }, '[]'],
+  ['/', { 'next-action': 'cachefn', RSC: '1' }, '[]'],
+  ['/', { 'next-action': '', RSC: '1', 'content-type': 'text/plain' }, '[]'],
+  ['/', { RSC: '1', 'content-type': 'multipart/form-datax' }, ''],
+  ['/missing-action.php', { 'next-action': 'cachefn', RSC: '1' }, '[]'],
+  [
+    '/',
+    { 'content-type': 'multipart/form-data; boundary=glassy-action', RSC: '1' },
+    '--glassy-action\r\nContent-Disposition: form-data; name="$ACTION_ID_cachefn"\r\n\r\n\r\n--glassy-action--\r\n',
+  ],
+  ['/', { 'content-type': 'application/x-www-form-urlencoded', RSC: '1' }, 'value=1'],
+]) {
+  await check(
+    `Page POST ${route} with ${Object.keys(headers).join(', ')} is rejected`,
+    async () => {
+      let result = await read(route, '*/*', 'POST', undefined, headers, payload);
+
+      // Next may canonicalize an RSC request's cache-busting query before dispatch.
+      if (result.response.status === 307) {
+        const target = new URL(result.response.headers.get('location'), baseUrl);
+        assert.equal(target.origin, baseUrl.origin);
+        result = await read(
+          target.pathname + target.search,
+          '*/*',
+          'POST',
+          undefined,
+          headers,
+          payload,
+        );
+      }
+
+      const { response, body } = result;
+      assert.equal(response.status, 405);
+      assert.equal(response.headers.get('allow'), 'GET, HEAD');
+      assert.equal(response.headers.get('cache-control'), 'no-store');
+      assert.equal(body, '', 'Unsupported action input is never reflected or rendered');
+    },
+  );
+}
+
+await check('API POSTs retain their own validation despite action headers', async () => {
+  const { response } = await read(
+    '/api/updates',
+    'application/json',
+    'POST',
+    undefined,
+    { origin: baseUrl.origin, 'content-type': 'application/json', 'next-action': 'cachefn' },
+    '{}',
+  );
+
+  assert.equal(
+    response.status,
+    400,
+    'Invalid signup input reaches API validation, not the page guard',
+  );
+  assert.ok(response.headers.get('content-type')?.startsWith('application/json'));
 });
 
 await check('Pro robots redirects to the fixed external origin', async () => {

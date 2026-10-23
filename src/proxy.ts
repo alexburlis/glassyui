@@ -4,8 +4,17 @@ import { prefersMarkdown } from '@/lib/markdown-negotiation';
 
 /** Negotiate Markdown from the free site's actual HTML. */
 export function proxy(request: NextRequest) {
+  // This site mutates through API routes and exports no page Server Actions.
+  if (request.method === 'POST')
+    return new NextResponse(null, {
+      status: 405,
+      headers: { Allow: 'GET, HEAD', 'Cache-Control': 'no-store' },
+    });
+
   if (
     (request.method === 'GET' || request.method === 'HEAD') &&
+    !request.headers.has('rsc') &&
+    !request.nextUrl.pathname.includes('.') &&
     prefersMarkdown(request.headers.get('accept'))
   ) {
     const url = request.nextUrl.clone();
@@ -22,11 +31,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    {
-      source: '/((?!api(?:/|$)|_next(?:/|$)|.*\\.).*)',
-      // Match before Next.js strips the RSC header from the proxy's Request.
-      missing: [{ type: 'header', key: 'rsc' }],
-    },
-  ],
+  matcher: ['/((?!api(?:/|$)|_next(?:/|$)).*)'],
 };
