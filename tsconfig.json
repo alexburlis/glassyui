@@ -39,6 +39,7 @@
     "registry/glassyui-native",
     "docs/seo/28day-*",
     "registry/glassyui-shadcn",
-    "research"
+    "research",
+    "git-worktrees"
   ]
 }

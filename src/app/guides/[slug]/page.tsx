@@ -678,6 +678,43 @@ function ExpoGuide() {
         </p>
       </section>
       <section className="docs-section">
+        <h2>Share Android blur work</h2>
+        <p>
+          For native builds with Expo SDK 57 and <code>expo-blur 57.0.3</code>, enable the included
+          Android plugin. Surfaces over the same backdrop share their blur output at each strength,
+          keeping the same frost, tint and rim with fewer graphics allocations.
+        </p>
+        <CopyCodeBlock
+          code={`{
+  "expo": {
+    "plugins": ["./components/glassyui/android/with-glassy-blur.cjs"]
+  }
+}`}
+          label="Merge into app.json"
+          language="json"
+        />
+        <CopyCodeBlock
+          code={`{
+  "expo": {
+    "autolinking": {
+      "android": { "buildFromSource": ["expo-blur"] }
+    }
+  }
+}`}
+          label="Merge into package.json"
+          language="json"
+        />
+        <p>
+          Keep your existing plugins and source-build entries. Adjust the plugin path if your
+          components live under <code>src</code>. Run{' '}
+          <code>npx expo prebuild --platform android --no-clean</code>, then{' '}
+          <code>npx expo run:android</code> to rebuild, including when your Android project already
+          exists. The plugin checks the native package version during prebuild. Expo Go uses its
+          bundled renderer; it cannot load this optimization. iOS and the web keep their existing
+          rendering.
+        </p>
+      </section>
+      <section className="docs-section">
         <h2>Put glass over something</h2>
         <p>
           Glass needs something to bend. <code>GlassBackdrop</code> lays its children over the{' '}

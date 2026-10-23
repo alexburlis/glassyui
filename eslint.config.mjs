@@ -14,6 +14,7 @@ const eslintConfig = defineConfig([
   ...nextTs,
   // Override default ignores of eslint-config-next.
   globalIgnores([
+    'git-worktrees/**',
     'tools/oxlint/anti-slop/**',
     // Generated evidence and browser-agent scratch files are not application source.
     '.artifacts/**',

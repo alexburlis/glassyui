@@ -39,9 +39,33 @@ if (!baseUrl) {
 const artifactDirectory =
   process.argv[3] ?? fs.mkdtempSync(path.join(os.tmpdir(), 'glassyui-refraction-visuals-'));
 
-const windowSlabOnly = process.argv[4] === '--window-slab';
+// Select only unfinished gates when resuming a bounded run; defaults still cover every gate.
+const stages = new Set(
+  (
+    process.env.GLASS_REFRACTION_SUITES ??
+    (process.argv[4] === '--window-slab'
+      ? 'window-slab'
+      : process.argv[4] === '--magnifier'
+        ? 'magnifier'
+        : 'magnifier,window-slab,optics')
+  ).split(','),
+);
 
-const magnifierOnly = process.argv[4] === '--magnifier';
+for (const stage of stages) {
+  assert.ok(['magnifier', 'window-slab', 'optics'].includes(stage), `Unknown stage: ${stage}`);
+}
+
+const selectedEngines = (process.env.GLASS_ENGINES ?? 'chromium,webkit,firefox').split(',');
+
+for (const engine of selectedEngines) {
+  assert.ok(['chromium', 'webkit', 'firefox'].includes(engine), `Unknown engine: ${engine}`);
+}
+
+const completedStages = [];
+
+const windowSlabOnly = stages.size === 1 && stages.has('window-slab');
+
+const magnifierOnly = stages.size === 1 && stages.has('magnifier');
 
 // The GlassSurface docs run glass over a fixed wallpaper: a pane that refracts a
 // viewport-aligned copy of the band's wallpaper through an SVG filter.
@@ -1794,6 +1818,8 @@ async function auditEngineAlignment() {
   const result = {};
 
   for (const [name, type] of Object.entries(engines)) {
+    if (!selectedEngines.includes(name)) continue;
+
     const engine = await type.launch({
       args: name === 'chromium' ? ['--disable-updater-scheduler'] : undefined,
       channel: name === 'chromium' ? 'chrome' : undefined,
@@ -1895,6 +1921,8 @@ async function auditHomepageScene() {
     );
 
   for (const [name, type] of Object.entries(engines)) {
+    if (!selectedEngines.includes(name)) continue;
+
     const engine = await type.launch({
       args: name === 'chromium' ? ['--disable-updater-scheduler'] : undefined,
       channel: name === 'chromium' ? 'chrome' : undefined,
@@ -2328,6 +2356,11 @@ function writeManifest(browserVersion) {
       version: browserVersion,
     },
     configuration: {
+      selectedStages: [...stages],
+      selectedEngines,
+      // Slab and layout sampling use Chromium; the named cross-engine checks use the selection.
+      layoutEngine: 'chromium',
+      completedStages,
       deviceScaleFactor: 1,
       reduceMotion: false,
       reducedMotionFallbackVerified: Boolean(results.reducedMotion),
@@ -2370,10 +2403,16 @@ const browser = await chromium.launch({
 });
 
 try {
-  if (!windowSlabOnly) {
-    results.magnifier = { chromium: await auditMagnifier(browser, 'chromium') };
+  if (stages.has('magnifier')) {
+    results.magnifier = {};
+
+    if (selectedEngines.includes('chromium')) {
+      results.magnifier.chromium = await auditMagnifier(browser, 'chromium');
+    }
 
     for (const [name, type] of Object.entries({ webkit, firefox })) {
+      if (!selectedEngines.includes(name)) continue;
+
       const engine = await type.launch({ headless: true });
 
       try {
@@ -2382,11 +2421,16 @@ try {
         await engine.close();
       }
     }
+
+    completedStages.push('magnifier');
   }
 
-  if (!magnifierOnly) results.windowSlab = await auditWindowSlab(browser);
+  if (stages.has('window-slab')) {
+    results.windowSlab = await auditWindowSlab(browser);
+    completedStages.push('window-slab');
+  }
 
-  if (!windowSlabOnly && !magnifierOnly) {
+  if (stages.has('optics')) {
     results.viewportAnchoring = await auditViewportAnchoring(browser);
     results.scrollSync = await auditScrollSync(browser);
     results.engineAlignment = await auditEngineAlignment();
@@ -2396,6 +2440,7 @@ try {
     results.largeSurface = await auditLargeSurface(browser);
     results.reducedMotion = await auditReducedMotion(browser);
     results.reducedTransparency = await auditReducedTransparency(browser);
+    completedStages.push('optics');
   }
 } catch (error) {
   results.failure = { message: error.message };
@@ -2405,4 +2450,6 @@ try {
   await browser.close();
 }
 
-console.log(`Refraction visual check passed. Artifacts: ${artifactDirectory}`);
+console.log(
+  `Refraction visual check passed: ${[...stages].join(', ')}; engines: ${selectedEngines.join(', ')}. Artifacts: ${artifactDirectory}`,
+);
