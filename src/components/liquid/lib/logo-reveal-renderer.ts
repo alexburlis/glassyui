@@ -3,8 +3,9 @@
 // its back and lands on the plane of the mark just behind it, so the mark warps only as real
 // glass would warp it. Each wavelength traces its own index, which splits colour; Fresnel
 // reflections show a studio of softboxes. The body morphs from a domed lens into a thick
-// rounded tile and settles flat; then the studio's lights move away, so its highlights slide
-// off the rim and the glass, with nothing left to reflect over a dark stage, leaves the mark.
+// rounded tile and settles flat; then it keeps coming towards the camera, past the mark and out
+// of the studio's light, so its highlights slide off the rim and thin to hairlines and the
+// glass, with nothing left to reflect over a dark stage, leaves the mark where it lies.
 //
 // Lengths are fractions of the mark's larger side, so the reveal keeps its proportions at any size.
 
@@ -53,6 +54,7 @@ uniform float glass;
 uniform float haze;
 uniform float lamp;
 uniform float drift;
+uniform float grow;
 
 // Lengths in the shader are in units of the glass's half size, so marching tolerances scale.
 float unit;
@@ -263,9 +265,9 @@ void main() {
   // on the ball, a second ring where light turns back inside it.
   vec2 g = normalize(sign(local) * max(plan, vec2(1e-4)) + 1e-6);
   float outside = max(outline, 0.0);
-  float halo = exp(-outside / 0.22) * step(0.0, outline) * 0.07;
-  float streak = exp(-pow((outline - 0.12) / 0.035, 2.0)) * pow(abs(g.x), 10.0) * (0.18 + 0.3 * rounding);
-  float walls = (exp(-pow((outline - 0.04) / 0.02, 2.0)) + 0.6 * exp(-pow((outline - 0.1) / 0.035, 2.0))) * (1.0 - rounding) * 1.8 * 0.08;
+  float halo = exp(-outside * grow / 0.22) * step(0.0, outline) * 0.07;
+  float streak = exp(-pow((outline - 0.12 / grow) / (0.035 / grow), 2.0)) * pow(abs(g.x), 10.0) * (0.18 + 0.3 * rounding);
+  float walls = (exp(-pow((outline - 0.035 / grow) / (0.01 / grow), 2.0)) + 0.6 * exp(-pow((outline - 0.09 / grow) / (0.016 / grow), 2.0))) * (1.0 - rounding) * 1.8 * 0.06;
   float ring = 0.0;
   // Light focused round the inside of the ball's rim, warm where its colours gather.
   float caustic = exp(-pow((outline + 0.11) / 0.014, 2.0)) * pow(rounding, 3.0) * 0.45;
@@ -274,7 +276,7 @@ void main() {
   // As the lights leave, the slivers run round the corners and narrow until they go out.
   float bearing = -0.785 + 0.6 * drift;
   float facing = abs(dot(g, vec2(cos(bearing), sin(bearing))));
-  float edgeLine = exp(-pow((outline + 0.02) / 0.022, 2.0)) * (0.08 + 0.92 * pow(facing, 6.0 + 18.0 * drift)) * 0.7;
+  float edgeLine = exp(-pow((outline + 0.02 / grow) / (0.022 / grow), 2.0)) * (0.06 + 1.6 * pow(facing, 8.0 + 18.0 * drift)) * 0.7;
   vec3 aura = (vec3(0.7, 0.8, 0.95) * (halo * exposure + streak + walls + ring) +
     mix(vec3(1.0, 0.86, 0.7), vec3(0.75, 0.9, 1.0), facing) * edgeLine +
     vec3(1.0, 0.82, 0.25) * caustic * exposure) * glass * lamp;
@@ -368,7 +370,10 @@ function revealFrame(time: number, layout: LogoRevealLayout, thickness: number) 
   const morph = sineInOut(span(t, 0.2, 0.62));
   // The face settles flat, then the lights move away and dim with distance.
   const flat = gentle(span(t, 0.9, 1.45));
-  const away = gentle(span(t, 1.05, 1.95));
+  const away = gentle(span(t, 1.0, 1.9));
+  // Then it comes on towards the camera, faster as it goes, and passes out of the frame.
+  const rush = span(t, 1.12, 2) ** 2.4;
+  const grow = 1 + 1.4 * rush;
   const settled = time >= LOGO_REVEAL_LENGTH;
 
   // The glass springs up to size with one small overshoot, then keeps drifting closer.
@@ -380,7 +385,8 @@ function revealFrame(time: number, layout: LogoRevealLayout, thickness: number) 
 
   const floats = {
     // Close around the mark, so it fills most of the glass.
-    extent: unit * 0.86 * size,
+    extent: unit * 0.86 * size * grow,
+    grow,
     exposure: smooth(span(t, 0.1, 0.17)),
     rest: settled ? 1 : gentle(span(t, 1.4, 1.75)),
     // A sphere first, then a slab with rounded corners and edges, as thick as a quarter of it.
@@ -398,7 +404,7 @@ function revealFrame(time: number, layout: LogoRevealLayout, thickness: number) 
     glass: settled ? 0 : smooth(span(t, 0.03, 0.2)) * (1 - span(t, 1.96, 2)),
     haze: mix(0.12, 0.08, morph) * (1 - flat),
     // What is left of the studio's light on the glass, falling off as the lights leave.
-    lamp: settled ? 0 : (1 - away) ** 2,
+    lamp: settled ? 0 : 1 - gentle(span(t, 1.18, 1.96)),
     drift: away,
   } satisfies Record<string, number>;
 
