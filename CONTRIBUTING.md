@@ -185,10 +185,10 @@ the server setup and smoke commands.
   `node scripts/check-logo-reveal.mjs <base-url> [artifact-directory]` proves,
   in Chromium, WebKit and Firefox at desktop and phone widths in both themes,
   that the reveal draws with WebGL2, moves while it plays, lands on the real
-  lockup (its canvas's last frame against the page's own lockup), holds a
-  scrubbed moment still, and shows the lockup at once under the system's reduced
-  motion and the site's preference. It saves those frames, Playwright traces and
-  a manifest with each landing's measured difference.
+  mark (its canvas's last frame against the page's own mark), holds a scrubbed
+  moment still, and shows the mark at once under the system's reduced motion and
+  the site's preference. It saves those frames, Playwright traces and a manifest
+  with each landing's measured difference.
 
 ### Formatting
 
