@@ -13,7 +13,8 @@
 /* Glass like the desk's widgets: one even material that frosts the page, bends it
    at the rim and catches the light along its edge. Frost alone cannot hold the copy
    over every part of the page, so the face carries the same legible tint. The
-   library turns the glass opaque under reduced transparency or more contrast. */
+   library turns the glass opaque under reduced transparency and forced colours,
+   and dims or frosts it denser under more contrast. */
 .analytics-consent {
   --lg-panel-radius: 24px;
 

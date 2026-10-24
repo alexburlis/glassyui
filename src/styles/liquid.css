@@ -458,6 +458,44 @@
     --lg-lens-blur: 10;
   }
 
+  /* Increased contrast keeps the glass and makes it predominantly black or
+     white, as the system's own glass does: dark glass dims what lies behind it
+     and light glass frosts denser, so text keeps 7:1 over any backdrop, and
+     muted text gets full contrast. Dark glass adds no white of its own, and
+     its Chromium lens dims as its frost does. Toasts and tooltips darken. A
+     ring in the text colour edges the glass (see Increased contrast below).
+     The dimming outranks the quality settings, which still lighten the frost. */
+  @media (prefers-contrast: more) {
+    [data-lg-theme='dark'],
+    [data-lg-theme='dark'][data-lg-mode],
+    [data-lg-theme='dark'][data-lg-mode][data-lg-quality] {
+      --lg-muted-foreground: var(--lg-foreground);
+      --lg-glass-alpha: 0.02;
+      --lg-glass-brightness: 0.22;
+      --lg-glass-contrast: 1;
+      --lg-sheen-alpha: 0;
+      --lg-lens-body-brightness: var(--lg-glass-brightness);
+      --lg-lens-rim-brightness: var(--lg-glass-brightness);
+      --lg-overlay-surface: rgb(28 28 30 / 0.88);
+      --lg-slab-tint: rgb(28 28 30 / 0.55);
+      --lg-slab-brightness: 0.5;
+      --lg-slab-rim-brightness: 0.65;
+      --lg-slab-blur: 14;
+      --lg-header-tint: rgb(28 28 30 / 0.55);
+      --lg-header-brightness: 0.5;
+      --lg-header-rim-brightness: 0.65;
+    }
+
+    [data-lg-theme='light'],
+    [data-lg-theme='light'][data-lg-mode] {
+      --lg-muted-foreground: var(--lg-foreground);
+      --lg-glass-alpha: 0.7;
+      --lg-slab-tint: rgb(255 255 255 / 0.9);
+      --lg-slab-blur: 14;
+      --lg-header-tint: rgb(255 255 255 / 0.9);
+    }
+  }
+
   :root[data-lg-quality='low'] {
     --lg-scene-highlight: 0.6;
     --lg-glass-blur: 6px;
@@ -1316,10 +1354,77 @@
   }
 
   /* ============================================
-     Increased contrast and forced colors: solid surfaces, real outlines
+     Increased contrast: glass dimmed or frosted denser (see the tokens above),
+     edged by a ring in the text colour. The ring is the specular layer, which
+     paints above the frost, so every engine shows it.
+     Forced colors: solid surfaces, real outlines.
+     Both: buttons and fields drop their blur, and controls get outlines in the
+     text colour.
      ============================================ */
 
-  @media (prefers-contrast: more), (forced-colors: active) {
+  @media (prefers-contrast: more) {
+    /* A guard like the transparency ones, so their hairline cannot replace it. */
+    .lg-glass-surface::after {
+      background: var(--lg-foreground) !important;
+    }
+
+    /* Dark glass adds no white of its own: presets and hover keep the base veil. */
+    [data-lg-theme='dark'] .lg-glass-surface {
+      --lg-surface-alpha: var(--lg-glass-alpha) !important;
+      --lg-surface-lift: 0 !important;
+    }
+
+    /* Light segmented tracks frost like the other glass, not as a slate well. */
+    [data-lg-theme='light']:not([data-lg-reduce-transparency='1']) .lg-segmented::before {
+      background-color: rgb(255 255 255 / var(--lg-glass-alpha));
+    }
+
+    /* A generated refraction shows its backdrop undimmed, so the pane frosts
+       and dims the page behind it instead. */
+    .lg-refraction-background {
+      display: none;
+    }
+
+    .lg-glass-surface[data-lg-generated-refraction='true']::before {
+      -webkit-backdrop-filter: blur(var(--lg-surface-blur)) brightness(var(--lg-glass-brightness))
+        contrast(var(--lg-glass-contrast)) saturate(var(--lg-glass-sat));
+      backdrop-filter: blur(var(--lg-surface-blur)) brightness(var(--lg-glass-brightness))
+        contrast(var(--lg-glass-contrast)) saturate(var(--lg-glass-sat));
+    }
+
+    /* Badges and alerts keep the solid fill their tone colours are set on. */
+    .lg-badge,
+    .lg-alert {
+      -webkit-backdrop-filter: none !important;
+      backdrop-filter: none !important;
+      background: var(--lg-opaque-surface) !important;
+    }
+
+    /* Overlays scroll their content, and their ring layer with it, so they
+       carry the ring as an outline that stays on their edge, focused or not. */
+    :is(
+      .lg-dialog-content,
+      .lg-popover-content,
+      .lg-sheet-content,
+      .lg-menu-content,
+      .lg-select-content
+    ) {
+      outline: 1px solid var(--lg-foreground) !important;
+      outline-offset: -1px !important;
+    }
+
+    :is(
+      .lg-dialog-content,
+      .lg-popover-content,
+      .lg-sheet-content,
+      .lg-menu-content,
+      .lg-select-content
+    )::after {
+      display: none;
+    }
+  }
+
+  @media (forced-colors: active) {
     .lg-glass-surface {
       outline: 1px solid CanvasText !important;
       outline-offset: -1px !important;
@@ -1341,6 +1446,21 @@
       background: var(--lg-opaque-surface) !important;
     }
 
+    .lg-glass-surface::before {
+      box-shadow: none !important;
+    }
+
+    /* The 1px outline replaces the specular ring. */
+    .lg-glass-surface::after {
+      display: none;
+    }
+
+    .lg-refraction-background {
+      display: none;
+    }
+  }
+
+  @media (prefers-contrast: more), (forced-colors: active) {
     .lg-badge,
     .lg-alert,
     .lg-kbd,
@@ -1373,12 +1493,6 @@
       outline: 2px solid CanvasText;
     }
 
-    .lg-glass-surface::before {
-      box-shadow: none !important;
-    }
-
-    /* The 1px outline replaces the specular ring. */
-    .lg-glass-surface::after,
     .lg-tabs-trigger[data-state='active']::after {
       display: none;
     }
@@ -1402,10 +1516,6 @@
     .lg-dialog-overlay {
       -webkit-backdrop-filter: none !important;
       backdrop-filter: none !important;
-    }
-
-    .lg-refraction-background {
-      display: none;
     }
 
     .lg-button .lg-button__rim {
@@ -5039,6 +5149,14 @@
     isolation: isolate;
   }
 
+  /* The backdrop and the canvas sit below the scene's children. Their wrapper
+     adds no box, so they stack as before, except over a viewport backdrop
+     (below). */
+  .lg-scene-layers {
+    display: contents;
+    border-radius: inherit;
+  }
+
   .lg-scene-backdrop,
   .lg-scene-canvas {
     position: absolute;
@@ -5061,7 +5179,25 @@
     clip-path: inset(0);
   }
 
-  .lg-scene[data-lg-backdrop-space='viewport'] > .lg-scene-backdrop {
+  /* The two layers share one box below the children, so the fixed backdrop
+     itself keeps a z-index of auto: over a fixed backdrop with a negative
+     z-index, iOS Safari paints the status bar solid and cuts the page off in a
+     hard line beneath it. */
+  .lg-scene[data-lg-backdrop-space='viewport'] > .lg-scene-layers {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .lg-scene[data-lg-backdrop-space='viewport']
+    > .lg-scene-layers
+    > :is(.lg-scene-backdrop, .lg-scene-canvas) {
+    z-index: auto;
+  }
+
+  .lg-scene[data-lg-backdrop-space='viewport'] > .lg-scene-layers > .lg-scene-backdrop {
     position: fixed;
     border-radius: 0;
   }
@@ -5072,7 +5208,7 @@
     height: 100%;
   }
 
-  .lg-scene[data-lg-scene-renderer='webgl'] > .lg-scene-canvas {
+  .lg-scene[data-lg-scene-renderer='webgl'] > .lg-scene-layers > .lg-scene-canvas {
     display: block;
   }
 

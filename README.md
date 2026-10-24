@@ -151,10 +151,16 @@ rim.
 
 ## Accessibility
 
-- Reduce Transparency, Increase Contrast, forced colours and Reduce Motion are
-  `!important` guards: no `className` brings transparency back. Restyle those
-  states through `--lg-opaque-surface`, `--lg-control-surface` and
+- Reduce Transparency, forced colours and Reduce Motion are `!important` guards:
+  no `className` brings transparency back. Restyle those states through
+  `--lg-opaque-surface`, `--lg-control-surface` and
   `--lg-control-surface-hover`.
+- Increase Contrast keeps the glass but makes it predominantly black or white:
+  dark glass dims what lies behind it and light glass frosts denser, so text
+  keeps 7:1 over any backdrop. A ring in the text colour edges the glass and
+  muted text gets full contrast. Badges and alerts turn solid, buttons and
+  fields drop their blur, controls get outlines in the text colour, and a
+  generated refraction gives way to the dimmed frost.
 - The prominent button tints what lies behind it and caps its brightness, so its
   white label keeps 4.5:1 contrast over any backdrop.
 - `GlassScene` turns its canvas off under Reduce Transparency, Increase Contrast

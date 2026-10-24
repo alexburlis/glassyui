@@ -995,7 +995,7 @@ async function checkDemo(engine, browser, statsPage, results) {
         }
         ${scene} .lg-scene-drop:nth-of-type(1) { left: 24px !important; }
         ${scene} .lg-scene-drop:nth-of-type(2) { left: 132px !important; }
-        ${scene} > :not(.lg-scene-drop):not(.lg-scene-backdrop):not(.lg-scene-canvas) { visibility: hidden !important; }
+        ${scene} > :not(.lg-scene-drop):not(.lg-scene-layers) { visibility: hidden !important; }
       `;
 
       const measureGap = async (merge, file) => {

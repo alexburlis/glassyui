@@ -83,7 +83,7 @@ const HERO = [
   '.home-title',
   '.home-lead',
   '.home-hero .home-actions > .lg-button--prominent',
-  '.home-hero .home-actions a[href="https://github.com/alexburlis/glassyui"]',
+  '.home-hero .home-actions a[href="https://pro.glassyui.com"]',
   '.home-desk-frame',
   '.desk-widgets > :first-child',
   '.desk-dock',
