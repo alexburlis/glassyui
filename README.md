@@ -36,10 +36,12 @@ Glassy UI needs React 19 and Tailwind CSS 4. If your app has no
 npx shadcn@4.14.1 init
 ```
 
-Add a component by its registry URL:
+Add a component. Glassy UI is in the
+[shadcn registry directory](https://ui.shadcn.com/docs/directory), so the CLI
+finds `@glassyui` with no setup:
 
 ```bash
-npx shadcn@4.14.1 add https://glassyui.com/r/glass-button.json
+npx shadcn@4.14.1 add @glassyui/glass-button
 ```
 
 The CLI copies the component, the shared files it imports and its package
@@ -58,25 +60,6 @@ keep it in sync with your theme switch. Every
 [component page](https://glassyui.com/components) also has pnpm, Yarn and bun
 commands, and a manual install that lists every file.
 
-<details>
-<summary>Install by name instead of URL</summary>
-
-<br>
-
-Map the namespace in `components.json`:
-
-```json
-{
-  "registries": {
-    "@glassyui": "https://glassyui.com/r/{name}.json"
-  }
-}
-```
-
-Then add items by name: `npx shadcn@4.14.1 add @glassyui/glass-button`.
-
-</details>
-
 ## Components
 
 | Group      | Components                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
@@ -91,6 +74,7 @@ Then add items by name: `npx shadcn@4.14.1 add @glassyui/glass-button`.
 | Mockups    | [Laptop](https://glassyui.com/components/glass-laptop) · [Phone Duo](https://glassyui.com/components/glass-phone-duo)                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 
 Each component is one registry item, named after its page:
+`@glassyui/glass-segmented-control`, served from
 `https://glassyui.com/r/glass-segmented-control.json`.
 
 ## Already using shadcn/ui?
@@ -98,7 +82,7 @@ Each component is one registry item, named after its page:
 `glassy-theme` restyles stock shadcn/ui components as glass, with CSS only:
 
 ```bash
-npx shadcn@4.14.1 add https://glassyui.com/r/glassy-theme.json
+npx shadcn@4.14.1 add @glassyui/glassy-theme
 ```
 
 To replace them with Glassy UI's own components behind the same exports, props
@@ -118,7 +102,7 @@ names and React Native props.
 </picture>
 
 ```bash
-npx shadcn@4.14.1 add https://glassyui.com/r/native/glass-button.json && npx expo install --fix
+npx shadcn@4.14.1 add @glassyui-native/glass-button && npx expo install --fix
 ```
 
 | Where                            | How the glass is drawn                              |

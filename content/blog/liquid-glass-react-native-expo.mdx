@@ -20,6 +20,16 @@ heroImage: '/share/blog/liquid-glass-react-native-expo.jpg'
 heroImageAlt:
   'A glass segmented control over ribbon artwork, beside the words: System
   glass. In Expo.'
+tldr:
+  - "In an Expo app, Apple's Liquid Glass comes from GlassView in
+    expo-glass-effect, which the system draws only on iOS 26 and later."
+  - 'Earlier iOS, Android and the web need a blur of the content behind instead,
+    and Reduce Transparency needs an opaque surface.'
+  - "Check both isLiquidGlassAvailable() and isGlassEffectAPIAvailable() before
+    drawing GlassView. Glassy UI's React Native components pick the material for
+    you."
+  - 'Expo documents that opacity 0 on a GlassView or any of its parents stops
+    the glass from rendering, so reveal glass by moving or scaling it instead.'
 ---
 
 In an Expo app, Apple's Liquid Glass comes from the `GlassView` component in
@@ -133,7 +143,7 @@ The [Expo guide](/guides/expo) covers the `components.json` that the CLI needs
 in an Expo app. With that in place, install the button and the panel:
 
 ```sh
-npx shadcn@4.14.1 add https://glassyui.com/r/native/glass-button.json https://glassyui.com/r/native/glass-panel.json && npx expo install --fix
+npx shadcn@4.14.1 add @glassyui-native/glass-button @glassyui-native/glass-panel && npx expo install --fix
 ```
 
 Both items depend on `glass-surface`. That item brings `glass-backdrop.tsx`,

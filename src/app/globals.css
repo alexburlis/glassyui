@@ -2626,6 +2626,42 @@ main :focus {
   font-size: 13px;
 }
 
+/* A table of contents with a rail under it: the two stay in view together, and scroll on their
+   own when they are taller than the window. The padding keeps focus rings inside the scroll box. */
+.docs-toc-stack {
+  position: sticky;
+  top: 88px;
+  display: grid;
+  align-self: start;
+  gap: 28px;
+  max-height: calc(100vh - 104px);
+  margin: -4px;
+  padding: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.docs-toc-stack > .docs-toc {
+  position: static;
+}
+
+/* Under 1280px the stack would squeeze the article below its measure: the page drops the right
+   column, as a page without a table of contents does, and shows its own copies of both. */
+@media (max-width: 1279px) {
+  .docs-layout--stack {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  .docs-layout--stack .docs-main {
+    max-width: var(--docs-measure);
+  }
+
+  .docs-toc-stack {
+    display: none;
+  }
+}
+
 .docs-toc a {
   color: var(--site-text-2);
   transition: color 150ms ease;

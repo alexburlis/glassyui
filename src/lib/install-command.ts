@@ -18,16 +18,27 @@ const packageInstallers: Record<PackageManager, string> = {
   bun: 'bun add',
 };
 
-/** The existing published item URL; both configured and direct installs resolve here. */
-export function registryItemUrl(name: string, platform: InstallPlatform) {
+function assertItem(name: string, platform: InstallPlatform) {
   if (!items[platform].includes(name)) {
     throw new Error(`Unknown ${platform} registry item: ${name}`);
   }
+}
+
+/** The published item URL; the shadcn registry directory maps both namespaces here. */
+export function registryItemUrl(name: string, platform: InstallPlatform) {
+  assertItem(name, platform);
 
   return `https://glassyui.com/r/${platform === 'react-native' ? 'native/' : ''}${name}.json`;
 }
 
-/** Add complete item payloads without requiring a consumer registry mapping. */
+/** The item's name in the shadcn registry directory, which needs no consumer setup. */
+function registryItemName(name: string, platform: InstallPlatform) {
+  assertItem(name, platform);
+
+  return `${platform === 'react-native' ? '@glassyui-native' : '@glassyui'}/${name}`;
+}
+
+/** Add complete item payloads by their directory names. */
 export function installCommand(
   itemNames: readonly string[],
   platform: InstallPlatform,
@@ -37,7 +48,7 @@ export function installCommand(
 
   if (names.length === 0) throw new Error('An install command needs at least one registry item.');
 
-  const command = `${runners[manager]} shadcn@4.14.1 add ${names.map((name) => registryItemUrl(name, platform)).join(' ')}`;
+  const command = `${runners[manager]} shadcn@4.14.1 add ${names.map((name) => registryItemName(name, platform)).join(' ')}`;
 
   return platform === 'react-native' ? `${command} && npx expo install --fix` : command;
 }

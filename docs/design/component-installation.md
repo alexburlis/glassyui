@@ -21,7 +21,7 @@ the standalone mock.
 | Install method  | CLI or Manual, as tabs at the top of Installation. CLI is the default.                        |
 | Package manager | npm, pnpm, yarn or bun in each command's header. npm by default, shared, remembered.          |
 | Platform        | The existing React and React Native switch in the page header, unchanged.                     |
-| Command         | `shadcn@4.14.1` with the item's full payload URL, no `registries` mapping (proposed).         |
+| Command         | `shadcn@4.14.1` with the item's `@glassyui` name, resolved by the shadcn registry directory.  |
 | Expo            | The add command is followed by `npx expo install --fix` in every package-manager choice.      |
 | Manual          | Packages, then every file in the closure, grouped by the item that ships it.                  |
 
@@ -209,10 +209,10 @@ existing choice is kept for consistency.
 
 Formulas:
 
-- React: `{runner} shadcn@4.14.1 add https://glassyui.com/r/{item}.json`
+- React: `{runner} shadcn@4.14.1 add @glassyui/{item}`
 - React Native:
-  `{runner} shadcn@4.14.1 add https://glassyui.com/r/native/{item}.json && npx expo install --fix`
-- Several items: one URL per item, separated by spaces, in the order the usage
+  `{runner} shadcn@4.14.1 add @glassyui-native/{item} && npx expo install --fix`
+- Several items: one name per item, separated by spaces, in the order the usage
   example imports them. The native form ends with one
   `&& npx expo install --fix`.
 - React packages: `{add} {packages}`, in closure order.
@@ -225,18 +225,18 @@ skips that matching. `&&` runs it only after a successful add.
 
 Glass Button, every state:
 
-| State         | Text                                                                                                     |
-| ------------- | -------------------------------------------------------------------------------------------------------- |
-| React, npm    | `npx shadcn@4.14.1 add https://glassyui.com/r/glass-button.json`                                         |
-| React, pnpm   | `pnpm dlx shadcn@4.14.1 add https://glassyui.com/r/glass-button.json`                                    |
-| React, yarn   | `yarn dlx shadcn@4.14.1 add https://glassyui.com/r/glass-button.json`                                    |
-| React, bun    | `bunx --bun shadcn@4.14.1 add https://glassyui.com/r/glass-button.json`                                  |
-| Native, npm   | `npx shadcn@4.14.1 add https://glassyui.com/r/native/glass-button.json && npx expo install --fix`        |
-| Native, pnpm  | `pnpm dlx shadcn@4.14.1 add https://glassyui.com/r/native/glass-button.json && npx expo install --fix`   |
-| Native, yarn  | `yarn dlx shadcn@4.14.1 add https://glassyui.com/r/native/glass-button.json && npx expo install --fix`   |
-| Native, bun   | `bunx --bun shadcn@4.14.1 add https://glassyui.com/r/native/glass-button.json && npx expo install --fix` |
-| Manual React  | `npm install @radix-ui/react-slot clsx` (and `pnpm add`, `yarn add`, `bun add`)                          |
-| Manual native | `npx expo install expo-blur expo-glass-effect`                                                           |
+| State         | Text                                                                                   |
+| ------------- | -------------------------------------------------------------------------------------- |
+| React, npm    | `npx shadcn@4.14.1 add @glassyui/glass-button`                                         |
+| React, pnpm   | `pnpm dlx shadcn@4.14.1 add @glassyui/glass-button`                                    |
+| React, yarn   | `yarn dlx shadcn@4.14.1 add @glassyui/glass-button`                                    |
+| React, bun    | `bunx --bun shadcn@4.14.1 add @glassyui/glass-button`                                  |
+| Native, npm   | `npx shadcn@4.14.1 add @glassyui-native/glass-button && npx expo install --fix`        |
+| Native, pnpm  | `pnpm dlx shadcn@4.14.1 add @glassyui-native/glass-button && npx expo install --fix`   |
+| Native, yarn  | `yarn dlx shadcn@4.14.1 add @glassyui-native/glass-button && npx expo install --fix`   |
+| Native, bun   | `bunx --bun shadcn@4.14.1 add @glassyui-native/glass-button && npx expo install --fix` |
+| Manual React  | `npm install @radix-ui/react-slot clsx` (and `pnpm add`, `yarn add`, `bun add`)        |
+| Manual native | `npx expo install expo-blur expo-glass-effect`                                         |
 
 The web CLI needs no separate init step in the common case: with no
 `components.json`, the pinned CLI asks to create one before adding (proven by
@@ -449,9 +449,9 @@ agreement; sharing a resolver alone does not establish correctness.
 3. Installation shows CLI selected on load. Arrow keys, Home and End move
    between CLI and Manual and show the matching panel.
 4. On Glass Button with no stored choice, the React command reads
-   `npx shadcn@4.14.1 add https://glassyui.com/r/glass-button.json`. Each
-   package manager produces its row of the command table. After Copy, the
-   clipboard holds exactly the shown text.
+   `npx shadcn@4.14.1 add @glassyui/glass-button`. Each package manager produces
+   its row of the command table. After Copy, the clipboard holds exactly the
+   shown text.
 5. On React Native, all four package-manager choices end with
    `&& npx expo install --fix`, and Copy copies the whole line.
 6. A choice made in one block shows in every block on the page, survives a

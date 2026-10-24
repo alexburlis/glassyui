@@ -18,7 +18,7 @@ export function GET() {
     '',
     `> Glassy UI components for React. ${componentDocs.length} accessible components that bend what sits behind them, installed with the shadcn CLI as source you own. Free and MIT licensed.`,
     '',
-    'Glassy UI ships as source through a shadcn-compatible registry. React components need React 19+, Tailwind CSS 4 and a project initialised with shadcn. Each item URL includes its shared files and packages; no registry mapping is required.',
+    'Glassy UI ships as source through a shadcn-compatible registry. React components need React 19+, Tailwind CSS 4 and a project initialised with shadcn. Glassy UI is in the shadcn registry directory, so @glassyui and @glassyui-native resolve with no registry mapping. Each item includes its shared files and packages.',
     '',
     '```bash',
     installCommand(['glass-button'], 'react'),

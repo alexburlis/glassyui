@@ -4,6 +4,7 @@ import {
   captureLink,
   interactionProperties,
   listenForLinks,
+  observeBannerImpression,
   type SiteAction,
 } from './interactions';
 import type { AnalyticsConfig } from './config';
@@ -32,6 +33,8 @@ let sdk: PostHog | null = null;
 let activeConfig: AnalyticsConfig | null = null;
 
 let removeLinks: (() => void) | null = null;
+
+let removeImpressions: (() => void) | null = null;
 
 function captureInteraction(event: (typeof INTERACTION_EVENTS)[number], properties: Properties) {
   if (!sdk || !trackingAllowed(activeConfig)) return;
@@ -148,6 +151,8 @@ export function stopAnalytics() {
   activeConfig = null;
   removeLinks?.();
   removeLinks = null;
+  removeImpressions?.();
+  removeImpressions = null;
   starting = false;
   lastPage = null;
   pending.forEach((controller) => controller.abort());
@@ -400,6 +405,9 @@ export function capturePage(config: AnalyticsConfig, pathname: string) {
     sdk.capture('$pageleave', { $current_url: `${siteOrigin()}${pagePath(lastPage)}` });
   }
 
+  removeImpressions?.();
   lastPage = pathname;
   sdk.capture('$pageview');
+  removeImpressions =
+    pathname === '/components' ? observeBannerImpression(captureInteraction) : null;
 }

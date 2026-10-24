@@ -3,6 +3,7 @@ import type { Properties } from 'posthog-js';
 /** Fixed categories only: never pass labels, input values or arbitrary URLs to capture. */
 export const INTERACTION_EVENTS = [
   'pro_banner_click',
+  'pro_banner_impression',
   'pro_link_click',
   'pro_checkout_click',
   'site_link_click',
@@ -146,4 +147,65 @@ export function listenForLinks(capture: Capture, pagePath: PagePath) {
   document.addEventListener('auxclick', click, { capture: true, signal: controller.signal });
 
   return () => controller.abort();
+}
+
+/** One viewable gallery promotion per pageview, under the caller's permission lifecycle. */
+export function observeBannerImpression(capture: Capture) {
+  let banner: Element | null = null;
+  let disposed = false;
+  let recorded = false;
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (disposed || recorded || document.visibilityState !== 'visible') return;
+
+      if (
+        !entries.some(
+          (entry) =>
+            entry.target === banner &&
+            entry.target.isConnected &&
+            entry.isIntersecting &&
+            entry.intersectionRatio >= 0.5,
+        )
+      )
+        return;
+      recorded = true;
+      capture('pro_banner_impression', { source: 'banner', destination: 'pro' });
+      observer.disconnect();
+      mutations.disconnect();
+      document.removeEventListener('visibilitychange', visibility);
+    },
+    { threshold: 0.5 },
+  );
+
+  const watch = () => {
+    if (disposed || recorded || document.visibilityState !== 'visible') return;
+    const next = document.querySelector('a.pro-card[data-analytics-source="banner"]');
+
+    if (next === banner) return;
+    observer.disconnect();
+    banner = next;
+
+    if (banner) observer.observe(banner);
+  };
+
+  const visibility = () => {
+    observer.disconnect();
+    banner = null;
+    watch();
+  };
+
+  // App Router can stream the gallery rail after its pathname effect has run.
+  const mutations = new MutationObserver(watch);
+
+  mutations.observe(document.body, { childList: true, subtree: true });
+  document.addEventListener('visibilitychange', visibility);
+  watch();
+
+  return () => {
+    disposed = true;
+    observer.disconnect();
+    mutations.disconnect();
+    document.removeEventListener('visibilitychange', visibility);
+  };
 }

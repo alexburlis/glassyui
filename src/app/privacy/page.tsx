@@ -91,15 +91,16 @@ export default function PrivacyPage() {
             We send page views (<code>$pageview</code>), page exits (<code>$pageleave</code>),
             loading and interaction measurements (<code>$web_vitals</code>), and explicit Pro
             checkout-button clicks (<code>pro_checkout_click</code>), promotion and navigation
-            clicks, and control actions. Interaction events contain fixed control categories,
-            placement, destination categories and outcomes. Signup outcomes mean a request was
-            accepted or failed, not a confirmed subscription. Search text, copied content and email
-            addresses are excluded. An event contains a known public route or route category, the
-            Glassy UI site, event time, processing basis, scroll depth, time on a page, browser and
-            device categories, screen dimensions, a broad referral category (direct, same-site or
-            external), and random visitor, session and page-view identifiers held only in the
-            current page document&apos;s memory. We do not link this identifier to an account or
-            purchase. A visit to a thank-you page is a page view, not proof of payment.
+            clicks, visible Pro banner impressions, and control actions. Interaction events contain
+            fixed control categories, placement, destination categories and outcomes. Signup
+            outcomes mean a request was accepted or failed, not a confirmed subscription. Search
+            text, copied content and email addresses are excluded. An event contains a known public
+            route or route category, the Glassy UI site, event time, processing basis, scroll depth,
+            time on a page, browser and device categories, screen dimensions, a broad referral
+            category (direct, same-site or external), and random visitor, session and page-view
+            identifiers held only in the current page document&apos;s memory. We do not link this
+            identifier to an account or purchase. A visit to a thank-you page is a page view, not
+            proof of payment.
           </p>
           <p>
             Event properties exclude query strings, fragments, full referring URLs, email addresses,

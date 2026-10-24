@@ -1,10 +1,10 @@
 # Registry components
 
-The registry exposes 37 source-copy component items. Install an item by URL
-without a Glassy UI namespace mapping:
+The registry exposes 37 source-copy component items. The shadcn registry
+directory maps `@glassyui`, so an item installs by name with no mapping:
 
 ```bash
-npx shadcn@4.14.1 add https://glassyui.com/r/<item-name>.json
+npx shadcn@4.14.1 add @glassyui/<item-name>
 ```
 
 The file lists below are each item's direct files from `registry.json`. The
