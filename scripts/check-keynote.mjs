@@ -103,7 +103,7 @@ const expect = (engine, condition, message) => {
 
 const HERO_ACTIONS = [
   '.home-hero .home-actions > .lg-button--prominent',
-  '.home-hero .home-actions a[href="https://github.com/alexburlis/glassyui"]',
+  '.home-hero .home-actions a[href="https://pro.glassyui.com"]',
 ];
 
 const HERO = [
