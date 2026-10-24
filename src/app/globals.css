@@ -187,6 +187,13 @@ main :focus {
 
 /* ------------------------------------------------------------ navigation */
 
+/* The search pill needs a wider capsule to keep the theme switch inside its rim. */
+@media (min-width: 1024px) {
+  .site-nav[data-condense-on-scroll] {
+    --lg-header-capsule-width: min(960px, calc(100vw - 32px));
+  }
+}
+
 .site-brand {
   display: inline-flex;
   align-items: center;
