@@ -75,6 +75,14 @@
   --site-syntax-attr: #a44122;
 }
 
+/* Under increased contrast the light glass behind copy frosts at least as densely as the
+   library's, so dark text keeps 7:1 over any backdrop. */
+@media (prefers-contrast: more) {
+  :root[data-lg-theme='light'] {
+    --site-legible-tint: rgb(255 255 255 / 0.75);
+  }
+}
+
 /* Theme colours commit together; hover transitions resume as soon as the change is painted. */
 :root[data-site-theme-changing],
 :root[data-site-theme-changing] *,
@@ -1342,7 +1350,9 @@ main :focus {
 /* A band of wallpaper with a glass pane in it. On the home page WebGL draws
    the pane; the GlassSurface docs show the SVG version. clip-path clips a
    fixed wallpaper to the band without becoming its containing block, so the
-   wallpaper stays put while the page scrolls. */
+   wallpaper stays put while the page scrolls. The fixed wallpaper stacks at
+   0 under the pane that follows it, never below 0: iOS Safari paints the
+   status bar solid over a fixed layer with a negative z-index. */
 .glass-window {
   position: relative;
   display: grid;
@@ -1365,7 +1375,7 @@ main :focus {
 .glass-window-backdrop {
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
 }
 

@@ -228,7 +228,8 @@ export function KeynoteTurn({ caption, children, nativeCount }: KeynoteTurnProps
 
     const target = () => {
       const box = track.getBoundingClientRect();
-      const range = box.height - stage.offsetHeight;
+      // The stage pins for its own height; a transparent border below it reaches further.
+      const range = box.height - stage.clientHeight;
       const progress = range > 0 ? Math.min(Math.max(-box.top / range, 0), 1) : 0;
 
       return progress * TURN.end;

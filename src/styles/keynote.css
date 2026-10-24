@@ -211,10 +211,19 @@ html[data-keynote] .turn {
   margin-top: calc(-1 * var(--turn-inset));
 }
 
+/* iOS Safari paints the status bar solid, cut off in a hard line, once a pinned layer the size of
+   the screen reaches the top, and keeps it there for the rest of the page. A layer well over the
+   screen's height is exempt, so a transparent border below the stage takes its box past the
+   largest viewport, and an equal negative margin keeps its layout, pinning and client size. The
+   camera stays at the centre of the screen, where the phone model's eye is, not of that box. */
 html[data-keynote] .turn-stage {
   position: sticky;
   top: 0;
+  box-sizing: content-box;
   height: 100svh;
+  margin-bottom: calc(100svh - 110lvh);
+  border-bottom: calc(110lvh - 100svh) solid transparent;
+  perspective-origin: 50% 50svh;
   pointer-events: none;
 }
 

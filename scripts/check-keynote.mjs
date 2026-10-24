@@ -409,7 +409,7 @@ function geometry(page) {
     const stage = document.querySelector('.turn-stage');
 
     return {
-      turnRange: track && stage ? track.offsetHeight - stage.offsetHeight : 0,
+      turnRange: track && stage ? track.offsetHeight - stage.clientHeight : 0,
       turnTop: track ? track.getBoundingClientRect().top + window.scrollY : 0,
     };
   });

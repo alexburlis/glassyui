@@ -69,7 +69,7 @@ try {
 
         return {
           top: track.getBoundingClientRect().top + scrollY,
-          range: track.offsetHeight - document.querySelector('.turn-stage').offsetHeight,
+          range: track.offsetHeight - document.querySelector('.turn-stage').clientHeight,
         };
       });
 
