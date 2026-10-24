@@ -82,6 +82,10 @@ def pixel_difference(first, second, region):
     }
 
 
+class HierarchyNotReady(AssertionError):
+    pass
+
+
 class Device:
     def __init__(self, serial):
         self.serial = serial
@@ -182,23 +186,43 @@ class Device:
         assert "Status: ok" in result, f"Fixture launch failed: {result}"
         return url
 
-    def tree(self):
+    def tree(self, timeout=30):
+        deadline = time.monotonic() + timeout
         path = "/sdcard/glassyui-proof.xml"
-        result = self.shell("uiautomator", "dump", path, timeout=30)
+        result = self.shell("uiautomator", "dump", path, timeout=timeout)
+        if result.strip() == "ERROR: null root node returned by UiTestAutomationBridge.":
+            raise HierarchyNotReady(f"Hierarchy did not settle: {result}")
         assert "dumped to:" in result, f"Hierarchy did not settle: {result}"
-        raw = self.shell("cat", path)
+        remaining = deadline - time.monotonic()
+        assert remaining > 0, "Hierarchy read deadline expired"
+        raw = self.shell("cat", path, timeout=remaining)
         return [dict(node.attrib) for node in ET.fromstring(raw).iter("node")]
 
     def wait_node(self, **selector):
         deadline = time.monotonic() + 30
+        not_ready = 0
+        last_failure = None
         while True:
-            nodes = self.tree()
-            found = find_node(nodes, **selector)
-            if found:
-                return nodes, found
-            if time.monotonic() >= deadline:
-                raise AssertionError(f"Visible native node not found: {selector}")
-            time.sleep(0.25)
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise AssertionError(
+                    f"Visible native node not found: {selector}; last hierarchy failure: {last_failure}"
+                )
+            try:
+                nodes = self.tree(timeout=remaining)
+            except HierarchyNotReady as failure:
+                not_ready += 1
+                last_failure = str(failure).strip()
+                print(json.dumps({"hierarchyNotReady": last_failure, "selector": selector,
+                                  "attempt": not_ready}), flush=True)
+            else:
+                found = find_node(nodes, **selector)
+                if found:
+                    if not_ready:
+                        print(json.dumps({"hierarchyRecovered": True, "selector": selector,
+                                          "nullRootFailures": not_ready}), flush=True)
+                    return nodes, found
+            time.sleep(min(0.25, max(0, deadline - time.monotonic())))
 
     def tap(self, node, hold_ms=0):
         left, top, right, bottom = bounds(node)
@@ -272,9 +296,10 @@ class Capture:
         self.persist()
         assert condition, name
 
-    def save(self, name, nodes=None, comparable=True, url=None):
+    def save(self, name, nodes=None, comparable=True, url=None, picture=None):
         started = time.monotonic()
-        picture = self.device.image(timeout=15)
+        if picture is None:
+            picture = self.device.image(timeout=15)
         stabilization = None
         if comparable:
             region = (0, self.args.exclude_top, self.device.width,
@@ -386,9 +411,15 @@ class Capture:
 
         self.device.launch(screen="boundary", theme=theme, motion=True)
         time.sleep(2)
-        first = self.save(f"{theme}-boundary-live-0", comparable=False)
+        first_start = time.monotonic()
+        first = self.device.image(timeout=15)
+        first_end = time.monotonic()
         time.sleep(0.65)
-        second = self.save(f"{theme}-boundary-live-1", comparable=False)
+        second_start = time.monotonic()
+        second = self.device.image(timeout=15)
+        second_end = time.monotonic()
+        self.save(f"{theme}-boundary-live-0", comparable=False, picture=first)
+        self.save(f"{theme}-boundary-live-1", comparable=False, picture=second)
         differences = []
         for label in ("subtle", "control", "standard", "prominent"):
             node = find_node(static_nodes, text=label)
@@ -402,6 +433,15 @@ class Capture:
             differences.append({"material": label, **pixel_difference(first, second, roi)})
         self.check(theme + " live backdrop changes inside glass", any(d["changedPixels"] for d in differences),
                    regions=differences, requestedSleepSeconds=0.65,
+                   screenshotCallTiming={
+                       "clock": "Python time.monotonic seconds",
+                       "firstStart": first_start, "firstEnd": first_end,
+                       "secondStart": second_start, "secondEnd": second_end,
+                       "betweenCallsSeconds": second_start - first_end,
+                       "startToStartSeconds": second_start - first_start,
+                       "encodingBetweenScreenshots": False,
+                       "limit": "Host call bounds, not guest capture or presentation timestamps.",
+                   },
                    limit="Checks visible source updates; these moving frames are excluded from static parity.")
 
     def run(self):
