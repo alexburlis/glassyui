@@ -258,10 +258,18 @@ class Capture:
         self.report = {"command": "capture", "invocation": shlex.join([sys.executable, *sys.argv]),
                        "runnerSha256": sha256(__file__), "package": PACKAGE,
                        "scenes": [], "checks": [], "passed": False}
+        self.persist()
+
+    def persist(self):
+        destination = self.output / "capture.json"
+        pending = self.output / "capture.json.pending"
+        write_json(pending, self.report)
+        pending.replace(destination)
 
     def check(self, name, condition, **details):
         result = {"name": name, "passed": bool(condition), **details}
         self.report["checks"].append(result)
+        self.persist()
         assert condition, name
 
     def save(self, name, nodes=None, comparable=True, url=None):
@@ -290,13 +298,14 @@ class Capture:
                              "changedProductPixelsPerAttempt": changes,
                              "region": list(region), "encodingDuringPolling": False}
         destination = self.output / (name + ".webp")
-        picture.save(destination, "WEBP", lossless=True, method=6)
+        picture.save(destination, "WEBP", lossless=True, method=4)
         self.report["scenes"].append({
             "name": name, "file": destination.name, "sha256": sha256(destination),
             "width": picture.width, "height": picture.height, "comparable": comparable,
             "rawRgbSha256": hashlib.sha256(picture.tobytes()).hexdigest(),
             "stabilization": stabilization, "launchUrl": url, "nodes": nodes or [],
         })
+        self.persist()
         return picture
 
     def launch(self, **parameters):
@@ -399,6 +408,10 @@ class Capture:
         try:
             self.report["environment"] = self.device.metadata()
             self.report["profile"] = "quick" if self.args.quick else "full"
+            self.report["apk"] = {"path": str(self.args.apk.resolve()), "sha256": sha256(self.args.apk)}
+            self.device.adb("install", "--no-incremental", "-r", str(self.args.apk.resolve()), timeout=180)
+            # Inspect bars only after the bound app owns a visible native window.
+            self.launch()
             if self.args.exclude_top is None or self.args.exclude_bottom is None:
                 top, bottom, sources = self.device.system_strips()
                 self.args.exclude_top = top if self.args.exclude_top is None else self.args.exclude_top
@@ -409,8 +422,6 @@ class Capture:
             self.report["staticComparison"] = {"excludedTopPixels": self.args.exclude_top,
                                                 "excludedBottomPixels": self.args.exclude_bottom,
                                                 "automaticMasks": False}
-            self.report["apk"] = {"path": str(self.args.apk.resolve()), "sha256": sha256(self.args.apk)}
-            self.device.adb("install", "--no-incremental", "-r", str(self.args.apk.resolve()), timeout=180)
             if self.args.quick:
                 self.report["offsets"] = {}
                 url, nodes = self.launch()
@@ -436,7 +447,7 @@ class Capture:
                 ):
                     offset = supplied if supplied is not None else self.device.discover_offset(resource_id, desired)
                     self.report["offsets"][name] = offset
-                    write_json(self.output / "capture.json", self.report)
+                    self.persist()
             for theme in self.args.themes:
                 for mode in self.args.modes:
                     parameters = {"theme": theme, "mode": mode}
@@ -477,7 +488,7 @@ class Capture:
             raise
         finally:
             self.report["retainedBytes"] = sum(path.stat().st_size for path in self.output.iterdir() if path.is_file())
-            write_json(self.output / "capture.json", self.report)
+            self.persist()
 
 
 def compare(args):

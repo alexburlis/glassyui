@@ -3504,7 +3504,7 @@ export default function Page() {
     route: '/components/glass-logo-reveal',
     searchTitle: 'Glass Logo Reveal: a WebGL logo animation for React',
     description:
-      'A logo sting: a capsule of thick glass carries your mark and name into view, then lands on the real lockup.',
+      'A logo sting: a ball of thick glass swells around your mark, squares into a glass tile and clears, leaving the real mark.',
     usage: `import { GlassLogoReveal } from "@/components/glassyui/glass-logo-reveal";
 
 export function Intro() {
@@ -3512,7 +3512,7 @@ export function Intro() {
     <GlassLogoReveal
       className="w-full max-w-3xl rounded-3xl"
       markSrc="/logo.svg"
-      name="Acme"
+      label="Acme"
     />
   );
 }`,
@@ -3523,7 +3523,7 @@ export function Intro() {
 
 return (
   <>
-    <GlassLogoReveal key={run} markSrc="/logo.svg" name="Acme" />
+    <GlassLogoReveal key={run} markSrc="/logo.svg" label="Acme" />
     <button type="button" onClick={() => setRun(run + 1)}>
       Replay
     </button>
@@ -3536,7 +3536,7 @@ return (
 
 return (
   <>
-    <GlassLogoReveal markSrc="/logo.svg" name="Acme" progress={moment} />
+    <GlassLogoReveal markSrc="/logo.svg" label="Acme" progress={moment} />
     <input
       aria-label="Moment"
       max={100}
@@ -3555,7 +3555,7 @@ return splash ? (
   <GlassLogoReveal
     className="fixed inset-0 aspect-auto"
     markSrc="/logo.svg"
-    name="Acme"
+    label="Acme"
     play="mount"
     onComplete={() => setTimeout(() => setSplash(false), 600)}
   />
@@ -3564,11 +3564,11 @@ return splash ? (
 );`,
       },
       {
-        title: 'Set the stage and the type',
+        title: 'Set the stage and the size',
         code: `<GlassLogoReveal
-  className="aspect-[3/1] bg-black font-semibold text-white"
+  className="aspect-[3/1] bg-black [--lg-logo-reveal-size:40cqmin]"
   markSrc="/logo-white.svg"
-  name="Acme"
+  label="Acme"
 />`,
       },
     ],
@@ -3576,7 +3576,7 @@ return splash ? (
       {
         name: 'GlassLogoReveal',
         description:
-          'A figure with role img: the stage, drawn on a canvas, and the lockup it lands on. Its background is the stage and its colour the name; size the lockup with font-size.',
+          "A figure with role img: the stage, drawn on a canvas, and the mark it lands on. Its background is the stage; --lg-logo-reveal-size sets the mark's height, nearly half the stage by default. The glass is ray-traced, so it bends the mark as real glass would and lands on it exactly.",
         extends: 'HTML figure attributes (no children)',
         props: [
           {
@@ -3588,11 +3588,10 @@ return splash ? (
             required: true,
           },
           {
-            name: 'name',
+            name: 'label',
             type: 'string',
             default: '—',
-            description:
-              "The name set beside the mark, in the figure's font and colour. Also its accessible name.",
+            description: "The mark's accessible name, such as your product's name.",
             required: true,
           },
           {
@@ -3606,28 +3605,28 @@ return splash ? (
             type: 'number',
             default: '—',
             description:
-              'Holds one moment, from 0 (the empty stage) to 1 (the lockup), instead of playing. Clearing it plays on from there.',
+              'Holds one moment, from 0 (the empty stage) to 1 (the mark at rest), instead of playing. Clearing it plays on from there.',
           },
           {
             name: 'duration',
             type: 'number',
             default: '2600',
-            description: 'Milliseconds from the empty stage to the lockup.',
+            description: 'Milliseconds from the empty stage to the mark at rest.',
           },
           {
             name: 'onComplete',
             type: '() => void',
             default: '—',
-            description: 'Called once the lockup has landed, or at once under reduced motion.',
+            description: 'Called once the mark has landed, or at once under reduced motion.',
           },
         ],
       },
     ],
     types: ['GlassLogoRevealProps', 'GlassLogoRevealPlay'],
     requires:
-      'WebGL2 and a mark from your origin or served with CORS. Without WebGL2 the finished lockup shows at once.',
+      'WebGL2 and a mark from your origin or served with CORS. Without WebGL2 the mark shows at once.',
     accessibility:
-      'The figure is named by name; pass aria-label for a fuller name. Reduced motion and reduced transparency show the lockup at once.',
+      'The figure is named by label. Reduced motion and reduced transparency show the mark at once.',
     pageToc: standardToc,
   },
   {
@@ -3889,12 +3888,6 @@ export const initializeShadcn = 'npx shadcn@4.14.1 init';
 export const glassThemeRoot = `<html lang="en" data-lg-theme="light">
   <body>{children}</body>
 </html>`;
-
-export const publicRegistryMapping = `{
-  "registries": {
-    "@glassyui": "https://glassyui.com/r/{name}.json"
-  }
-}`;
 
 export const componentCategories: ComponentCategory[] = [
   'Core',

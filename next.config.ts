@@ -14,6 +14,8 @@ if (process.env.NEXT_PUBLIC_SENTRY_DSN && !/^glassyui@[0-9a-f]{40}$/.test(releas
 const nextConfig: NextConfig = {
   // The production image (Dockerfile) runs the traced standalone server.
   output: 'standalone',
+  // Preserve RSC headers so Proxy can separate component reads from page POSTs.
+  skipProxyUrlNormalize: true,
   images: {
     localPatterns: [{ pathname: '/**', search: '' }, { pathname: '/share/blog/**' }],
   },

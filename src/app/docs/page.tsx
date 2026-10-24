@@ -5,7 +5,6 @@ import {
   componentDocs,
   glassThemeRoot,
   initializeShadcn,
-  publicRegistryMapping,
 } from '@/components/docs/component-docs-data';
 import { CopyCodeBlock } from '@/components/docs/copy-code-block';
 import { DocsShell } from '@/components/docs/docs-shell';
@@ -68,7 +67,11 @@ export default function DocsPage() {
             <code>components.json</code>, initialize it first:
           </p>
           <CopyCodeBlock code={initializeShadcn} label="Initialize shadcn" language="shell" />
-          <p>Install a component directly from its URL:</p>
+          <p>
+            Then add a component. Glassy UI is in the{' '}
+            <a href="https://ui.shadcn.com/docs/directory">shadcn registry directory</a>, so the CLI
+            finds <code>@glassyui</code> with no setup:
+          </p>
           <CopyCodeBlock
             code={installCommand(['glass-button'], 'react')}
             label="Install Glass Button"
@@ -82,18 +85,6 @@ export default function DocsPage() {
           <p>
             Building with Expo? See <Link href="/guides/expo">Add Glassy UI to an Expo app</Link>.
           </p>
-          <details>
-            <summary>Optional registry shorthand</summary>
-            <p>
-              Merge this mapping into your <code>components.json</code> to install with{' '}
-              <code>@glassyui/glass-button</code> instead of the full URL.
-            </p>
-            <CopyCodeBlock
-              code={publicRegistryMapping}
-              label="Optional components.json registry mapping"
-              language="json"
-            />
-          </details>
           <p>
             Already using shadcn/ui components? The Glassy UI theme restyles them without code
             changes:{' '}

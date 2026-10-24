@@ -5,8 +5,8 @@ import path from 'node:path';
 import { chromium, firefox, webkit } from 'playwright';
 
 // Proves the Glass Logo Reveal on its docs page in Chromium, WebKit and Firefox, at desktop and
-// phone widths in both themes: it draws with WebGL2, moves, lands exactly on the real lockup,
-// holds a scrubbed moment, plays again, and shows the lockup at once under reduced motion.
+// phone widths in both themes: it draws with WebGL2, moves, lands exactly on the real mark,
+// holds a scrubbed moment, plays again, and shows the mark at once under reduced motion.
 const baseUrl = process.argv[2] ?? 'http://127.0.0.1:3000';
 
 const directory = path.resolve(process.argv[3] ?? '.artifacts/logo-reveal');
@@ -143,10 +143,10 @@ try {
         await preview.locator('.lg-logo-reveal[data-state="ended"]').waitFor({ timeout: 6000 });
         assert.equal(await moment.getAttribute('aria-valuenow'), '100', `${label}: it landed`);
 
-        // The canvas's last frame alone, then the page's own lockup alone.
+        // The canvas's last frame alone, then the page's own mark alone.
         const canvasOnly = await page.addStyleTag({
           content:
-            '.lg-logo-reveal-canvas { opacity: 1 !important; transition: none !important; } .lg-logo-reveal-lockup { visibility: hidden !important; }',
+            '.lg-logo-reveal-canvas { opacity: 1 !important; transition: none !important; } .lg-logo-reveal-mark { visibility: hidden !important; }',
         });
 
         await page.waitForTimeout(100);
@@ -170,10 +170,10 @@ try {
         manifest.landings.push({ run: label, meanDifference: Number(landing.toFixed(3)) });
         assert.ok(
           landing < 0.6,
-          `${label}: the last frame must land on the real lockup (${landing.toFixed(2)})`,
+          `${label}: the last frame must land on the real mark (${landing.toFixed(2)})`,
         );
 
-        // A scrubbed moment holds; the end of the timeline is the lockup itself.
+        // A scrubbed moment holds; the end of the timeline is the mark itself.
         await moment.focus();
         await page.keyboard.press('Home');
 
@@ -198,18 +198,18 @@ try {
         await page.keyboard.press('End');
         await preview.locator('.lg-logo-reveal[data-state="ended"]').waitFor();
 
-        // The system setting shows the lockup at once.
+        // The system setting shows the mark at once.
         await page.emulateMedia({ reducedMotion: 'reduce' });
         await replay.click();
         await page.waitForTimeout(100);
         assert.equal(
           await reveal.getAttribute('data-state'),
           'ended',
-          `${label}: reduced motion must show the lockup at once`,
+          `${label}: reduced motion must show the mark at once`,
         );
         assert.ok(
           (await difference(page, lockup, await reveal.screenshot())) < 0.6,
-          `${label}: reduced motion must show the same lockup`,
+          `${label}: reduced motion must show the same mark`,
         );
         await page.emulateMedia({ reducedMotion: 'no-preference' });
 
@@ -226,7 +226,7 @@ try {
         assert.equal(
           await reveal.getAttribute('data-state'),
           'ended',
-          `${label}: the site preference must show the lockup at once`,
+          `${label}: the site preference must show the mark at once`,
         );
 
         const still = await reveal.screenshot({
@@ -236,7 +236,7 @@ try {
         keep(`${prefix}-still.png`);
         assert.ok(
           (await difference(page, lockup, still)) < 0.6,
-          `${label}: the site preference must show the same lockup`,
+          `${label}: the site preference must show the same mark`,
         );
         await context.tracing.stop({ path: path.join(directory, `${prefix}-trace.zip`) });
         await context.close();

@@ -389,8 +389,9 @@ quality preference on weak devices.
 
 ## Installable names
 
-Configure the local namespace once as described in
-[`registry-installation.md`](registry-installation.md), then install a matching
+The shadcn registry directory resolves `@glassyui`; to test local changes, map
+it to the loopback server as described in
+[`registry-installation.md`](registry-installation.md). Install a matching
 registry item with the pinned CLI:
 
 ```bash

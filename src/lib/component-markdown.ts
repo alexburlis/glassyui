@@ -32,7 +32,7 @@ export function componentMarkdown(component: ComponentDoc, headingLevel = 2) {
   sections.push(`Page: ${SITE_URL}${component.route ?? '/components'}`);
   sections.push(heading(1, 'Install'), fence(component.install, 'bash'));
   sections.push(
-    'For a React 19+ app with Tailwind CSS 4 and a shadcn components.json. The complete item URL needs no registry mapping. The component page also offers pnpm, modern Yarn and bun commands.',
+    'For a React 19+ app with Tailwind CSS 4 and a shadcn components.json. Glassy UI is in the shadcn registry directory, so @glassyui needs no registry mapping. The component page also offers pnpm, modern Yarn and bun commands.',
     heading(2, 'Manual installation'),
     `Copy the complete files from ${registryItemUrl(component.registryItem, 'react')}. Keep the lib and styles directories. If @/ points at src, use src/components/glassyui. Installed modules import their stylesheets; no separate stylesheet import is needed.`,
     component.installedFiles.map((file) => `- \`${file}\``).join('\n'),
