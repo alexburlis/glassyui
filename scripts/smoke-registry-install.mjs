@@ -928,8 +928,8 @@ try {
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.setViewportSize({ width: 800, height: 600 });
 
-    // The reveal plays on its own and lands exactly on the lockup the page laid out: its
-    // canvas's last frame and the real lockup make the same picture.
+    // The reveal plays on its own and lands exactly on the mark the page laid out: its
+    // canvas's last frame and the real mark make the same picture.
     const reveal = page.locator('[data-installed-example="logo-reveal"]');
     const sting = reveal.locator('.lg-logo-reveal');
     const replay = reveal.getByRole('button', { name: 'Replay reveal', exact: true });
@@ -954,7 +954,7 @@ try {
 
     const canvasOnly = await page.addStyleTag({
       content:
-        '.lg-logo-reveal-canvas { opacity: 1 !important; transition: none !important; } .lg-logo-reveal-lockup { visibility: hidden !important; }',
+        '.lg-logo-reveal-canvas { opacity: 1 !important; transition: none !important; } .lg-logo-reveal-mark { visibility: hidden !important; }',
     });
 
     await nextPaint(page);
@@ -979,7 +979,7 @@ try {
 
     assert.ok(
       landing < 0.6,
-      `${browserName}: the last frame must land on the real lockup (${landing.toFixed(2)})`,
+      `${browserName}: the last frame must land on the real mark (${landing.toFixed(2)})`,
     );
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await replay.click();
@@ -987,11 +987,11 @@ try {
     assert.equal(
       await sting.getAttribute('data-state'),
       'ended',
-      `${browserName}: reduced motion must show the lockup at once`,
+      `${browserName}: reduced motion must show the mark at once`,
     );
     assert.ok(
       (await pictureDifference(page, lockup, await sting.screenshot())) < 0.6,
-      `${browserName}: reduced motion must show the same lockup`,
+      `${browserName}: reduced motion must show the same mark`,
     );
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.evaluate(() => document.documentElement.setAttribute('data-lg-reduce-motion', '1'));
@@ -1000,7 +1000,7 @@ try {
     assert.equal(
       await sting.getAttribute('data-state'),
       'ended',
-      `${browserName}: the site preference must show the lockup at once`,
+      `${browserName}: the site preference must show the mark at once`,
     );
     await page.evaluate(() => document.documentElement.removeAttribute('data-lg-reduce-motion'));
     assert.deepEqual(runtimeErrors, [], `${browserName}: installed examples must not throw`);

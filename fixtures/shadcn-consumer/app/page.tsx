@@ -115,7 +115,7 @@ export default function InstalledRegistryFixture() {
           className="bg-black text-white"
           duration={1200}
           markSrc={revealMark}
-          name="Installed reveal"
+          label="Installed reveal"
           play="mount"
         />
         <button onClick={() => setRevealRun(revealRun + 1)} type="button">

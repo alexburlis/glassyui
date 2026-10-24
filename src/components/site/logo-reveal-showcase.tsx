@@ -22,7 +22,7 @@ export function LogoRevealShowcase({ quiet = false }: { quiet?: boolean }) {
             ? '/brand/glassyui-logo.svg'
             : '/brand/glassyui-logo-white.svg'
         }
-        name="Glassy UI"
+        label="Glassy UI"
         onComplete={() => setLanded(true)}
         progress={moment}
       />

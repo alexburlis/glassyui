@@ -2,6 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import { Image, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GlassBackdrop } from './components/glassyui/glass-backdrop';
 import { GlassButton } from './components/glassyui/glass-button';
 import { GlassProvider, useGlassTheme, usePreferences } from './components/glassyui/glass-provider';
@@ -164,11 +165,13 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={styles.screen}>
-      <GlassProvider>
-        <GlassToastProvider>
-          <Gallery capture={launch.capture} />
-        </GlassToastProvider>
-      </GlassProvider>
+      <SafeAreaProvider>
+        <GlassProvider>
+          <GlassToastProvider>
+            <Gallery capture={launch.capture} />
+          </GlassToastProvider>
+        </GlassProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
