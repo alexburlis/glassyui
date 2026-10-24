@@ -3,7 +3,8 @@
 // its back and lands on the plane of the mark just behind it, so the mark warps only as real
 // glass would warp it. Each wavelength traces its own index, which splits colour; Fresnel
 // reflections show a studio of softboxes. The body morphs from a domed lens into a thick
-// rounded tile, then clears by losing its refractive index, so the last frame is the mark itself.
+// rounded tile and settles flat; then the studio's lights move away, so its highlights slide
+// off the rim and the glass, with nothing left to reflect over a dark stage, leaves the mark.
 //
 // Lengths are fractions of the mark's larger side, so the reveal keeps its proportions at any size.
 
@@ -50,6 +51,8 @@ uniform float gap;
 uniform float tilt;
 uniform float glass;
 uniform float haze;
+uniform float lamp;
+uniform float drift;
 
 // Lengths in the shader are in units of the glass's half size, so marching tolerances scale.
 float unit;
@@ -97,8 +100,11 @@ vec3 normalAt(vec3 p) {
 // A dark studio: a large softbox up and to the right, a smaller fill down and to the left, a thin
 // strip on the left and a faint floor, so the glass catches light at opposite corners.
 vec3 studio(vec3 d) {
-  float key = smoothstep(0.35, 0.0, length((d.xy - vec2(0.55, -0.6)) / vec2(0.5, 0.3)) - 0.6) * step(d.z, 0.2);
-  float fill = smoothstep(0.3, 0.0, length((d.xy - vec2(-0.6, 0.6)) / vec2(0.4, 0.25)) - 0.5) * step(d.z, 0.2);
+  // As the lights move away they slide out towards the horizon, so their reflections run off
+  // the rim, and fall dim with distance.
+  vec2 away = vec2(0.9, -0.5) * drift;
+  float key = smoothstep(0.35, 0.0, length((d.xy - vec2(0.55, -0.6) - away) / vec2(0.5, 0.3)) - 0.6) * step(d.z, 0.2);
+  float fill = smoothstep(0.3, 0.0, length((d.xy - vec2(-0.6, 0.6) + away) / vec2(0.4, 0.25)) - 0.5) * step(d.z, 0.2);
   float strip = smoothstep(0.08, 0.0, abs(d.x + 0.78) - 0.03) * smoothstep(0.6, 0.2, abs(d.y + 0.1)) * step(d.z, 0.3);
   float ground = smoothstep(0.1, 0.9, d.y) * 0.05;
   // A soft overhead and a band of light around the horizon catch every grazing edge.
@@ -108,6 +114,7 @@ vec3 studio(vec3 d) {
   vec3 light = vec3(1.0, 0.98, 0.95) * key * 9.0 + vec3(0.95, 0.97, 1.0) * fill * 5.0 +
     vec3(0.85, 0.92, 1.0) * strip * 3.0 +
     vec3(0.8, 0.86, 0.95) * (above + horizon) + ground;
+  light *= lamp;
 
   return mix(vec3(0.94, 0.94, 0.93) - light * 0.5, light, dark);
 }
@@ -228,6 +235,8 @@ void main() {
 
   float count = float(taps);
   vec4 through = vec4(sum, alpha / count);
+  float shine = 0.0;
+  vec3 reflection = vec3(0.0);
 
   if (covered > 0.0) {
     float share = covered / count;
@@ -235,18 +244,18 @@ void main() {
     thickness /= covered;
     // Thick glass absorbs a little and scatters some of the mark's light within it.
     // Thick glass absorbs warm light first, so its depths read cool and blue.
-    through.rgb *= mix(vec3(1.0), vec3(0.82, 0.9, 1.05), clamp(thickness * 0.25, 0.0, 1.0) * dark);
-    through.rgb += vec3(0.004, 0.008, 0.016) * dark * share;
+    through.rgb *= mix(vec3(1.0), vec3(0.82, 0.9, 1.05), clamp(thickness * 0.25, 0.0, 1.0) * dark * lamp);
+    through.rgb += vec3(0.004, 0.008, 0.016) * dark * lamp * share;
     // Light scattered in the glass lifts its depths to a milky navy, brighter towards the key
     // light up and to the left.
     float milk = (0.035 + 0.04 * smoothstep(1.2, -0.6, local.x + local.y)) * mix(1.6, 1.0, 1.0 - rounding);
-    through.rgb += vec3(0.55, 0.65, 0.85) * milk * glass * dark * share;
+    through.rgb += vec3(0.55, 0.65, 0.85) * milk * glass * lamp * dark * share;
     vec4 glow = (markAt(centre + local * extent * 0.8, 4.0) * 0.5 + markAt(centre + local * extent * 0.7, 6.0) * 0.5);
     through.rgb += glow.rgb * haze * dark * share;
-    vec3 reflection = mirror / covered;
-    // Reflection adds light; a soft shoulder keeps bright studio light from clipping hard.
-    vec3 lit = through.rgb * (1.0 - fresnel * glass * share) + reflection * fresnel * glass * share;
-    through.rgb = mix(lit / (1.0 + max(lit - 1.0, 0.0)), through.rgb, 1.0 - dark);
+    // Beyond its lights the studio is the stage, so once they have gone the glass reflects
+    // only the stage and disappears into it.
+    reflection = mirror / covered + backdrop.rgb * dark;
+    shine = fresnel * glass * share;
   }
 
   // Light around the glass, from its outline on screen: a soft halo, streaks where the side
@@ -262,19 +271,24 @@ void main() {
   float caustic = exp(-pow((outline + 0.11) / 0.014, 2.0)) * pow(rounding, 3.0) * 0.45;
   // The polished edge stays dark except at the corners facing the key and the fill, where it
   // catches them as bright slivers.
-  float facing = abs(dot(g, normalize(vec2(0.7, -0.7))));
-  float edgeLine = exp(-pow((outline + 0.02) / 0.022, 2.0)) * (0.08 + 0.92 * pow(facing, 6.0)) * 0.7;
-  vec3 aura = vec3(0.7, 0.8, 0.95) * (halo * exposure + streak + walls + ring) * glass +
-    mix(vec3(1.0, 0.86, 0.7), vec3(0.75, 0.9, 1.0), facing) * edgeLine * glass +
-    vec3(1.0, 0.82, 0.25) * caustic * exposure * glass;
+  // As the lights leave, the slivers run round the corners and narrow until they go out.
+  float bearing = -0.785 + 0.6 * drift;
+  float facing = abs(dot(g, vec2(cos(bearing), sin(bearing))));
+  float edgeLine = exp(-pow((outline + 0.02) / 0.022, 2.0)) * (0.08 + 0.92 * pow(facing, 6.0 + 18.0 * drift)) * 0.7;
+  vec3 aura = (vec3(0.7, 0.8, 0.95) * (halo * exposure + streak + walls + ring) +
+    mix(vec3(1.0, 0.86, 0.7), vec3(0.75, 0.9, 1.0), facing) * edgeLine +
+    vec3(1.0, 0.82, 0.25) * caustic * exposure) * glass * lamp;
 
   float cover = clamp(0.5 - outline / pixel, 0.0, 1.0);
   vec4 c = mix(mix(plain, through, cover), over(stillAt(p)), rest);
-  c.rgb += aura * dark * (1.0 - rest);
+  // Reflection adds light; a soft shoulder keeps bright studio light from clipping hard.
+  vec3 lit = c.rgb * (1.0 - shine * cover) + reflection * shine * cover;
+  c.rgb = mix(c.rgb, lit / (1.0 + max(lit - 1.0, 0.0)), dark);
+  c.rgb += aura * dark;
   c.a = max(c.a, dot(aura, vec3(0.333)) * dark);
   float noise = fract(sin(dot(gl_FragCoord.xy + seed, vec2(12.9898, 78.233))) * 43758.5453);
   // Fine grain while the glass is there, as a lens would record it; none once it lands.
-  c.rgb += (noise - 0.5) * mix(1.0, 5.0, glass * (1.0 - rest)) / 255.0 * c.a;
+  c.rgb += (noise - 0.5) * mix(1.0, 5.0, glass * lamp) / 255.0 * c.a;
   colour = clamp(c, 0.0, 1.0);
 }`;
 
@@ -352,7 +366,9 @@ function revealFrame(time: number, layout: LogoRevealLayout, thickness: number) 
   const t = clamp(time, 0, LOGO_REVEAL_LENGTH) / PACE;
   const unit = Math.max(layout.width, layout.height, 1);
   const morph = sineInOut(span(t, 0.2, 0.62));
-  const clear = gentle(span(t, 0.98, 1.6));
+  // The face settles flat, then the lights move away and dim with distance.
+  const flat = gentle(span(t, 0.9, 1.45));
+  const away = gentle(span(t, 1.05, 1.95));
   const settled = time >= LOGO_REVEAL_LENGTH;
 
   // The glass springs up to size with one small overshoot, then keeps drifting closer.
@@ -366,21 +382,24 @@ function revealFrame(time: number, layout: LogoRevealLayout, thickness: number) 
     // Close around the mark, so it fills most of the glass.
     extent: unit * 0.86 * size,
     exposure: smooth(span(t, 0.1, 0.17)),
-    rest: settled ? 1 : gentle(span(t, 1.5, 1.98)),
+    rest: settled ? 1 : gentle(span(t, 1.4, 1.75)),
     // A sphere first, then a slab with rounded corners and edges, as thick as a quarter of it.
     // A domed, lens-like ball first, then a slab a quarter as thick, rounded at corners and edges.
     rounding: mix(1, 0.46, morph),
     depth: mix(0.5, 0.3, morph),
     edge: mix(0.5, 0.3, morph),
     // The face bulges most while the glass is new and settles flatter as it comes to rest.
-    dome: mix(0.2, 0.32 - 0.18 * sineInOut(span(t, 0.5, 1.2)), morph) * (1 - clear),
-    // The glass clears by losing its index: refraction and reflection fade together.
-    ior: settled ? 1 : 1 + 0.5 * (0.8 + 0.2 * thickness) * (1 - clear),
+    dome: mix(0.2, 0.32 - 0.18 * sineInOut(span(t, 0.5, 1.2)), morph) * (1 - flat),
+    // The glass keeps its index to the end: flat over the mark, it no longer moves it.
+    ior: 1 + 0.5 * (0.8 + 0.2 * thickness),
     split: settled ? 0 : 0.035 * (0.6 + 0.4 * thickness),
     gap: 0.04,
     tilt: 0,
-    glass: settled ? 0 : smooth(span(t, 0.03, 0.2)) * (1 - gentle(span(t, 1.42, 1.98))),
-    haze: mix(0.12, 0.08, morph) * (1 - clear),
+    glass: settled ? 0 : smooth(span(t, 0.03, 0.2)) * (1 - span(t, 1.96, 2)),
+    haze: mix(0.12, 0.08, morph) * (1 - flat),
+    // What is left of the studio's light on the glass, falling off as the lights leave.
+    lamp: settled ? 0 : (1 - away) ** 2,
+    drift: away,
   } satisfies Record<string, number>;
 
   return { floats, pairs };
