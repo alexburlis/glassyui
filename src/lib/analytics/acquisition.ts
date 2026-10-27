@@ -1,6 +1,6 @@
 import type { PostHog } from 'posthog-js';
 
-export const ACQUISITION_IDLE_MS = 30 * 60 * 1000;
+const ACQUISITION_IDLE_MS = 30 * 60 * 1000;
 
 const STORAGE_PROPERTY = 'glassy_acquisition';
 
