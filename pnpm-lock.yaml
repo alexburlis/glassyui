@@ -14,6 +14,9 @@ overrides:
   hono: 4.13.11
 
 patchedDependencies:
+  posthog-js@1.434.15:
+    hash: 701171cec4013fc44745cfbaa4b3bce974279d5974c31b82d5583f70cc560d5b
+    path: patches/posthog-js@1.434.15.patch
   braces@3.0.3:
     hash: c5ffd8075677409c3704bfa465f0304cb1bb97954b8351c0c2b64fe361f9f1e0
     path: patches/braces@3.0.3.patch
@@ -96,7 +99,7 @@ importers:
         version: 6.0.0(@types/react@19.2.17)(react@19.3.0)
       posthog-js:
         specifier: 1.434.15
-        version: 1.434.15(@types/react@19.2.17)(react@19.3.0)
+        version: 1.434.15(patch_hash=701171cec4013fc44745cfbaa4b3bce974279d5974c31b82d5583f70cc560d5b)(@types/react@19.2.17)(react@19.3.0)
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -10127,7 +10130,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.2
 
-  posthog-js@1.434.15(@types/react@19.2.17)(react@19.3.0):
+  posthog-js@1.434.15(patch_hash=701171cec4013fc44745cfbaa4b3bce974279d5974c31b82d5583f70cc560d5b)(@types/react@19.2.17)(react@19.3.0):
     dependencies:
       '@posthog/browser-common': 0.9.0
       '@posthog/core': 1.55.2

@@ -97,10 +97,13 @@ export default function PrivacyPage() {
             text, copied content and email addresses are excluded. An event contains a known public
             route or route category, the Glassy UI site, event time, processing basis, scroll depth,
             time on a page, browser and device categories, screen dimensions, a broad referral
-            category (direct, same-site or external), and random visitor, session and page-view
-            identifiers held only in the current page document&apos;s memory. We do not link this
-            identifier to an account or purchase. A visit to a thank-you page is a page view, not
-            proof of payment.
+            category and fixed source labels such as X, GitHub or Google. Known campaign tags and
+            the landing-page category connect permitted visits to later control actions. Raw
+            campaign strings and full referrers are excluded. Random PostHog browser and session
+            identifiers use a first-party cookie shared between the two sites, with an expiry of 30
+            minutes after refresh. Page-view identifiers and technical session state support
+            navigation measurement. We do not link these identifiers to an account or purchase. A
+            visit to a thank-you page is a page view, not proof of payment.
           </p>
           <p>
             Event properties exclude query strings, fragments, full referring URLs, email addresses,
@@ -116,13 +119,14 @@ export default function PrivacyPage() {
             After explicit acceptance, personal-data processing relies on your consent under Article
             6(1)(a) GDPR, and optional storage or device access relies on consent under Section
             25(1) TDDDG. For the United States default, we rely on our legitimate interest in
-            understanding public-page use and checkout-link interest under Article 6(1)(f) GDPR. We
-            limit this to the events above, without advertising, person profiles or recording
-            sessions, and provide an unconditional way to object. The German controller&apos;s GDPR
-            obligations apply beyond Europe. The US default does not constitute consent or establish
-            an exemption from German device-access requirements. We honour Global Privacy Control
-            and Do Not Track as refusals, including when an earlier choice allowed analytics.
-            Closing the notice or continuing to browse does not give consent.
+            understanding public-page use, source-to-action journeys and checkout-link interest
+            under Article 6(1)(f) GDPR. We limit this to the events above, without advertising,
+            person profiles or recording sessions, and provide an unconditional way to object. The
+            German controller&apos;s GDPR obligations apply beyond Europe. The US default does not
+            constitute consent or establish an exemption from German device-access requirements. We
+            honour Global Privacy Control and Do Not Track as refusals, including when an earlier
+            choice allowed analytics. Closing the notice or continuing to browse does not give
+            consent.
           </p>
           <p>
             Open Privacy settings in either site&apos;s footer to accept, reject, turn analytics off

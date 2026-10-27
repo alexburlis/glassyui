@@ -133,7 +133,8 @@
     "patchedDependencies": {
       "braces@3.0.3": "patches/braces@3.0.3.patch",
       "mdx-blog-kit@0.1.2": "patches/mdx-blog-kit@0.1.2.patch",
-      "next@16.4.1": "patches/next@16.4.1.patch"
+      "next@16.4.1": "patches/next@16.4.1.patch",
+      "posthog-js@1.434.15": "patches/posthog-js@1.434.15.patch"
     }
   },
   "packageManager": "pnpm@10.34.5+sha512.a4ee05f2f73658255bd6a89859c065a45c28a57daefae2c893a168ee2b73168c37b91e83e57ea67654ad03f03031746430e8bce38e362e042605fb8abc80192e"

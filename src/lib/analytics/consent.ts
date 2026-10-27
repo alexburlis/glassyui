@@ -1,6 +1,6 @@
 export const CONSENT_COOKIE = 'glassy-ui-analytics-consent';
 
-export const CONSENT_VERSION = 'analytics-v1';
+export const CONSENT_VERSION = 'analytics-v2';
 
 export const CONSENT_MAX_AGE_SECONDS = 180 * 86400;
 
