@@ -22,7 +22,7 @@ const lifetime = 180 * 86400 * 1000;
 
 const accepted = {
   decision: 'accepted',
-  version: 'analytics-v1',
+  version: 'analytics-v2',
   purpose: 'analytics',
   updatedAt: now - 1000,
   expiresAt: now - 1000 + lifetime,
@@ -232,7 +232,7 @@ for (const trust of [null, '', 'false', 'TRUE', '1', 'unreviewed']) {
 
 check('first-party preference identity and proposed expiry', () => {
   assert.equal(CONSENT_COOKIE, 'glassy-ui-analytics-consent');
-  assert.equal(CONSENT_VERSION, 'analytics-v1');
+  assert.equal(CONSENT_VERSION, 'analytics-v2');
   assert.equal(CONSENT_MAX_AGE_SECONDS, 180 * 86400);
 });
 
@@ -258,6 +258,7 @@ for (const [name, raw] of [
     JSON.stringify({ ...accepted, expiresAt: accepted.updatedAt + lifetime + 1 }),
   ],
   ['invalid timestamp', JSON.stringify({ ...accepted, updatedAt: 'yesterday' })],
+  ['previous notice acceptance', JSON.stringify({ ...accepted, version: 'analytics-v1' })],
   ['materially changed acceptance', JSON.stringify({ ...accepted, version: 'analytics-v0' })],
 ]) {
   check(`discard ${name}`, () => assert.equal(parseConsent(raw, now), null));

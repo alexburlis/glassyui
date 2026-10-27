@@ -39,3 +39,17 @@ ARM64 uses the vendor's source-build path with two compiler jobs and a one-hour
 compile limit, so it needs a separate build capacity reservation. This
 campaign's production runtime verification covers AMD64; the ARM64 branch has
 source review only until that build runs.
+
+## `posthog-js@1.434.15`
+
+The pinned SDK saves raw session entry URLs/referrers and search keywords even
+when both `save_referrer` and `save_campaign_params` are false. Cookie
+persistence would retain private query values outside the application transport.
+This patch makes those switches govern session-source persistence and search
+keywords in the CommonJS implementation and the bundled `no-external` import
+used by both Glassy UI apps. It changes no dependency versions.
+
+Keep the bounded acquisition model in the application. Remove the patch only
+when an upstream SDK honors the same storage contract and the paired analytics
+browser checks prove that query, referrer and search content stay out of
+cookies, other SDK storage and transmitted events.

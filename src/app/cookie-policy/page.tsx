@@ -92,18 +92,27 @@ export default function CookiePolicyPage() {
           <p>
             When analytics is allowed by your acceptance or the US default, PostHog uses a
             first-party cookie shared by the two sites named{' '}
-            <code>glassyui_analytics_sdk_permission</code>, with a maximum lifetime of 180 days, to
-            store its technical capture-enabled flag. It contains only a boolean permission marker,
-            not a visitor identifier or proof that you clicked Accept. The Glassy UI choice cookie
-            above is the recorded decision. The SDK cookie uses HTTPS/Secure,
+            <code>glassyui_analytics_sdk_permission</code>, with an expiry of 30 minutes after
+            refresh, to store its technical capture-enabled flag. It contains only a boolean
+            permission marker, not a visitor identifier or proof that you clicked Accept. The Glassy
+            UI choice cookie above is the recorded decision. The SDK cookie uses HTTPS/Secure,
             <code> Path=/</code> and <code>SameSite=Lax</code> on production sites.
           </p>
           <p>
-            Analytics identifiers are kept in current-page memory rather than cookies, local storage
-            or session storage. They end when the page document closes or analytics is withdrawn.
-            There is no persistent analytics visitor identifier, session replay or tracking fallback
-            after refusal. The SDK is first loaded only when analytics is allowed; analytics events
-            are not queued during a period when collection is disallowed.
+            The first-party <code>ph_glassyui_analytics</code> cookie stores a random PostHog
+            browser identifier, session identity and fixed acquisition labels. It connects permitted
+            navigation, reloads and visits between glassyui.com and pro.glassyui.com. It uses the
+            same production domain, Secure, Path and SameSite settings as the technical cookie, with
+            an expiry of 30 minutes after refresh. It is not shared with Stripe or an ad provider.
+            No raw referrer URL, query string, email or account identifier is stored.
+          </p>
+          <p>
+            PostHog also uses <code>ph_glassyui_analytics</code> and its technical window/session
+            variants in session storage until the browser session ends or analytics is withdrawn.
+            These support session and page-view measurement. Local storage is not used for analytics
+            identity. The SDK is first loaded only when analytics is allowed; events are not queued
+            while collection is disallowed. An older acceptance must be renewed where consent is
+            required for this updated storage. Earlier refusals stay effective.
           </p>
           <p>
             Choose Turn off in the US notice, or open Privacy settings in either footer to reject
