@@ -22,7 +22,8 @@
           }
         }
       ],
-      "./components/glassyui/android/with-glassy-blur.cjs"
+      "./components/glassyui/android/with-glassy-blur.cjs",
+      "./plugins/with-patched-okhttp.cjs"
     ]
   }
 }

@@ -139,6 +139,7 @@ async function checkManualButton() {
 
   for (const file of ['package.json', 'components.json', 'tsconfig.json', 'index.ts', 'app.json'])
     fs.copyFileSync(path.join(fixture, file), path.join(manualRoot, file));
+  fs.cpSync(path.join(fixture, 'plugins'), path.join(manualRoot, 'plugins'), { recursive: true });
   const manifestPath = path.join(manualRoot, 'package.json');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
