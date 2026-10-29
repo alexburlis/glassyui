@@ -14,6 +14,9 @@ overrides:
   hono: 4.13.11
 
 patchedDependencies:
+  posthog-js@1.434.15:
+    hash: 701171cec4013fc44745cfbaa4b3bce974279d5974c31b82d5583f70cc560d5b
+    path: patches/posthog-js@1.434.15.patch
   braces@3.0.3:
     hash: c5ffd8075677409c3704bfa465f0304cb1bb97954b8351c0c2b64fe361f9f1e0
     path: patches/braces@3.0.3.patch
@@ -78,7 +81,7 @@ importers:
         version: 4.0.529(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@sentry/nextjs':
         specifier: 10.75.2
-        version: 10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.10.0))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.10.0))(next@16.4.1(patch_hash=0b811e707bba4101dcb352a9a1fcaafd38552d12d39922840342588e1f4e31f7)(@babel/core@7.29.7)(@opentelemetry/api@1.10.0)(@types/node@26.1.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(webpack@5.111.1)
+        version: 10.75.2(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(next@16.4.1(patch_hash=0b811e707bba4101dcb352a9a1fcaafd38552d12d39922840342588e1f4e31f7)(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.1.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(webpack@5.111.1)
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -96,7 +99,7 @@ importers:
         version: 6.0.0(@types/react@19.2.17)(react@19.3.0)
       posthog-js:
         specifier: 1.434.15
-        version: 1.434.15(@types/react@19.2.17)(react@19.3.0)
+        version: 1.434.15(patch_hash=701171cec4013fc44745cfbaa4b3bce974279d5974c31b82d5583f70cc560d5b)(@types/react@19.2.17)(react@19.3.0)
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -7137,22 +7140,22 @@ snapshots:
     dependencies:
       '@sentry/core': 10.75.2
 
-  '@sentry/nextjs@10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.10.0))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.10.0))(next@16.4.1(patch_hash=0b811e707bba4101dcb352a9a1fcaafd38552d12d39922840342588e1f4e31f7)(@babel/core@7.29.7)(@opentelemetry/api@1.10.0)(@types/node@26.1.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(webpack@5.111.1)':
+  '@sentry/nextjs@10.75.2(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(next@16.4.1(patch_hash=0b811e707bba4101dcb352a9a1fcaafd38552d12d39922840342588e1f4e31f7)(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.1.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(webpack@5.111.1)':
     dependencies:
-      '@opentelemetry/api': 1.10.0
-      '@rollup/plugin-commonjs': 28.0.1(rollup@4.65.0)
+      '@opentelemetry/api': 1.9.1
+      '@rollup/plugin-commonjs': 28.0.1(rollup@4.63.5)
       '@sentry/browser-utils': 10.75.2
       '@sentry/bundler-plugin-core': 5.3.0
       '@sentry/conventions': 0.16.0
       '@sentry/core': 10.75.2
-      '@sentry/node': 10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.10.0))
-      '@sentry/opentelemetry': 10.75.2(@opentelemetry/api@1.10.0)(@opentelemetry/core@2.12.0(@opentelemetry/api@1.10.0))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.10.0))
+      '@sentry/node': 10.75.2(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))
+      '@sentry/opentelemetry': 10.75.2(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))
       '@sentry/react': 10.75.2(react@19.3.0)
       '@sentry/server-utils': 10.75.2
       '@sentry/vercel-edge': 10.75.2
-      '@sentry/webpack-plugin': 5.4.1(rollup@4.65.0)(webpack@5.111.1)
-      next: 16.4.1(patch_hash=0b811e707bba4101dcb352a9a1fcaafd38552d12d39922840342588e1f4e31f7)(@babel/core@7.29.7)(@opentelemetry/api@1.10.0)(@types/node@26.1.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      rollup: 4.65.0
+      '@sentry/webpack-plugin': 5.4.0(rollup@4.63.5)(webpack@5.111.1)
+      next: 16.4.1(patch_hash=0b811e707bba4101dcb352a9a1fcaafd38552d12d39922840342588e1f4e31f7)(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.1.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      rollup: 4.63.5
       stacktrace-parser: 0.1.11
     transitivePeerDependencies:
       - '@opentelemetry/core'
@@ -7163,35 +7166,35 @@ snapshots:
       - supports-color
       - webpack
 
-  '@sentry/node-core@10.75.2(@opentelemetry/api@1.10.0)(@opentelemetry/core@2.12.0(@opentelemetry/api@1.10.0))(@opentelemetry/instrumentation@0.220.0(@opentelemetry/api@1.10.0))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.10.0))':
+  '@sentry/node-core@10.75.2(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/instrumentation@0.220.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))':
     dependencies:
       '@sentry/conventions': 0.16.0
       '@sentry/core': 10.75.2
-      '@sentry/opentelemetry': 10.75.2(@opentelemetry/api@1.10.0)(@opentelemetry/core@2.12.0(@opentelemetry/api@1.10.0))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.10.0))
-      import-in-the-middle: 3.5.2
+      '@sentry/opentelemetry': 10.75.2(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))
+      import-in-the-middle: 3.5.1
     optionalDependencies:
       '@opentelemetry/api': 1.10.0
       '@opentelemetry/core': 2.12.0(@opentelemetry/api@1.10.0)
       '@opentelemetry/instrumentation': 0.220.0(@opentelemetry/api@1.10.0)
       '@opentelemetry/sdk-trace-base': 2.12.0(@opentelemetry/api@1.10.0)
 
-  '@sentry/node@10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.10.0))':
+  '@sentry/node@10.75.2(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))':
     dependencies:
       '@opentelemetry/api': 1.10.0
       '@opentelemetry/instrumentation': 0.220.0(@opentelemetry/api@1.10.0)
       '@opentelemetry/sdk-trace-base': 2.12.0(@opentelemetry/api@1.10.0)
       '@sentry/conventions': 0.16.0
       '@sentry/core': 10.75.2
-      '@sentry/node-core': 10.75.2(@opentelemetry/api@1.10.0)(@opentelemetry/core@2.12.0(@opentelemetry/api@1.10.0))(@opentelemetry/instrumentation@0.220.0(@opentelemetry/api@1.10.0))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.10.0))
-      '@sentry/opentelemetry': 10.75.2(@opentelemetry/api@1.10.0)(@opentelemetry/core@2.12.0(@opentelemetry/api@1.10.0))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.10.0))
+      '@sentry/node-core': 10.75.2(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/instrumentation@0.220.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))
+      '@sentry/opentelemetry': 10.75.2(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))
       '@sentry/server-utils': 10.75.2
-      import-in-the-middle: 3.5.2
+      import-in-the-middle: 3.5.1
     transitivePeerDependencies:
       - '@opentelemetry/core'
       - '@opentelemetry/exporter-trace-otlp-http'
       - supports-color
 
-  '@sentry/opentelemetry@10.75.2(@opentelemetry/api@1.10.0)(@opentelemetry/core@2.12.0(@opentelemetry/api@1.10.0))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.10.0))':
+  '@sentry/opentelemetry@10.75.2(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))':
     dependencies:
       '@opentelemetry/api': 1.10.0
       '@opentelemetry/core': 2.12.0(@opentelemetry/api@1.10.0)
@@ -7223,7 +7226,7 @@ snapshots:
 
   '@sentry/vercel-edge@10.75.2':
     dependencies:
-      '@opentelemetry/api': 1.10.0
+      '@opentelemetry/api': 1.9.1
       '@sentry/core': 10.75.2
 
   '@sentry/webpack-plugin@5.4.1(rollup@4.65.0)(webpack@5.111.1)':
@@ -10170,7 +10173,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.2
 
-  posthog-js@1.434.15(@types/react@19.2.17)(react@19.3.0):
+  posthog-js@1.434.15(patch_hash=701171cec4013fc44745cfbaa4b3bce974279d5974c31b82d5583f70cc560d5b)(@types/react@19.2.17)(react@19.3.0):
     dependencies:
       '@posthog/browser-common': 0.9.0
       '@posthog/core': 1.55.2

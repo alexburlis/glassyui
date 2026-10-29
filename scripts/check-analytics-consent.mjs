@@ -186,6 +186,7 @@ async function openSession(options = {}) {
   const events = [];
   const allEvents = [];
   const pageErrors = [];
+  const consoleErrors = [];
   const routingErrors = [];
   let config = { ...CONFIG, ...options.config };
   let unavailable = options.unavailable ?? false;
@@ -201,6 +202,8 @@ async function openSession(options = {}) {
 
   await context.addInitScript(
     (settings) => {
+      if (!['http:', 'https:'].includes(location.protocol)) return;
+
       Object.defineProperty(navigator, 'webdriver', { value: false });
 
       if (!localStorage.getItem('glassy-ui-preferences')) {
@@ -229,6 +232,9 @@ async function openSession(options = {}) {
   }
 
   page.on('pageerror', (error) => pageErrors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text());
+  });
 
   // The browser sees the real HTTPS subdomains and therefore exercises shared Secure cookies.
   // Only transport is forwarded to loopback; the real SDK is imported from the application's build.
@@ -324,6 +330,7 @@ async function openSession(options = {}) {
     events,
     allEvents,
     pageErrors,
+    consoleErrors,
     routingErrors,
     configCount: () => configCount,
     delayedChunkCount: () => delayedChunkCount,
@@ -349,7 +356,7 @@ async function openSession(options = {}) {
 async function go(session, url = `${MAIN}/privacy`) {
   const count = session.configCount();
 
-  await session.page.goto(url, { waitUntil: 'domcontentloaded' });
+  await session.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await until(() => session.configCount() > count, 'first-party configuration request');
 }
 
@@ -397,7 +404,7 @@ async function assertChoice(session, expected) {
   ]);
   assert.equal(preference.decision, expected);
   assert.equal(preference.purpose, 'analytics');
-  assert.equal(preference.version, 'analytics-v1');
+  assert.equal(preference.version, 'analytics-v2');
   assert.equal(
     snapshot.appearance,
     APPEARANCE,
@@ -414,9 +421,18 @@ async function assertImplicitPermission(session) {
     'A regional default never saves an explicit consent decision',
   );
   assert.deepEqual(
-    snapshot.analytics.filter((key) => key !== 'glassyui_analytics_sdk_permission'),
+    snapshot.analytics.filter(
+      (key) =>
+        ![
+          'glassyui_analytics_sdk_permission',
+          'ph_glassyui_analytics',
+          'ph_glassyui_analytics_window_id',
+          'ph_glassyui_analytics_primary_window_exists',
+          'ph_glassyui_analytics_session_registered_properties',
+        ].includes(key),
+    ),
     [],
-    'The regional default creates no persistent analytics identifier',
+    'The regional default uses only the documented SDK namespaces',
   );
   assert.equal(snapshot.appearance, APPEARANCE, 'Appearance remains independent');
 
@@ -508,6 +524,7 @@ async function scenario(name, run, options = {}) {
       requests: session.requests,
       events: session.allEvents,
       pageErrors: session.pageErrors,
+      consoleErrors: session.consoleErrors,
       routingErrors: session.routingErrors,
     });
     await session.context.close();
@@ -519,7 +536,7 @@ function preference(decision, overrides = {}) {
 
   return {
     decision,
-    version: 'analytics-v1',
+    version: 'analytics-v2',
     purpose: 'analytics',
     updatedAt: now - 1000,
     expiresAt: now + 86400,
@@ -528,6 +545,161 @@ function preference(decision, overrides = {}) {
 }
 
 try {
+  await scenario(
+    'acquisition: tagged source follows copy, reload and Pro intent',
+    async (session) => {
+      await go(
+        session,
+        `${MAIN}/components/glass-button?utm_source=x&utm_medium=paid_social&utm_campaign=x-launch&email=alice%40example.com#private-fragment`,
+      );
+      await noCollection(session, 'Tagged arrival before permission');
+      await accept(session);
+      await until(() => session.events.length === 1, 'tagged landing page');
+      const landing = session.events[0];
+      assert.equal(landing.properties.acquisition_source, 'x', 'The paid X source is retained');
+      assert.equal(landing.properties.acquisition_medium, 'paid_social');
+      assert.equal(landing.properties.acquisition_campaign, 'x-launch');
+      assert.equal(landing.properties.utm_source, 'x', 'Built-in acquisition uses the safe source');
+      assert.equal(landing.properties.utm_medium, 'paid_social');
+      assert.equal(landing.properties.utm_campaign, 'x-launch');
+      await session.page.evaluate(() => {
+        Object.defineProperty(navigator.clipboard, 'writeText', {
+          configurable: true,
+          value: async () => {},
+        });
+      });
+      await session.page.locator('.docs-copy-button').first().click();
+      await until(
+        () =>
+          session.allEvents.some(
+            (event) =>
+              event.event === 'site_action' &&
+              event.properties.action === 'install_copy' &&
+              event.properties.outcome === 'succeeded',
+          ),
+        'attributed successful install-command copy',
+      );
+      const copy = session.allEvents.find((event) => event.properties.action === 'install_copy');
+      assert.equal(copy.distinct_id, landing.distinct_id);
+      assert.equal(copy.properties.acquisition_campaign, 'x-launch');
+      await session.page.reload({ waitUntil: 'domcontentloaded' });
+      await until(
+        () => session.events.filter((event) => event.event === '$pageview').length === 2,
+        'reload pageview',
+      );
+      const reloaded = session.events.filter((event) => event.event === '$pageview').at(-1);
+      assert.equal(reloaded.distinct_id, landing.distinct_id, 'Reload retains the SDK visitor');
+      assert.equal(
+        reloaded.properties.$session_id,
+        landing.properties.$session_id,
+        'Reload retains the SDK session',
+      );
+      assert.equal(reloaded.properties.acquisition_campaign, 'x-launch');
+      const stored = await storage(session);
+      const identity = stored.cookies.find((cookie) => cookie.name === 'ph_glassyui_analytics');
+      assert.ok(identity, 'The SDK owns the only persisted visitor identity');
+      assert.ok(
+        identity.expires - Date.now() / 1000 > 0 && identity.expires - Date.now() / 1000 <= 1810,
+        'Visitor cookie expires within 30 minutes',
+      );
+      assert.equal(identity.domain, '.glassyui.com');
+      assert.equal(identity.secure, true);
+      assert.doesNotMatch(
+        decodeURIComponent(identity.value),
+        /alice|private-email|secret-session|email=|private-fragment/i,
+        'SDK cookie excludes raw URL values',
+      );
+
+      if (proBase) {
+        await go(session, `${PRO}/`);
+        await until(
+          () => session.events.filter((event) => event.event === '$pageview').length === 3,
+          'Pro arrival',
+        );
+        await session.page.locator('a[href^="https://buy.stripe.com/"]').first().click();
+        await until(
+          () => session.events.some((event) => event.event === 'pro_checkout_click'),
+          'attributed checkout intent',
+        );
+        const checkout = session.events.find((event) => event.event === 'pro_checkout_click');
+        assert.equal(
+          checkout.distinct_id,
+          landing.distinct_id,
+          'Free and Pro use the same SDK identity',
+        );
+        assert.equal(checkout.properties.acquisition_campaign, 'x-launch');
+        assert.equal(checkout.properties.$session_id, landing.properties.$session_id);
+        await go(session, `${PRO}/`);
+      }
+
+      await reopen(session);
+      await reject(session);
+      const count = session.requests.length;
+      assert.deepEqual(
+        (await storage(session)).analytics,
+        [],
+        'Withdrawal removes identity and attribution',
+      );
+      await session.page.reload({ waitUntil: 'domcontentloaded' });
+      await quiet(session.page);
+      assert.equal(session.requests.length, count, 'Stored campaign never revives refusal');
+    },
+  );
+
+  for (const [referrer, source, medium] of [
+    ['https://t.co/public', 'x', 'social'],
+    ['https://github.com/public', 'github', 'referral'],
+    ['https://www.google.com/search?q=private-email', 'google', 'search'],
+    ['https://t.co.evil.test/private-email', 'other', 'referral'],
+  ]) {
+    await scenario(
+      `acquisition: untagged source ${source} from ${new URL(referrer).hostname}`,
+      async (session) => {
+        await session.page.goto(
+          `${MAIN}/privacy?utm_source=alice&utm_medium=paid_social&utm_campaign=private-email`,
+          { waitUntil: 'domcontentloaded', referer: referrer },
+        );
+        await accept(session);
+        await until(() => session.events.length === 1, 'untagged source capture');
+        const properties = session.events[0].properties;
+        assert.equal(properties.acquisition_source, source);
+        assert.equal(properties.acquisition_medium, medium);
+        assert.ok(!properties.acquisition_campaign, 'Unknown campaign is excluded');
+        assert.notEqual(
+          properties.utm_medium,
+          'paid_social',
+          'A referrer alone never proves paid traffic',
+        );
+        assert.doesNotMatch(JSON.stringify(properties), /evil\.test|private-email|alice/);
+        const snapshot = await storage(session);
+
+        for (const cookie of snapshot.cookies.filter((item) => analyticsKey(item.name))) {
+          assert.doesNotMatch(
+            decodeURIComponent(cookie.value),
+            /private-email|alice|evil\.test/i,
+            'SDK cookies exclude referrer content',
+          );
+        }
+
+        const saved = await session.page.evaluate(() =>
+          [localStorage, sessionStorage]
+            .flatMap((store) =>
+              Object.keys(store)
+                .filter((key) => /^(ph_|__ph)|posthog/i.test(key))
+                .map((key) => store.getItem(key)),
+            )
+            .join(' '),
+        );
+
+        assert.doesNotMatch(
+          saved,
+          /private-email|alice|evil\.test/i,
+          'SDK storage excludes referrer search terms',
+        );
+      },
+    );
+  }
+
   for (const initiallyAllowed of [false, true]) {
     await scenario(
       `async consent window: ${initiallyAllowed ? 'withdraw then reaccept' : 'grant during copy'}`,
@@ -888,6 +1060,41 @@ try {
     assert.equal(clicks[0].properties.source, 'banner');
     assert.equal(clicks[0].properties.destination, 'pro');
   });
+  await scenario('acquisition: expired cookie starts a fresh visit', async (session) => {
+    await go(session, `${MAIN}/privacy?utm_source=x&utm_medium=paid_social&utm_campaign=x-launch`);
+    await accept(session);
+    await until(() => session.events.length === 1, 'tagged visit');
+    const original = session.events[0];
+    await session.page.goto('about:blank');
+    await session.context.clearCookies({ name: 'ph_glassyui_analytics' });
+    await go(session, `${MAIN}/privacy`);
+    await until(() => session.events.length === 2, 'fresh visit after cookie expiry');
+    assert.notEqual(session.events[1].distinct_id, original.distinct_id);
+    assert.equal(session.events[1].properties.acquisition_campaign, null);
+  });
+
+  await scenario('acquisition: blocked SDK cookie prevents collection', async (session) => {
+    await session.context.addInitScript(() => {
+      const cookie = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie');
+      Object.defineProperty(document, 'cookie', {
+        get() {
+          return cookie.get.call(document);
+        },
+        set(value) {
+          if (!value.startsWith('ph_glassyui_analytics=')) cookie.set.call(document, value);
+        },
+      });
+    });
+    await go(session);
+    await accept(session);
+    await quiet(session.page);
+    assert.deepEqual(session.allEvents, [], 'No disconnected events without SDK cookie');
+    assert.equal(
+      (await session.context.cookies()).some((cookie) => cookie.name === 'ph_glassyui_analytics'),
+      false,
+    );
+  });
+
   await scenario(
     `fresh opt-in visit: no collection on ${proBase ? 'either host' : 'the free host'}`,
     async (session) => {

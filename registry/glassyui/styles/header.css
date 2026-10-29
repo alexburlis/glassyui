@@ -105,8 +105,9 @@
     opacity: calc(var(--lg-noise-alpha) * var(--lg-header-material));
   }
 
-  /* The contrast outline edges the glass, so it goes with it: the open bar has none. */
-  @media (prefers-contrast: more), (forced-colors: active) {
+  /* The forced-colours outline edges the glass, so it goes with it: the open bar has none.
+     Increased contrast edges it with the ring above, which fades with the glass. */
+  @media (forced-colors: active) {
     .lg-header[data-condense-on-scroll] > .lg-header-glass {
       outline-width: calc(1px * var(--lg-header-material)) !important;
     }

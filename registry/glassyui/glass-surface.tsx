@@ -1,7 +1,7 @@
 'use client';
 
 import clsx from 'clsx';
-import { Children, forwardRef, useMemo, useRef } from 'react';
+import { Children, forwardRef, useMemo, useRef, useSyncExternalStore } from 'react';
 import type { CSSProperties, HTMLAttributes, ReactNode } from 'react';
 import { mergeRefs } from './lib/merge-refs';
 import { useGlassScenePane } from './lib/scene-context';
@@ -32,6 +32,20 @@ export type GlassSurfaceProps = HTMLAttributes<HTMLDivElement> & {
    */
   thickness?: number;
 };
+
+// Increased contrast dims the lens through its tokens, which the lens reads only when it measures.
+const contrastQuery = '(prefers-contrast: more)';
+
+const subscribeToContrast = (onChange: () => void) => {
+  const query = window.matchMedia(contrastQuery);
+  query.addEventListener('change', onChange);
+
+  return () => query.removeEventListener('change', onChange);
+};
+
+const readContrast = () => window.matchMedia(contrastQuery).matches;
+
+const readServerContrast = () => false;
 
 export const GlassSurface = forwardRef<HTMLDivElement, GlassSurfaceProps>(
   (
@@ -72,10 +86,16 @@ export const GlassSurface = forwardRef<HTMLDivElement, GlassSurfaceProps>(
       viewportAligned: refractionBackgroundSpace === 'viewport',
     });
 
+    const moreContrast = useSyncExternalStore(
+      subscribeToContrast,
+      readContrast,
+      readServerContrast,
+    );
+
     // One refraction technique at a time: a generated background scene covers the frost.
     const lensFilter = useLensFilter(surfaceRef, {
       enabled: lens && !generatedRefractionEnabled && !reduceTransparency,
-      signature: `${preferences?.theme}:${preferences?.mode}:${preferences?.quality}:${thickness ?? preferences?.thickness}`,
+      signature: `${preferences?.theme}:${preferences?.mode}:${preferences?.quality}:${thickness ?? preferences?.thickness}:${moreContrast}`,
     });
 
     // Inside a GlassScene the canvas draws this glass; a generated refraction

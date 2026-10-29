@@ -103,7 +103,7 @@ const expect = (engine, condition, message) => {
 
 const HERO_ACTIONS = [
   '.home-hero .home-actions > .lg-button--prominent',
-  '.home-hero .home-actions a[href="https://github.com/alexburlis/glassyui"]',
+  '.home-hero .home-actions a[href="https://pro.glassyui.com"]',
 ];
 
 const HERO = [
@@ -409,7 +409,7 @@ function geometry(page) {
     const stage = document.querySelector('.turn-stage');
 
     return {
-      turnRange: track && stage ? track.offsetHeight - stage.offsetHeight : 0,
+      turnRange: track && stage ? track.offsetHeight - stage.clientHeight : 0,
       turnTop: track ? track.getBoundingClientRect().top + window.scrollY : 0,
     };
   });

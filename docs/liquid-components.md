@@ -368,16 +368,22 @@ Each part carries an `lg-*` class for CSS that a `className` cannot reach:
   `lg-menu-separator`, `lg-menu-shortcut`, `lg-menu-indicator`,
   `lg-menu-chevron`
 - `lg-lens-stage`, `lg-lens-scene`, `lg-lens`, `lg-lens-view`
-- `lg-scene`, `lg-scene-backdrop`, `lg-scene-canvas`, `lg-scene-drop`
+- `lg-scene`, `lg-scene-layers`, `lg-scene-backdrop`, `lg-scene-canvas`,
+  `lg-scene-drop`
 
 Tokens take arbitrary properties. `[--lg-button-fill:rgb(14_165_233/0.4)]` tints
 a button and `[--lg-button-fill-hover:…]` sets its hover fill; pair a strong
 tint with a readable text color.
 
-Reduce Transparency, increased contrast, forced colors and reduced motion are
-`!important` guards, so no `className` can bring transparency back for a user
-who turned it off. Restyle those states through `--lg-opaque-surface`,
-`--lg-control-surface` and `--lg-control-surface-hover`.
+Reduce Transparency, forced colors and reduced motion are `!important` guards,
+so no `className` can bring transparency back for a user who turned it off.
+Restyle those states through `--lg-opaque-surface`, `--lg-control-surface` and
+`--lg-control-surface-hover`. Increased contrast keeps the glass but makes it
+predominantly black or white: dark glass dims what lies behind it and light
+glass frosts denser, so text keeps 7:1 over any backdrop. A ring in the text
+color edges the glass and muted text gets full contrast. Badges and alerts turn
+solid, buttons and fields drop their blur, controls get outlines in the text
+color, and a generated refraction gives way to the dimmed frost.
 
 Glass frosts what is painted behind it. In Chromium, `opacity` below 1, a
 `filter`, a `mask` or a `mix-blend-mode` on a glass component or any ancestor

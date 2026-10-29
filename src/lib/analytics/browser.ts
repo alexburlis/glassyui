@@ -1,4 +1,5 @@
 import type { PostHog, Properties } from 'posthog-js';
+import { acquisitionProperties, startAcquisition } from './acquisition';
 import {
   INTERACTION_EVENTS,
   captureLink,
@@ -288,11 +289,12 @@ export async function startAnalytics(config: AnalyticsConfig) {
     instance.init(config.token!, {
       api_host: config.host,
       persistence_name: 'glassyui_analytics',
-      persistence: 'memory',
-      disable_persistence: true,
+      persistence: 'cookie',
+      disable_persistence: false,
       split_storage: false,
-      cookie_expiration: 180,
-      // This technical flag must be removable from either site. Identity stays in memory.
+      cookie_expiration: 1 / 48,
+      persistence_save_debounce_ms: 0,
+      // One SDK-owned cookie carries permitted visits across both sites for 30 minutes.
       cross_subdomain_cookie: productionHost(),
       secure_cookie: location.protocol === 'https:',
       consent_persistence_name: SDK_PERMISSION_COOKIE,
@@ -342,6 +344,14 @@ export async function startAnalytics(config: AnalyticsConfig) {
         const path = pagePath(eventUrl.pathname);
 
         if (path === null) return null;
+        const attribution = acquisitionProperties(instance, pagePath);
+
+        if (!document.cookie.split('; ').some((entry) => entry.startsWith(`${SDK_STORAGE}=`))) {
+          console.warn('Glassy UI analytics cookie is unavailable; visit measurement is disabled.');
+
+          return null;
+        }
+
         const controller = new AbortController();
         const origin = siteOrigin();
 
@@ -363,6 +373,7 @@ export async function startAnalytics(config: AnalyticsConfig) {
             properties: {
               ...webAnalyticsProperties(event.properties),
               ...interactionProperties(event.properties, pagePath),
+              ...attribution,
               $lib_custom_api_host: `${location.origin}${config.host}`,
               $current_url: `${origin}${path}`,
               $pathname: path,
@@ -388,6 +399,7 @@ export async function startAnalytics(config: AnalyticsConfig) {
       },
     });
     instance.opt_in_capturing({ captureEventName: false });
+    startAcquisition(instance, pagePath);
     sdk = instance;
     activeConfig = config;
     removeLinks = listenForLinks(captureInteraction, pagePath);

@@ -23,7 +23,6 @@
         }
       ],
       "./components/glassyui/android/with-glassy-blur.cjs"
-    ],
-    "scheme": "glassyui-proof"
+    ]
   }
 }

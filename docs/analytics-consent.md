@@ -20,11 +20,13 @@ choice cookie and SDK privacy contract.
 - The SDK is lazy-loaded after the permission gate permits collection. No events
   from a disallowed period are queued or replayed after acceptance.
 - Events carry a known public path or coarse route family, the canonical Glassy
-  UI origin, event time, document-memory visitor, session and pageview
-  identifiers, the processing basis, browser/device categories, screen
-  dimensions, scroll depth, page duration, scalar Web Vitals and a `direct` /
-  `same_site` / `external` referrer category. Dynamic path segments, queries,
-  fragments, full referrers and free-form content are excluded.
+  UI origin, event time, SDK-owned visitor, session and pageview identifiers,
+  the processing basis, browser/device categories, screen dimensions, scroll
+  depth, page duration, scalar Web Vitals and a `direct` / `same_site` /
+  `external` referrer category. Bounded acquisition source, medium, campaign and
+  landing-route fields accompany every permitted event. Dynamic path segments,
+  raw query strings, fragments, full referrers and free-form content are
+  excluded.
 - No person profile is created. Payloads set `$process_person_profile: false`,
   `$geoip_disable: true` and `$ip: '0.0.0.0'`. PostHog still receives connection
   information, including the network IP and browser user agent; payload
@@ -95,19 +97,80 @@ change.
 
 | Name                                | Purpose and contents                                                                                                                               | Scope and lifetime                                                                                                                                         |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `glassy-ui-analytics-consent`       | Necessary choice record: `accepted` or `rejected`, `purpose: analytics`, `version: analytics-v1`, `updatedAt`, `expiresAt`. No visitor identifier. | HTTPS production: `Domain=glassyui.com; Path=/; Secure; SameSite=Lax`, shared by the two sites. Localhost: host-only, Secure when HTTPS. Maximum 180 days. |
-| `glassyui_analytics_sdk_permission` | Optional SDK technical capture flag (`1`/`0`), written only after the application gate allows initialization. It is not the user's consent record. | Production: `Domain=glassyui.com; Path=/; Secure; SameSite=Lax`; localhost: host-only. Maximum 180 days; removed on withdrawal.                            |
+| `glassy-ui-analytics-consent`       | Necessary choice record: `accepted` or `rejected`, `purpose: analytics`, `version: analytics-v2`, `updatedAt`, `expiresAt`. No visitor identifier. | HTTPS production: `Domain=glassyui.com; Path=/; Secure; SameSite=Lax`, shared by the two sites. Localhost: host-only, Secure when HTTPS. Maximum 180 days. |
+| `glassyui_analytics_sdk_permission` | Optional SDK technical capture flag (`1`/`0`), written only after the application gate allows initialization. It is not the user's consent record. | Production: `Domain=glassyui.com; Path=/; Secure; SameSite=Lax`; localhost: host-only. Maximum 30 minutes from refresh; removed on withdrawal.             |
 | `glassy-ui-preferences`             | Requested appearance/accessibility settings; independent of analytics.                                                                             | Origin-local `localStorage`, no application expiry. Preserved on withdrawal.                                                                               |
 | `glassy-ui-docs-platform`           | Requested React / React Native documentation choice; independent of analytics.                                                                     | Origin-local `localStorage`, no application expiry. Preserved on withdrawal.                                                                               |
 
-SDK identifier persistence is disabled: `persistence: 'memory'`,
-`disable_persistence: true`. Optional cleanup also removes the owned legacy
-namespace `ph_glassyui_analytics` and its `_window_id`, `_primary_window_exists`
-and `_session_registered_properties` variants from cookies, local storage and
-session storage. No legacy key is used to grant consent. Cookie expiry is not
-provider event deletion. Refusals survive a notice-version change; expired,
-invalid or old acceptances do not grant permission. A material purpose change
-requires a new `CONSENT_VERSION` and renewed acceptance.
+The SDK uses `persistence: 'cookie'`, `disable_persistence: false`,
+`cookie_expiration: 1 / 48` and `split_storage: false`. Its sole visitor cookie,
+`ph_glassyui_analytics`, stores the SDK random browser/session identity and the
+validated acquisition object. It is shared on
+`Domain=glassyui.com; Path=/; Secure; SameSite=Lax` in production and host-only
+on localhost. Its expiry is 30 minutes after refresh. There is no
+application-generated journey ID, account join or cross-session stitching.
+Browser identities are not unique people.
+
+The SDK also uses the same namespace in session storage for its technical
+session properties, plus `_window_id`, `_primary_window_exists` and
+`_session_registered_properties` variants. These remain limited to the browser
+session and are removed on withdrawal. Local storage is not used for identity.
+Blocked SDK cookies disable event delivery with a visible console warning; there
+is no memory-identity measurement fallback.
+
+A pinned SDK patch makes `save_referrer: false` also suppress search-term
+storage and makes the session-source manager omit raw entry URL/referrer when
+both automatic attribution switches are disabled. Application acquisition labels
+are independently validated. Do not remove that patch while enabling cookie
+persistence; `before_send` alone cannot prevent SDK storage of raw URLs.
+
+Optional cleanup removes these owned names from cookies, local storage and
+session storage. No SDK key grants permission. Cookie expiry is not provider
+event deletion. Notice version `analytics-v2` requires renewed acceptance for
+older acceptances in opt-in locations. Earlier refusals remain refusals. The US
+regional default remains separate from explicit acceptance.
+
+## Acquisition and campaign attribution
+
+`acquisition.ts` owns the bounded data shape. Every existing page, navigation,
+copy, signup and Pro-intent event carries `acquisition_source`,
+`acquisition_medium`, `acquisition_campaign` and `acquisition_landing_path`.
+Validated equivalents also populate `utm_source`, `utm_medium`, `utm_campaign`
+and a canonical `$referring_domain` for PostHog reporting. These standard fields
+contain derived labels, not raw URL parameters or referrers.
+
+Known hostname groups map to X, GitHub, Google, Bing, DuckDuckGo, LinkedIn,
+Reddit and YouTube. Exact hosts and their subdomains are matched at hostname
+boundaries; unknown sources become `other`. The full referring URL, arbitrary
+hostname, search terms and private query parameters are never retained. An
+untagged X referrer maps to `x` / `social`; this does not prove organic rather
+than untagged paid distribution. Source loss is recorded as `direct`.
+
+The one registered paid campaign is the exact tuple `utm_source=x`,
+`utm_medium=paid_social`, `utm_campaign=x-launch`. A future separately
+authorized ad can use
+`https://glassyui.com/?utm_source=x&utm_medium=paid_social&utm_campaign=x-launch`.
+Each parameter must occur exactly once. Other combinations are ignored rather
+than accepted as free-form strings. Register a new campaign explicitly in this
+module and verify it before using its link. A recognized paid tuple describes
+the tagged arrival; it is not a verified click, charge or incremental lift.
+
+The first permitted acquisition is retained across SPA navigation, reloads and
+free-to-Pro navigation through the SDK cookie. A new valid tagged arrival can
+replace it. Each event refreshes last activity; after 30 minutes of inactivity,
+old acquisition expires. A newly active open document without a fresh arrival
+uses `direct`; it cannot revive an expired campaign. Refusal, withdrawal,
+DNT/GPC or a stricter region clears all optional state through the existing
+gate. No pre-permission events or raw arrival data are queued for later
+delivery.
+
+The US-only assessment now includes a 30-minute first-party SDK cookie and
+bounded source-to-action analysis within permitted public-page use. The purpose
+is to evaluate navigation and campaign interest before further ad spend. This
+uses the existing Article 6(1)(f) assessment and immediate objection route; it
+introduces no ad-provider pixel, exchange, profile, fingerprint or payment join.
+The German device-access caveat and unknown-location opt-in rule remain. This
+change grants no new country, provider feature or budget authority.
 
 ## Configuration
 
@@ -168,12 +231,12 @@ these produces pageview events that cannot form Web Analytics sessions.
 numeric values only, excluding DOM attribution and resource URLs. Blog routes
 use `/blog` or `/blog/[page]`.
 
-Visitors here mean browsers permitted to run analytics, with identifiers limited
-to the current document. Reloads and cross-host navigations start a new
-identity. This is not a count of all human visitors or returning people.
-Rejected visits, opt-in visits without acceptance, DNT/GPC, and blocked
-JavaScript remain excluded. Historic events missing session IDs cannot be
-reliably stitched into sessions after the fact.
+Visitors here mean browsers permitted to run analytics. The short-lived SDK
+cookie can preserve identity across reloads and the two Glassy UI hosts while
+valid. This is not a count of all human visitors or returning people. Rejected
+visits, opt-in visits without acceptance, DNT/GPC, and blocked JavaScript remain
+excluded. Historic events missing session IDs cannot be reliably stitched into
+sessions after the fact.
 
 ## Checking the two applications
 
@@ -207,8 +270,8 @@ emits success or failure from the clipboard boundary. Platform and theme
 choices, search opening/result selection and signup request outcomes have
 explicit owners. No search terms, email addresses, copied content, labels, query
 strings or fragments are collected. Signup acceptance does not mean double
-opt-in confirmation. Checkout means link intent, never payment. Memory
-identities do not establish unique people across reloads.
+opt-in confirmation. Checkout means link intent, never payment. SDK browser
+identities do not establish unique people.
 
 Copy and signup results are bound to the SDK permission window where the action
 began. Granting consent during a pending action, or withdrawing and accepting
@@ -227,13 +290,14 @@ record a new exposure. This measures viewable placement, not attention or all
 people visiting the site.
 
 Both impression and click events use `source: banner`, `destination: pro` and
-the existing session, pageview and memory-only visitor IDs. No new identifiers,
-storage, text or personal properties are added. CTR starts with this deployment;
-older clicks have no impression denominator and must not be mixed into it.
+the existing SDK session, pageview and short-lived browser IDs. Banner
+measurement creates no additional identity, storage, text or personal
+properties. CTR starts with this deployment; older clicks have no impression
+denominator and must not be mixed into it.
 
-For viewer CTR, count distinct memory visitor IDs that have a banner impression,
+For viewer CTR, count distinct SDK browser IDs that have a banner impression,
 then the subset with a banner click on an exposed pageview in the same window.
 Divide clicking viewers by viewers and multiply by 100. Show no rate when the
-denominator is zero. Reloads can count the same person again because IDs are
-held in document memory. Pageview CTR uses exposed pageviews and the subset with
-a click; repeated clicks on one pageview count only once.
+denominator is zero. An expired or cleared SDK cookie can count the same person
+again. Pageview CTR uses exposed pageviews and the subset with a click; repeated
+clicks on one pageview count only once.

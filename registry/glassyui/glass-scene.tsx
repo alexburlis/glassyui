@@ -142,8 +142,13 @@ export const GlassScene = forwardRef<HTMLDivElement, GlassSceneProps>(
           }
           {...rest}
         >
-          <span ref={backdropRef} className="lg-scene-backdrop" aria-hidden="true" />
-          <canvas ref={canvasRef} className="lg-scene-canvas" aria-hidden="true" />
+          {/* In viewport space the layers stack below the children together, so the fixed
+              backdrop keeps a z-index of auto: iOS Safari paints the status bar solid over a
+              fixed backdrop with a negative z-index. */}
+          <span className="lg-scene-layers" aria-hidden="true">
+            <span ref={backdropRef} className="lg-scene-backdrop" aria-hidden="true" />
+            <canvas ref={canvasRef} className="lg-scene-canvas" aria-hidden="true" />
+          </span>
           {children}
         </div>
       </GlassSceneContext.Provider>
