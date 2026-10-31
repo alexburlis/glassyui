@@ -366,16 +366,23 @@
       opacity: 0.72;
     }
 
-    /* Focus darkens the edge into a ring, as the components' fields do, and keyboard
-       focus adds an outline beyond it. */
+    /* A focused field fills in, as the components' fields do, and draws no ring. The
+       select trigger has no caret, so keyboard focus still outlines it. */
     :is([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger']):focus {
-      border-color: rgb(var(--glassy-focus));
       background: rgb(var(--glassy-glass) / var(--glassy-control-hover-alpha));
-      box-shadow: 0 0 0 1px rgb(var(--glassy-focus));
     }
 
-    :is([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger']):focus-visible {
+    [data-slot='select-trigger']:focus-visible {
       outline-color: rgb(var(--glassy-focus));
+    }
+
+    /* Increased contrast and forced colours keep an outline on a focused field, over the
+       field's outline-none. */
+    @media (prefers-contrast: more), (forced-colors: active) {
+      :is([data-slot='input'], [data-slot='textarea']):focus {
+        outline: 2px solid rgb(var(--glassy-focus)) !important;
+        outline-offset: 2px !important;
+      }
     }
 
     :is(

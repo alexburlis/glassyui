@@ -769,6 +769,40 @@ function splitShadows(value) {
 const shadowColour = (shadow) =>
   shadow.match(/(?:rgba?|oklab|oklch|color)\([^()]*\)/)?.[0] ?? 'transparent';
 
+// Tabs onto an element so it matches :focus-visible, and reads its focus styles
+// once their transitions land, beside its resting edge and shadows.
+async function keyboardFocus(page, selector) {
+  const target = page.locator(selector);
+
+  const resting = await target.evaluate((node) => {
+    const style = getComputedStyle(node);
+
+    return { border: style.borderTopColor, shadow: style.boxShadow };
+  });
+
+  await target.focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  await page.waitForTimeout(400);
+
+  const focus = await target.evaluate((node) => {
+    const style = getComputedStyle(node);
+
+    return {
+      focused: document.activeElement === node,
+      outline:
+        style.outlineStyle === 'none' ? 'none' : `${style.outlineStyle} ${style.outlineWidth}`,
+      outlineColour: style.outlineColor,
+      border: style.borderTopColor,
+      shadow: style.boxShadow,
+    };
+  });
+
+  await target.evaluate((node) => node.blur());
+
+  return { ...focus, restingBorder: resting.border, restingShadow: resting.shadow };
+}
+
 function parseAlpha(colour) {
   if (!colour || colour === 'transparent') return 0;
   const slash = colour.match(/\/\s*([\d.]+%?)\s*\)\s*$/);
@@ -1757,22 +1791,18 @@ async function themeLookAssertions(page) {
     contract.ownFill,
   );
 
-  // Stock focus rings survive.
-  await page.locator('[data-check="input"]').focus();
-  await page.keyboard.press('Shift+Tab');
-  await page.keyboard.press('Tab');
-  // The stock field transitions its box-shadow, so the ring is read once it lands.
-  await page.waitForTimeout(400);
-  const focusShadow = await page.evaluate(() => getComputedStyle(document.activeElement).boxShadow);
+  // The select trigger has no caret, so its stock focus ring survives.
+  const triggerFocus = await keyboardFocus(page, '[data-check="select-trigger"]');
   check(
-    'stock 3px focus ring survives on a field',
-    splitShadows(focusShadow).some(
-      (shadow) =>
-        !/\binset\b/.test(shadow) &&
-        /0px 0px 0px 3px/.test(shadow) &&
-        parseAlpha(shadowColour(shadow)) > 0,
-    ),
-    focusShadow,
+    'stock 3px focus ring survives on the select trigger',
+    triggerFocus.focused &&
+      splitShadows(triggerFocus.shadow).some(
+        (shadow) =>
+          !/\binset\b/.test(shadow) &&
+          /0px 0px 0px 3px/.test(shadow) &&
+          parseAlpha(shadowColour(shadow)) > 0,
+      ),
+    triggerFocus,
   );
 
   // Slabs set down; they never scale.
@@ -1820,6 +1850,34 @@ async function themedAssertions(browser, base, fixtureDirectory) {
 
   if (dropins) await nativeLookAssertions(page);
   else await themeLookAssertions(page);
+
+  // A focused field fills in and draws no ring: a text field counts as
+  // keyboard-focused even when clicked, so a ring would follow every tap.
+  const fieldFocus = await keyboardFocus(page, '[data-check="input"]');
+  check(
+    'a focused field draws no ring, outline or darker edge',
+    fieldFocus.focused &&
+      fieldFocus.outline === 'none' &&
+      fieldFocus.border === fieldFocus.restingBorder &&
+      !splitShadows(fieldFocus.shadow).some(
+        (shadow) =>
+          !/\binset\b/.test(shadow) &&
+          parseAlpha(shadowColour(shadow)) > 0 &&
+          !splitShadows(fieldFocus.restingShadow).includes(shadow),
+      ),
+    fieldFocus,
+  );
+
+  if (dropins) {
+    const triggerFocus = await keyboardFocus(page, '[data-check="select-trigger"]');
+    check(
+      'keyboard focus outlines the select trigger',
+      triggerFocus.focused &&
+        triggerFocus.outline !== 'none' &&
+        parseAlpha(triggerFocus.outlineColour) > 0,
+      triggerFocus,
+    );
+  }
 
   // The tabs pill slides on the spring.
   await page.mouse.move(5, 5);

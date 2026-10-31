@@ -2111,13 +2111,15 @@
     box-shadow: var(--lg-input-shadow);
   }
 
+  /* A focused field fills in and its caret shows where typing goes. It draws no
+     ring: a text field counts as keyboard-focused even when clicked, so a ring
+     would follow every tap. The select trigger has no caret, so keyboard focus
+     still outlines it. */
   .lg-input:focus {
     background: var(--lg-control-surface-hover);
-    border-color: var(--lg-focus-ring);
-    box-shadow: 0 0 0 1px var(--lg-focus-ring);
   }
 
-  .lg-input:focus-visible {
+  .lg-select-trigger:focus-visible {
     outline: 2px solid var(--lg-focus-ring);
     outline-offset: 2px;
   }
