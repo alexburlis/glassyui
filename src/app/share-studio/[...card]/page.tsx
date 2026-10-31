@@ -62,6 +62,7 @@ const MOSAIC = ['glass-button', 'glass-switch', 'glass-slider', 'glass-segmented
 // out what would go stale in a picture: the sample launch date and signup count.
 const TEMPLATE_STAGES: Partial<Record<FreeTemplateSlug, { zoom: number; hide: string }>> = {
   halcyon: { zoom: 0.6, hide: '.halcyon-hero-chip, .halcyon-avatars-text' },
+  fieldnotes: { zoom: 0.6, hide: '.fieldnotes-mast-issue' },
 };
 
 /** What a card says and shows, from its address: /share-studio/card/<kind>/<name>. */

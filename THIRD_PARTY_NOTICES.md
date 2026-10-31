@@ -36,6 +36,9 @@ free templates' previews. They are under the SIL Open Font License 1.1, whose
 text and copyright notices are in `src/fonts/OFL.txt`. Installed templates
 include no font files.
 
+Fraunces and Literata, for the Fieldnotes preview, are under the same licence;
+their notices are in `src/fonts/OFL-fraunces-literata.txt`.
+
 ## Vendored lint rules
 
 The anti-slop and ESLint Stylistic notices and provenance remain beside their

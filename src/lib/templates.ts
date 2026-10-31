@@ -34,9 +34,11 @@ export const FREE_TEMPLATES: readonly FreeTemplate[] = [
     kind: 'Founder letter',
     name: 'Fieldnotes',
     slug: 'fieldnotes',
-    status: 'soon',
+    status: 'available',
     summary:
       'A long-form letter about why you built it, with pull quotes, margin notes and pricing.',
+    registryItem: 'template-fieldnotes',
+    theme: 'light',
   },
   {
     kind: 'Landing page for a meditation app',

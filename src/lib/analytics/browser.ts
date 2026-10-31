@@ -185,6 +185,7 @@ function pagePath(pathname: string) {
     '/guides',
     '/blog',
     '/templates/halcyon',
+    '/templates/fieldnotes',
     '/privacy',
     '/cookie-policy',
     '/imprint',
