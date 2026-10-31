@@ -40,7 +40,8 @@
     "glass-phone-duo",
     "glassy-theme",
     "glassy-ui-new-york",
-    "glassy-ui-base-nova"
+    "glassy-ui-base-nova",
+    "template-halcyon"
   ],
   "react-native": [
     "glass-provider",

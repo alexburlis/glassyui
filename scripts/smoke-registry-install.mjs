@@ -324,6 +324,20 @@ const expectedLibraryFiles = [
   ]),
 ];
 
+// The free Halcyon template: its own folder on top of the library components it uses. Also
+// hand-derived, from the template's files rather than from its payload.
+const expectedTemplateFiles = [
+  'halcyon.tsx',
+  'waitlist-form.tsx',
+  'feature-tiles.tsx',
+  'countdown.tsx',
+  'stat-counter.tsx',
+  'hero-art.tsx',
+  'icons.tsx',
+  'use-count-to.ts',
+  'halcyon.css',
+].map((file) => `components/glassyui/templates/halcyon/${file}`);
+
 for (const dependency of expectedLibraryDependencies) {
   assert.equal(
     fixtureDependencies[dependency],
@@ -798,6 +812,31 @@ try {
       `namespace compatibility changed ${file}`,
     );
 
+  // A template installs by URL like a component, adds only its own folder and no packages the
+  // library has not already brought, and renders as a page of the consumer's app.
+  run(process.execPath, [
+    shadcnBin,
+    'add',
+    `${baseUrl.replace(/\/$/, '')}/r/template-halcyon.json`,
+    '--yes',
+  ]);
+  assertExactSet(
+    'library and template file closure',
+    listFiles(path.join(temporaryRoot, 'components', 'glassyui'), 'components/glassyui'),
+    [...expectedLibraryFiles, ...expectedTemplateFiles],
+  );
+  assert.deepEqual(
+    JSON.parse(fs.readFileSync(path.join(temporaryRoot, 'package.json'), 'utf8')).dependencies,
+    libraryDependencies,
+    'the template install changed the consumer packages',
+  );
+  fs.mkdirSync(path.join(temporaryRoot, 'app', 'halcyon'), { recursive: true });
+  fs.writeFileSync(
+    path.join(temporaryRoot, 'app', 'halcyon', 'page.tsx'),
+    `import { Halcyon } from '@/components/glassyui/templates/halcyon/halcyon';\n\nexport default function Page() {\n  return <Halcyon />;\n}\n`,
+  );
+  report.template = { item: 'template-halcyon', files: expectedTemplateFiles, route: '/halcyon' };
+
   report.primary = {
     packageManager: 'pnpm',
     urlWithoutMapping: true,
@@ -819,6 +858,15 @@ try {
   assert.ok(
     cssAssets.some((css) => css.includes(liquidCssSentinel)),
     `built consumer CSS is missing the installed liquid.css sentinel ${liquidCssSentinel}`,
+  );
+
+  assert.ok(
+    cssAssets.some((css) => css.includes('.halcyon-waitlist')),
+    'built consumer CSS is missing the installed Halcyon stylesheet',
+  );
+  assert.ok(
+    fs.existsSync(path.join(temporaryRoot, '.next', 'server', 'app', 'halcyon.html')),
+    'the installed Halcyon page must prerender',
   );
 
   report.build = 'passed';

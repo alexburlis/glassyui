@@ -45,6 +45,7 @@ const expectedItems = [
   'glassy-theme',
   'glassy-ui-new-york',
   'glassy-ui-base-nova',
+  'template-halcyon',
 ];
 
 const dropinItems = ['glassy-ui-new-york', 'glassy-ui-base-nova'];
