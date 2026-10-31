@@ -229,7 +229,11 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
     () => false,
   );
 
-  const openDoc = (next: Doc) => {
+  // The sheet opens from several buttons, so it remembers which one, to hand focus back to.
+  const sheetOpenerRef = useRef<HTMLElement | null>(null);
+
+  const openDoc = (next: Doc, opener: HTMLElement) => {
+    sheetOpenerRef.current = opener;
     setDoc(next);
     setSheetOpen(true);
   };
@@ -237,8 +241,9 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
   // Every secondary call to action leads back to the one field.
   const goToField = useCallback(() => {
     if (sheetOpen) {
+      sheetOpenerRef.current = null;
       setSheetOpen(false);
-      // The sheet hands focus back to its trigger as it closes; take it after that.
+      // Once the sheet has closed and let go of the page's scroll, go to the field.
       window.setTimeout(() => waitlistRef.current?.focus(), 320);
 
       return;
@@ -277,7 +282,7 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
                 aria-haspopup="dialog"
                 className="halcyon-header-note"
                 size="sm"
-                onClick={() => openDoc('note')}
+                onClick={(event) => openDoc('note', event.currentTarget)}
               >
                 Read the note
               </GlassButton>
@@ -375,7 +380,7 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
                     aria-expanded={sheetOpen && doc === 'note'}
                     aria-haspopup="dialog"
                     className="halcyon-note-button"
-                    onClick={() => openDoc('note')}
+                    onClick={(event) => openDoc('note', event.currentTarget)}
                   >
                     Read the whole note
                     <ArrowIcon />
@@ -458,7 +463,7 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
                       aria-haspopup="dialog"
                       className="halcyon-footer-link"
                       type="button"
-                      onClick={() => openDoc('note')}
+                      onClick={(event) => openDoc('note', event.currentTarget)}
                     >
                       The note
                     </button>
@@ -469,7 +474,7 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
                       aria-haspopup="dialog"
                       className="halcyon-footer-link"
                       type="button"
-                      onClick={() => openDoc('privacy')}
+                      onClick={(event) => openDoc('privacy', event.currentTarget)}
                     >
                       Privacy
                     </button>
@@ -498,6 +503,10 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
             closeLabel="Close"
             data-lg-theme="dark"
             side={narrow ? 'bottom' : 'right'}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              sheetOpenerRef.current?.focus();
+            }}
           >
             <div className="halcyon-sheet-head">
               <span aria-hidden className="halcyon-brand">
