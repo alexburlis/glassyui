@@ -50,9 +50,6 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
       </head>
       <body className="antialiased">
-        <a className="skip-link" href="#main-content">
-          Skip to content
-        </a>
         <Providers defaultTheme={DEFAULT_THEME}>{children}</Providers>
       </body>
     </html>

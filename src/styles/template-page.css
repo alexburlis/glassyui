@@ -24,7 +24,8 @@
 .template-preview {
   max-width: 1240px;
   margin: 0 auto;
-  padding: 0 24px;
+  /* Below 368 px the gutters narrow, so the frame stays as wide as a template's 320 px minimum. */
+  padding: 0 clamp(0px, (100% - 320px) / 2, 24px);
   text-align: center;
 }
 

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import type { ReactNode } from 'react';
+import { FramedPreviewAnchors } from '@/components/site/framed-preview-anchors';
 import { TEMPLATE_FONTS } from '@/lib/template-fonts';
 import {
   FREE_TEMPLATES,
@@ -51,7 +52,7 @@ export default async function TemplatePreviewPage({ params }: PreviewProps) {
   const fonts = TEMPLATE_FONTS[template.slug];
 
   return (
-    <div id="main-content">
+    <>
       {/* Runs before the template paints. The only interpolated value is the catalogue's theme. */}
       <script
         dangerouslySetInnerHTML={{
@@ -59,7 +60,8 @@ export default async function TemplatePreviewPage({ params }: PreviewProps) {
         }}
       />
       {fonts ? <style dangerouslySetInnerHTML={{ __html: `:root { ${fonts} }` }} /> : null}
+      <FramedPreviewAnchors />
       {preview}
-    </div>
+    </>
   );
 }

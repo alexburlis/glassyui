@@ -15,13 +15,18 @@ export function Providers({
 }) {
   const pathname = usePathname();
 
-  // A template's preview is the template alone, in its own appearance: the site's saved
-  // preferences, consent notice and analytics stay out of it.
+  // A template's preview is the template alone, in its own appearance: the site's skip link,
+  // saved preferences, consent notice and analytics stay out of it.
   if (isTemplatePreviewPath(pathname)) return children;
 
   return (
-    <PreferencesProvider defaultTheme={defaultTheme}>
-      <AnalyticsConsent>{children}</AnalyticsConsent>
-    </PreferencesProvider>
+    <>
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
+      <PreferencesProvider defaultTheme={defaultTheme}>
+        <AnalyticsConsent>{children}</AnalyticsConsent>
+      </PreferencesProvider>
+    </>
   );
 }
