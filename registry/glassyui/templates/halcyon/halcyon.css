@@ -747,11 +747,21 @@ html:has(.halcyon-page) {
   text-align: center;
 }
 
-/* Engines without the lens treat a glass pane as the backdrop root, so a prominent button
-   inside one sees only the pane's thin fill. A partial accent fill keeps its label legible. */
+/* A prominent button's glass recolours the page behind it. The sheet frosts its own backdrop,
+   and in Safari and Firefox the glass here may see little or none of the page, so its face
+   would show only the dark light under it, behind a dark label. There it takes the solid fill
+   instead, as the library does where glass cannot be drawn. */
+.halcyon-sheet .lg-button--prominent > .lg-button__layers > .lg-button__distortion {
+  background-color: var(--lg-prominent-fill);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
 @supports not (-webkit-app-region: drag) {
-  .halcyon .lg-glass-surface .lg-button--prominent .lg-button__tint {
-    background-color: color-mix(in srgb, var(--hc-accent) 85%, transparent);
+  .halcyon .lg-button--prominent > .lg-button__layers > .lg-button__distortion {
+    background-color: var(--lg-prominent-fill);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 }
 
@@ -1842,6 +1852,17 @@ html:has(.halcyon-page) {
 
 .halcyon-sheet.lg-glass-surface {
   padding: 0;
+}
+
+/* Without the lens the library's light frost leaves the hero's large type legible through the
+   note, and sharp where an engine draws no backdrop filter. There the sheet is solid navy, as
+   the library makes glass it cannot draw. */
+@supports not (-webkit-app-region: drag) {
+  .halcyon-sheet {
+    background: var(--hc-navy);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 
 .halcyon-sheet .lg-sheet-handle {
