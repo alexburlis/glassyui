@@ -106,11 +106,19 @@ const themeOnly = process.argv[4] === 'theme';
 
 const firefoxFailuresOnly = process.argv[4] === 'firefox-failures';
 
+// A bounded rerun can name its engines; the manifest records which ran.
+const selectedEngines = (process.env.GLASS_ENGINES ?? 'chromium,webkit,firefox').split(',');
+
+for (const engine of selectedEngines) {
+  assert.ok(['chromium', 'webkit', 'firefox'].includes(engine), `Unknown engine: ${engine}`);
+}
+
 const activeContexts = new Set();
 
 const manifest = {
   baseUrl,
   scope: firefoxFailuresOnly ? 'firefox-failures' : themeOnly ? 'theme' : 'full',
+  selectedEngines,
   failures,
   engines: {},
 };
@@ -1475,7 +1483,7 @@ async function checkDeskTheme(browser, name) {
 const engines = { chromium, webkit, firefox };
 
 for (const [name, launcher] of Object.entries(engines)) {
-  if (firefoxFailuresOnly && name !== 'firefox') continue;
+  if (!selectedEngines.includes(name) || (firefoxFailuresOnly && name !== 'firefox')) continue;
   const options = { headless: true };
 
   if (name === 'chromium') {

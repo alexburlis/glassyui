@@ -95,7 +95,20 @@ fs.mkdirSync(artifactDirectory, { recursive: true });
 
 const failures = [];
 
-const manifest = { baseUrl, engines: {}, failures, suite: process.argv[4] ?? 'keynote' };
+// A bounded rerun can name its engines; the manifest records which ran.
+const selectedEngines = (process.env.GLASS_ENGINES ?? 'chromium,webkit,firefox').split(',');
+
+if (selectedEngines.some((engine) => !['chromium', 'webkit', 'firefox'].includes(engine))) {
+  throw new Error(`Unknown engine in GLASS_ENGINES: ${selectedEngines.join(', ')}`);
+}
+
+const manifest = {
+  baseUrl,
+  engines: {},
+  failures,
+  selectedEngines,
+  suite: process.argv[4] ?? 'keynote',
+};
 
 const fail = (engine, message) => failures.push(`${engine}: ${message}`);
 
@@ -2170,6 +2183,8 @@ if (!lensContractsOnly) {
 }
 
 for (const browserType of [chromium, webkit, firefox]) {
+  if (!selectedEngines.includes(browserType.name())) continue;
+
   try {
     await checkEngine(browserType);
   } catch (error) {
