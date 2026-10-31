@@ -135,7 +135,8 @@ try {
 
   assert.equal(imageUrls.size, 3, 'Each launch component needs its own share image');
 
-  // The free portfolio template was retired: its addresses and guide lead to Glassy UI Pro.
+  // The free portfolio template was retired: its addresses, its guide and the old templates
+  // index lead to Glassy UI Pro. Free templates have their own pages under /templates/<slug>.
   for (const route of [
     '/templates',
     '/templates/portfolio',
@@ -161,7 +162,55 @@ try {
   assert.equal(sitemapResponse.status(), 200);
   const sitemap = await sitemapResponse.text();
 
-  assert.equal(sitemap.includes('/templates'), false, 'The retired template is out of the sitemap');
+  assert.equal(
+    sitemap.includes('/templates/portfolio'),
+    false,
+    'The retired template is out of the sitemap',
+  );
+  assert.ok(
+    sitemap.includes('<loc>https://glassyui.com/templates/halcyon</loc>'),
+    'The Halcyon template page is in the sitemap',
+  );
+  assert.equal(sitemap.includes('/preview<'), false, 'Template previews are out of the sitemap');
+
+  // A free template's page frames its live preview; the preview stands alone, unindexed.
+  await visit('/templates/halcyon');
+  await assertContained('/templates/halcyon');
+  assert.equal(await page.locator('main h1').innerText(), 'Halcyon');
+  assert.match(
+    await page.locator('link[rel="canonical"]').getAttribute('href'),
+    /\/templates\/halcyon$/,
+  );
+  assert.equal(
+    await page.locator('iframe[src="/templates/halcyon/preview"]').count(),
+    1,
+    'The Halcyon page frames its preview',
+  );
+  assert.match(
+    await page.locator('.copy-chip-command').innerText(),
+    /shadcn@4\.14\.1 add @glassyui\/template-halcyon/,
+  );
+  await visit('/templates/halcyon/preview');
+  await assertContained('/templates/halcyon/preview');
+  assert.match(
+    await page.locator('meta[name="robots"]').getAttribute('content'),
+    /noindex, follow/,
+  );
+  assert.match(
+    await page.locator('link[rel="canonical"]').getAttribute('href'),
+    /\/templates\/halcyon$/,
+  );
+  assert.equal(await page.locator('html').getAttribute('data-lg-theme'), 'dark');
+  assert.equal(
+    await page.locator('.analytics-consent').count(),
+    0,
+    'No consent notice in a preview',
+  );
+  checks.push({
+    route: '/templates/halcyon',
+    sitemap: true,
+    preview: '/templates/halcyon/preview',
+  });
 
   for (const route of guideRoutes) {
     await visit(route);
@@ -183,6 +232,15 @@ try {
   await page.screenshot({ path: path.join(artifactDirectory, 'home-mobile.png'), fullPage: true });
   const missing = await context.request.get(new URL('/guides/not-a-guide', baseUrl).href);
   assert.equal(missing.status(), 404);
+
+  for (const route of ['/templates/not-a-template', '/templates/not-a-template/preview']) {
+    const missingTemplate = await context.request.get(new URL(route, baseUrl).href, {
+      maxRedirects: 0,
+    });
+
+    assert.equal(missingTemplate.status(), 404, `${route} must not exist`);
+  }
+
   assert.deepEqual(errors, [], 'No unhandled browser exceptions');
   assert.deepEqual(missingAssets, [], 'No required assets may be missing');
 } catch (error) {

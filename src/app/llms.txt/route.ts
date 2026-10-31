@@ -2,6 +2,7 @@ import { componentCategories, componentDocs } from '@/components/docs/component-
 import { guides } from '@/components/docs/guide-data';
 import { PRO_ORIGIN, GITHUB, SITE_URL } from '@/lib/site-links';
 import { installCommand } from '@/lib/install-command';
+import { FREE_TEMPLATES, freeTemplatePath } from '@/lib/templates';
 
 export const dynamic = 'force-static';
 
@@ -33,6 +34,11 @@ export function GET() {
     `- [Templates](${PRO_ORIGIN}): Complete Next.js sites built from Glassy UI components, in Glassy UI Pro`,
     link('React Native', '/mobile', 'The same components for React Native and Expo apps'),
     ...guides.map((guide) => link(guide.title, `/guides/${guide.slug}`, guide.description)),
+    ...FREE_TEMPLATES.flatMap((template) =>
+      template.status === 'available'
+        ? [link(`${template.name} template`, freeTemplatePath(template.slug), template.summary)]
+        : [],
+    ),
     '',
   ];
 

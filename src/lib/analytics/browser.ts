@@ -184,6 +184,7 @@ function pagePath(pathname: string) {
     '/mobile',
     '/guides',
     '/blog',
+    '/templates/halcyon',
     '/privacy',
     '/cookie-policy',
     '/imprint',

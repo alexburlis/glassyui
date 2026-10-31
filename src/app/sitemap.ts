@@ -4,6 +4,7 @@ import { guides } from '@/components/docs/guide-data';
 import { SITE_URL } from '@/lib/site-links';
 import { nativeComponentDocs } from '@/lib/native-component-docs';
 import { getBlogSitemapEntries } from '@/lib/blog';
+import { FREE_TEMPLATES, freeTemplatePath } from '@/lib/templates';
 
 export const revalidate = 900;
 
@@ -41,6 +42,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly' as const,
       priority: 0.8,
     })),
+    // A template's preview is its page's frame, not a page of its own.
+    ...FREE_TEMPLATES.flatMap((template) =>
+      template.status === 'available'
+        ? [
+            {
+              url: `${SITE_URL}${freeTemplatePath(template.slug)}`,
+              changeFrequency: 'monthly' as const,
+              priority: 0.8,
+            },
+          ]
+        : [],
+    ),
     ...nativeComponentDocs.map((component) => ({
       url: `${SITE_URL}/components/${component.id}`,
       changeFrequency: 'monthly' as const,

@@ -279,10 +279,10 @@ progress, spinners, skeletons and the Pro card's art.
 
 ## Link previews
 
-A shared link shows the product, not a template. Every page has its own 1200 ×
-630 card in `public/share`, set in the film stills' grid: the 44 px lockup at
-the top left, the page's name on clean ivory under it, and the product on the
-right, bleeding off the edge.
+A shared link shows the product; a free template's page may show its template.
+Every page has its own 1200 × 630 card in `public/share`, set in the film
+stills' grid: the 44 px lockup at the top left, the page's name on clean ivory
+under it, and the product on the right, bleeding off the edge.
 
 - **The home and React Native cards are film.** They are stills from the loops
   `link-previews/` renders: one pill of clear glass over the real dock, or
@@ -292,6 +292,8 @@ right, bleeding off the edge.
   shows.
 - **Every other card is the live component.** The share studio photographs each
   demo on the docs' wallpaper stage, magnified, with overlays open.
+- **A free template's card is its live preview**, at a desktop width, with its
+  sample dates and counts left out of the photograph.
 - **Pro is the one card in Vermilion**, with the Pro card's own art and white
   copy beside the white glyph.
 - **Type:** "Bends light." over a second line in the tertiary colour, or the

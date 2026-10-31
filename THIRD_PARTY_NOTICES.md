@@ -29,6 +29,13 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+## Template fonts
+
+The site serves Instrument Sans and Instrument Serif from `src/fonts/` for the
+free templates' previews. They are under the SIL Open Font License 1.1, whose
+text and copyright notices are in `src/fonts/OFL.txt`. Installed templates
+include no font files.
+
 ## Vendored lint rules
 
 The anti-slop and ESLint Stylistic notices and provenance remain beside their

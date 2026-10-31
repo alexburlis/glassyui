@@ -32,8 +32,14 @@ const nextConfig: NextConfig = {
     return [
       { source: '/pro', destination: `${PRO_ORIGIN}/`, permanent: true },
       { source: '/pro/:path*', destination: `${PRO_ORIGIN}/:path*`, permanent: true },
-      // Retired template and guide addresses lead to Glassy UI Pro.
-      ...['/templates', '/templates/:path*', '/guides/portfolio'].map((source) => ({
+      // The retired portfolio template and guide, and the old templates index, lead to Glassy UI
+      // Pro. The free templates' own pages live under /templates/<slug>.
+      ...[
+        '/templates',
+        '/templates/portfolio',
+        '/templates/portfolio/:path*',
+        '/guides/portfolio',
+      ].map((source) => ({
         source,
         destination: PRO_ORIGIN,
         permanent: true,

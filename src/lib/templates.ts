@@ -14,6 +14,10 @@ export interface FreeTemplate {
   status: 'available' | 'soon';
   /** One sentence: what a founder gets from it. */
   summary: string;
+  /** The registry item that installs it. Its registry dependencies are the components it uses. */
+  registryItem?: string;
+  /** The appearance it is drawn for. Its preview pins it over the visitor's site theme. */
+  theme?: 'light' | 'dark';
 }
 
 export const FREE_TEMPLATES: readonly FreeTemplate[] = [
@@ -23,6 +27,8 @@ export const FREE_TEMPLATES: readonly FreeTemplate[] = [
     slug: 'halcyon',
     status: 'available',
     summary: 'A waitlist page with a launch countdown, a live signup count and a referral link.',
+    registryItem: 'template-halcyon',
+    theme: 'dark',
   },
   {
     kind: 'Founder letter',
@@ -43,4 +49,24 @@ export const FREE_TEMPLATES: readonly FreeTemplate[] = [
 
 export function freeTemplatePath(slug: FreeTemplateSlug) {
   return `/templates/${slug}`;
+}
+
+/** A template whose page has shipped, with what its page needs; undefined for any other slug. */
+export function getAvailableTemplate(slug: string) {
+  const template = FREE_TEMPLATES.find(
+    (candidate) => candidate.slug === slug && candidate.status === 'available',
+  );
+
+  if (!template) return undefined;
+
+  if (!template.registryItem || !template.theme) {
+    throw new Error(`The ${template.name} template needs its registry item and theme.`);
+  }
+
+  return { ...template, registryItem: template.registryItem, theme: template.theme };
+}
+
+/** A template's bare preview, which its page frames: /templates/<slug>/preview. */
+export function isTemplatePreviewPath(pathname: string) {
+  return /^\/templates\/[^/]+\/preview\/?$/.test(pathname);
 }
