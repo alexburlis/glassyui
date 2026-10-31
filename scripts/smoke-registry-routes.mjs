@@ -46,6 +46,7 @@ const expectedItems = [
   'glassy-ui-new-york',
   'glassy-ui-base-nova',
   'template-halcyon',
+  'template-fieldnotes',
 ];
 
 const dropinItems = ['glassy-ui-new-york', 'glassy-ui-base-nova'];

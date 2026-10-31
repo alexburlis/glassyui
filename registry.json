@@ -2602,6 +2602,95 @@
           "target": "components/glassyui/templates/halcyon/halcyon.css"
         }
       ]
+    },
+    {
+      "name": "template-fieldnotes",
+      "type": "registry:ui",
+      "title": "Fieldnotes",
+      "description": "A founder letter on warm paper, with margin notes, pull quotes, a transcript to tag and pricing, built from Glassy UI components.",
+      "registryDependencies": [
+        "@glassyui/glass-accordion",
+        "@glassyui/glass-avatar",
+        "@glassyui/glass-badge",
+        "@glassyui/glass-button",
+        "@glassyui/glass-header",
+        "@glassyui/glass-input",
+        "@glassyui/glass-kbd",
+        "@glassyui/glass-panel",
+        "@glassyui/glass-progress",
+        "@glassyui/glass-scroll-area",
+        "@glassyui/glass-segmented-control",
+        "@glassyui/glass-sheet",
+        "@glassyui/glass-switch",
+        "@glassyui/glass-toast"
+      ],
+      "files": [
+        {
+          "path": "registry/glassyui/templates/fieldnotes/fieldnotes.tsx",
+          "type": "registry:block",
+          "target": "components/glassyui/templates/fieldnotes/fieldnotes.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/cover.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/cover.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/letter.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/letter.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/tag-a-moment.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/tag-a-moment.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/chapters.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/chapters.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/field.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/field.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/rates.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/rates.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/letters.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/letters.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/sign-off.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/sign-off.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/parts.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/parts.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/icons.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/icons.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/use-reveals.ts",
+          "type": "registry:hook",
+          "target": "components/glassyui/templates/fieldnotes/use-reveals.ts"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/fieldnotes.css",
+          "type": "registry:file",
+          "target": "components/glassyui/templates/fieldnotes/fieldnotes.css"
+        }
+      ]
     }
   ]
 }

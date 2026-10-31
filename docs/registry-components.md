@@ -1,6 +1,6 @@
 # Registry components
 
-The registry exposes 37 source-copy component items and one page template. The
+The registry exposes 37 source-copy component items and free page templates. The
 shadcn registry directory maps `@glassyui`, so an item installs by name with no
 mapping:
 
@@ -644,6 +644,44 @@ the template's folder, not the library. The page reads its accent and fonts from
 `--halcyon-sans`, with system fonts until they are set, and expects
 `data-lg-theme="dark"` on `<html>`. Its page at `/templates/halcyon` frames a
 live preview of the same source.
+
+### `template-fieldnotes`
+
+Files, installed under `components/glassyui/templates/fieldnotes/`:
+
+- `registry/glassyui/templates/fieldnotes/fieldnotes.tsx`
+- `registry/glassyui/templates/fieldnotes/cover.tsx`
+- `registry/glassyui/templates/fieldnotes/letter.tsx`
+- `registry/glassyui/templates/fieldnotes/tag-a-moment.tsx`
+- `registry/glassyui/templates/fieldnotes/chapters.tsx`
+- `registry/glassyui/templates/fieldnotes/field.tsx`
+- `registry/glassyui/templates/fieldnotes/rates.tsx`
+- `registry/glassyui/templates/fieldnotes/letters.tsx`
+- `registry/glassyui/templates/fieldnotes/sign-off.tsx`
+- `registry/glassyui/templates/fieldnotes/parts.tsx`
+- `registry/glassyui/templates/fieldnotes/icons.tsx`
+- `registry/glassyui/templates/fieldnotes/use-reveals.ts`
+- `registry/glassyui/templates/fieldnotes/fieldnotes.css`
+
+Package dependencies: none of its own; its components bring theirs.
+
+Registry dependencies: `@glassyui/glass-accordion`, `@glassyui/glass-avatar`,
+`@glassyui/glass-badge`, `@glassyui/glass-button`, `@glassyui/glass-header`,
+`@glassyui/glass-input`, `@glassyui/glass-kbd`, `@glassyui/glass-panel`,
+`@glassyui/glass-progress`, `@glassyui/glass-scroll-area`,
+`@glassyui/glass-segmented-control`, `@glassyui/glass-sheet`,
+`@glassyui/glass-switch` and `@glassyui/glass-toast`.
+
+Purpose: a founder letter on warm paper, rendered by `<Fieldnotes />`. Its
+sign-up form calls an `onStart(email)` prop that you wire to your own endpoint;
+without it the form confirms locally, says "Demo. Nothing was sent." and sends
+nothing. The margin notes, pull quotes, taggable transcript with its selection
+menu and insights board, and the pricing table live in the template's folder,
+not the library. The page reads its accent and fonts from `--fieldnotes-accent`,
+`--fieldnotes-accent-rotate`, `--fieldnotes-serif`, `--fieldnotes-sans` and, for
+headlines, `--fieldnotes-display`, with system fonts until they are set, and
+expects `data-lg-theme="light"` on `<html>`. Its page at `/templates/fieldnotes`
+frames a live preview of the same source.
 
 ## Expo-only interactions
 

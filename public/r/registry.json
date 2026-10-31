@@ -4042,6 +4042,220 @@
         "@radix-ui/react-switch",
         "@radix-ui/react-toast"
       ]
+    },
+    {
+      "name": "template-fieldnotes",
+      "title": "Fieldnotes",
+      "description": "A founder letter on warm paper, with margin notes, pull quotes, a transcript to tag and pricing, built from Glassy UI components.",
+      "files": [
+        {
+          "path": "registry/glassyui/glass-provider.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-provider.tsx"
+        },
+        {
+          "path": "registry/glassyui/liquid-filters.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/liquid-filters.tsx"
+        },
+        {
+          "path": "registry/glassyui/lib/preferences.ts",
+          "type": "registry:lib",
+          "target": "components/glassyui/lib/preferences.ts"
+        },
+        {
+          "path": "registry/glassyui/styles/liquid.css",
+          "type": "registry:file",
+          "target": "components/glassyui/styles/liquid.css"
+        },
+        {
+          "path": "registry/glassyui/glass-surface.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-surface.tsx"
+        },
+        {
+          "path": "registry/glassyui/lib/merge-refs.ts",
+          "type": "registry:lib",
+          "target": "components/glassyui/lib/merge-refs.ts"
+        },
+        {
+          "path": "registry/glassyui/lib/refraction-map.ts",
+          "type": "registry:lib",
+          "target": "components/glassyui/lib/refraction-map.ts"
+        },
+        {
+          "path": "registry/glassyui/lib/slab-optics.ts",
+          "type": "registry:lib",
+          "target": "components/glassyui/lib/slab-optics.ts"
+        },
+        {
+          "path": "registry/glassyui/lib/use-refraction-filter.tsx",
+          "type": "registry:hook",
+          "target": "components/glassyui/lib/use-refraction-filter.tsx"
+        },
+        {
+          "path": "registry/glassyui/lib/scene-context.ts",
+          "type": "registry:lib",
+          "target": "components/glassyui/lib/scene-context.ts"
+        },
+        {
+          "path": "registry/glassyui/glass-panel.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-panel.tsx"
+        },
+        {
+          "path": "registry/glassyui/glass-accordion.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-accordion.tsx"
+        },
+        {
+          "path": "registry/glassyui/glass-avatar.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-avatar.tsx"
+        },
+        {
+          "path": "registry/glassyui/glass-badge.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-badge.tsx"
+        },
+        {
+          "path": "registry/glassyui/glass-button.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-button.tsx"
+        },
+        {
+          "path": "registry/glassyui/glass-header.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-header.tsx"
+        },
+        {
+          "path": "registry/glassyui/lib/liquid-motion.ts",
+          "type": "registry:lib",
+          "target": "components/glassyui/lib/liquid-motion.ts"
+        },
+        {
+          "path": "registry/glassyui/styles/header.css",
+          "type": "registry:file",
+          "target": "components/glassyui/styles/header.css"
+        },
+        {
+          "path": "registry/glassyui/glass-input.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-input.tsx"
+        },
+        {
+          "path": "registry/glassyui/glass-kbd.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-kbd.tsx"
+        },
+        {
+          "path": "registry/glassyui/glass-progress.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-progress.tsx"
+        },
+        {
+          "path": "registry/glassyui/glass-scroll-area.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-scroll-area.tsx"
+        },
+        {
+          "path": "registry/glassyui/glass-segmented-control.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-segmented-control.tsx"
+        },
+        {
+          "path": "registry/glassyui/glass-sheet.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-sheet.tsx"
+        },
+        {
+          "path": "registry/glassyui/glass-switch.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-switch.tsx"
+        },
+        {
+          "path": "registry/glassyui/glass-toast.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-toast.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/fieldnotes.tsx",
+          "type": "registry:block",
+          "target": "components/glassyui/templates/fieldnotes/fieldnotes.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/cover.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/cover.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/letter.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/letter.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/tag-a-moment.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/tag-a-moment.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/chapters.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/chapters.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/field.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/field.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/rates.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/rates.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/letters.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/letters.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/sign-off.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/sign-off.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/parts.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/parts.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/icons.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/icons.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/use-reveals.ts",
+          "type": "registry:hook",
+          "target": "components/glassyui/templates/fieldnotes/use-reveals.ts"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/fieldnotes.css",
+          "type": "registry:file",
+          "target": "components/glassyui/templates/fieldnotes/fieldnotes.css"
+        }
+      ],
+      "type": "registry:ui",
+      "dependencies": [
+        "clsx",
+        "@radix-ui/react-accordion",
+        "@radix-ui/react-avatar",
+        "@radix-ui/react-slot",
+        "@radix-ui/react-scroll-area",
+        "@radix-ui/react-radio-group",
+        "@radix-ui/react-dialog",
+        "@radix-ui/react-switch",
+        "@radix-ui/react-toast"
+      ]
     }
   ]
 }

@@ -41,7 +41,8 @@
     "glassy-theme",
     "glassy-ui-new-york",
     "glassy-ui-base-nova",
-    "template-halcyon"
+    "template-halcyon",
+    "template-fieldnotes"
   ],
   "react-native": [
     "glass-provider",

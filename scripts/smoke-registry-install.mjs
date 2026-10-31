@@ -338,6 +338,23 @@ const expectedTemplateFiles = [
   'halcyon.css',
 ].map((file) => `components/glassyui/templates/halcyon/${file}`);
 
+// The free Fieldnotes template, hand-derived the same way.
+const expectedFieldnotesFiles = [
+  'fieldnotes.tsx',
+  'cover.tsx',
+  'letter.tsx',
+  'tag-a-moment.tsx',
+  'chapters.tsx',
+  'field.tsx',
+  'rates.tsx',
+  'letters.tsx',
+  'sign-off.tsx',
+  'parts.tsx',
+  'icons.tsx',
+  'use-reveals.ts',
+  'fieldnotes.css',
+].map((file) => `components/glassyui/templates/fieldnotes/${file}`);
+
 for (const dependency of expectedLibraryDependencies) {
   assert.equal(
     fixtureDependencies[dependency],
@@ -837,6 +854,33 @@ try {
   );
   report.template = { item: 'template-halcyon', files: expectedTemplateFiles, route: '/halcyon' };
 
+  run(process.execPath, [
+    shadcnBin,
+    'add',
+    `${baseUrl.replace(/\/$/, '')}/r/template-fieldnotes.json`,
+    '--yes',
+  ]);
+  assertExactSet(
+    'library and Fieldnotes file closure',
+    listFiles(path.join(temporaryRoot, 'components', 'glassyui'), 'components/glassyui'),
+    [...expectedLibraryFiles, ...expectedTemplateFiles, ...expectedFieldnotesFiles],
+  );
+  assert.deepEqual(
+    JSON.parse(fs.readFileSync(path.join(temporaryRoot, 'package.json'), 'utf8')).dependencies,
+    libraryDependencies,
+    'the Fieldnotes install changed the consumer packages',
+  );
+  fs.mkdirSync(path.join(temporaryRoot, 'app', 'fieldnotes'), { recursive: true });
+  fs.writeFileSync(
+    path.join(temporaryRoot, 'app', 'fieldnotes', 'page.tsx'),
+    `import { Fieldnotes } from '@/components/glassyui/templates/fieldnotes/fieldnotes';\n\nexport default function Page() {\n  return <Fieldnotes />;\n}\n`,
+  );
+  report.fieldnotes = {
+    item: 'template-fieldnotes',
+    files: expectedFieldnotesFiles,
+    route: '/fieldnotes',
+  };
+
   report.primary = {
     packageManager: 'pnpm',
     urlWithoutMapping: true,
@@ -867,6 +911,14 @@ try {
   assert.ok(
     fs.existsSync(path.join(temporaryRoot, '.next', 'server', 'app', 'halcyon.html')),
     'the installed Halcyon page must prerender',
+  );
+  assert.ok(
+    cssAssets.some((css) => css.includes('.fieldnotes-highlighter')),
+    'built consumer CSS is missing the installed Fieldnotes stylesheet',
+  );
+  assert.ok(
+    fs.existsSync(path.join(temporaryRoot, '.next', 'server', 'app', 'fieldnotes.html')),
+    'the installed Fieldnotes page must prerender',
   );
 
   report.build = 'passed';
