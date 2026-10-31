@@ -133,6 +133,66 @@ async function noSidewaysScroll(page, label) {
   );
 }
 
+function whiteContrast(rgb) {
+  const [red, green, blue] = rgb.map((value) => {
+    const channel = value / 255;
+
+    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+
+  return 1.05 / (0.2126 * red + 0.7152 * green + 0.0722 * blue + 0.05);
+}
+
+// The lowest contrast white copy has against a card's red, read from rendered pixels in the card's
+// right padding, from the top of its first line of copy down to the foot of its last.
+async function lowestWhiteContrast(page, card, first, last) {
+  const band = await card.evaluate(
+    (node, selectors) => {
+      const box = node.getBoundingClientRect();
+
+      return {
+        top: node.querySelector(selectors.first).getBoundingClientRect().top - box.top,
+        bottom: node.querySelector(selectors.last).getBoundingClientRect().bottom - box.top,
+        x: box.width - 8,
+      };
+    },
+    { first, last },
+  );
+
+  const png = await card.screenshot();
+
+  const column = await page.evaluate(
+    async ({ band, source }) => {
+      const image = new Image();
+      image.src = source;
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const context = canvas.getContext('2d');
+      context.drawImage(image, 0, 0);
+      const top = Math.ceil(band.top);
+
+      const { data } = context.getImageData(
+        Math.round(band.x),
+        top,
+        1,
+        Math.floor(band.bottom) - top,
+      );
+
+      return Array.from({ length: data.length / 4 }, (_, index) => ({
+        rgb: [data[index * 4], data[index * 4 + 1], data[index * 4 + 2]],
+        y: top + index,
+      }));
+    },
+    { band, source: `data:image/png;base64,${png.toString('base64')}` },
+  );
+
+  return column
+    .map(({ rgb, y }) => ({ ratio: whiteContrast(rgb), rgb, y }))
+    .reduce((lowest, pixel) => (pixel.ratio < lowest.ratio ? pixel : lowest));
+}
+
 try {
   browser = await chromium.launch({
     args: [
@@ -219,8 +279,9 @@ try {
   }
 
   // The home page's templates: free and Pro mixed in one gallery, the Pro cards and the closing
-  // tile leading to the Pro site, and nothing scrolling sideways.
-  for (const width of [360, 390, 768, 1280]) {
+  // tile leading to the Pro site, two columns down to the narrowest phone, and nothing scrolling
+  // sideways.
+  for (const width of [320, 360, 390, 768, 1280]) {
     const label = `home templates ${width}px`;
     const { context, failures, page } = await openPage({ width });
 
@@ -233,6 +294,12 @@ try {
 
     const cards = await gallery.locator('.template-card').evaluateAll((nodes) =>
       nodes.map((node) => ({
+        chipInside: (() => {
+          const chip = node.querySelector('.template-chip').getBoundingClientRect();
+          const poster = node.querySelector('.template-card-poster').getBoundingClientRect();
+
+          return chip.right <= poster.right && chip.bottom <= poster.bottom;
+        })(),
         focusable:
           node.matches('a[href], [tabindex]') || Boolean(node.querySelector('a, [tabindex]')),
         href: node.getAttribute('href'),
@@ -264,6 +331,8 @@ try {
       if (card.pro) {
         assert.equal(card.source, 'template', `${label}: ${name} counts as a template link`);
       }
+
+      assert.equal(card.chipInside, true, `${label}: ${name}'s tier fits on its poster`);
     }
 
     const firstRow = cards.filter((card) => card.top === cards[0].top);
@@ -305,6 +374,18 @@ try {
     assert.ok(
       width >= 1024 ? tileState.beside : tileState.full,
       `${label}: the Pro tile closes the gallery (${JSON.stringify(tileState)})`,
+    );
+
+    const tileRed = await lowestWhiteContrast(
+      page,
+      tile,
+      '.template-pro-tile-title',
+      '.template-pro-tile-action',
+    );
+
+    assert.ok(
+      tileRed.ratio >= 5,
+      `${label}: the Pro tile's copy keeps 5:1 (${JSON.stringify(tileRed)})`,
     );
     assert.match(
       await section.locator('.template-gallery-note').textContent(),

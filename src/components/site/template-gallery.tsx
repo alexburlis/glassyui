@@ -73,15 +73,17 @@ export function TemplateGallery() {
           <TemplateCard entry={entry} key={entry.slug} />
         ))}
         <a className="template-pro-tile" data-analytics-source="template" href={PRO_ORIGIN}>
-          <span className="template-pro-tile-title">Every Pro template, one price</span>
-          <span className="template-pro-tile-text">
-            {PRO_OFFER.earlyBirdOpen
-              ? `$${PRO_OFFER.earlyBirdPrice} for the first ${PRO_OFFER.earlyBirdCap}, then $${PRO_OFFER.regularPrice}.`
-              : `$${PRO_OFFER.regularPrice}, paid once.`}{' '}
-            {firstRelease} arrive first, estimated {PRO_OFFER.firstReleaseEstimate}.
-          </span>
-          <span className="template-pro-tile-action">
-            Pre-order Pro<span aria-hidden> ↗</span>
+          <span className="template-pro-tile-copy">
+            <span className="template-pro-tile-title">Every Pro template, one price</span>
+            <span className="template-pro-tile-text">
+              {PRO_OFFER.earlyBirdOpen
+                ? `$${PRO_OFFER.earlyBirdPrice} for the first ${PRO_OFFER.earlyBirdCap}, then $${PRO_OFFER.regularPrice}.`
+                : `$${PRO_OFFER.regularPrice}, paid once.`}{' '}
+              {firstRelease} arrive first, estimated {PRO_OFFER.firstReleaseEstimate}.
+            </span>
+            <span className="template-pro-tile-action">
+              Pre-order Pro<span aria-hidden> ↗</span>
+            </span>
           </span>
         </a>
       </div>

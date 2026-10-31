@@ -4216,8 +4216,8 @@ main :focus {
 
 /* ------------------------------------------------------------ templates */
 
-/* The home page's templates, free and Pro in one grid: three across on a wide screen, two below
-   that, and one only where two would not fit. */
+/* The home page's templates, free and Pro in one grid: three across on a wide screen and two below
+   that, down to the narrowest phone. */
 .template-gallery {
   --template-gap: 20px;
 
@@ -4341,25 +4341,59 @@ a.template-card:hover .template-card-title {
 }
 
 /* The one Vermilion card on the home page, in the Pro card's colours in both themes. It holds
-   still. Its red is anchored to its foot, where the copy sits, so the copy keeps 5:1 however
-   tall the tile grows. On three columns it is as tall as the poster beside it. */
+   still. On three columns it is as tall as the poster beside it. */
 .template-pro-tile {
+  --tile-padding: 24px;
+
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  align-items: flex-start;
   align-self: start;
-  gap: 10px;
   grid-column: span 2;
   min-height: calc((100cqi - 2 * var(--template-gap)) / 3 * 0.625);
-  padding: 24px;
+  overflow: hidden;
+  padding: var(--tile-padding);
   border-radius: 16px;
-  background: linear-gradient(to top, #b02d14, #cc391b 150px, #f0502b 250px, #ff8656 360px);
+  background: #ff8656;
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.28),
     0 0 0 1px rgb(150 30 10 / 0.25),
     0 24px 48px -26px rgb(190 50 20 / 0.65);
   color: #fff;
+}
+
+/* The light along the top edge sits over the red, which the copy draws. */
+.template-pro-tile::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.28);
+  content: '';
+  pointer-events: none;
+}
+
+/* The red is measured from the copy, not from the tile's edges, because the copy's height changes
+   as it wraps. It deepens from #cc391b, which keeps 5:1 against white, just above the copy to
+   #b02d14 at the foot, and lightens above it, so the copy keeps 5:1 at every width. */
+.template-pro-tile-copy {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin: -8px calc(-1 * var(--tile-padding)) calc(-1 * var(--tile-padding));
+  padding: 8px var(--tile-padding) var(--tile-padding);
+  background: linear-gradient(to top, #b02d14, #cc391b);
+}
+
+.template-pro-tile-copy::before {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  height: 210px;
+  background: linear-gradient(to top, #cc391b, #f0502b 100px, #ff8656);
+  content: '';
 }
 
 .template-pro-tile-title {
@@ -4444,17 +4478,11 @@ a.template-card:hover .template-card-title {
   }
 
   .template-pro-tile {
-    padding: 20px;
+    --tile-padding: 20px;
   }
 
   .template-pro-tile-title {
     font-size: 21px;
-  }
-}
-
-@media (max-width: 359px) {
-  .template-gallery {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 
