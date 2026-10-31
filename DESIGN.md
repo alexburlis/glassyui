@@ -128,7 +128,7 @@ token in `src/styles/liquid.css`.
 | `--lg-prominent-fill` | `#0067d9` | `#0067d9` | Prominent buttons where glass can't be drawn |
 | `--lg-accent`         | `#0067d9` | `#0067d9` | Selection and active controls                |
 | `--lg-switch-on`      | `#0067d9` | `#0067d9` | A switch that is on                          |
-| `--lg-focus-ring`     | `#b8b8be` | `#66666a` | Neutral keyboard focus                       |
+| `--lg-focus-ring`     | `#b8b8be` | `#66666a` | Neutral keyboard focus on controls           |
 | `--lg-invalid`        | `#ff7a8e` | `#c4153f` | Errors                                       |
 
 - Blue actions use `#0067d9` for white-label legibility. Links adjust for each
@@ -185,6 +185,13 @@ token in `src/styles/liquid.css`.
   line along its rim moves round to the end facing the light and the glow along
   its bottom to the far end. The shadow stays under the slab. Nothing new lights
   up; the rim light it already has moves.
+- Fields never draw a focus ring, outline or darker edge. A text field counts as
+  keyboard-focused even when clicked, so a ring would follow every tap. A
+  focused field fills in instead, and its caret shows where typing goes. This
+  holds in the components, the shadcn/ui theme and drop-ins, React Native and
+  every template. Increased contrast and forced colours keep an outline.
+  Controls without a caret, such as buttons and the select trigger, keep the
+  neutral ring for keyboard focus.
 - The dock is a quiet glass shelf with space around its icons. Full app artwork
   fills an item; navigation glyphs stay small inside the same generous target.
   Hover and keyboard focus never resize the dock or its neighbours. Nothing is

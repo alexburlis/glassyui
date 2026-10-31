@@ -39,15 +39,15 @@ const PLACEHOLDER = {
 } as const;
 
 /**
- * A recessed text field with an optional label above and hint below. It rings in the focus
- * colour while focused and in the invalid colour while `invalid`; `editable={false}` dims it.
+ * A recessed text field with an optional label above and hint below. It fills in while focused,
+ * without a ring, and rings in the invalid colour while `invalid`; `editable={false}` dims it.
  */
 export const GlassInput = forwardRef<TextInput, GlassInputProps>(
   ({ editable = true, hint, invalid = false, label, onBlur, onFocus, style, ...rest }, ref) => {
     const { colors, preferences } = useGlassTheme();
     const [focused, setFocused] = useState(false);
     const theme = preferences.theme;
-    const ring = invalid ? colors.invalid : focused ? colors.focusRing : null;
+    const ring = invalid ? colors.invalid : null;
 
     const handleFocus = useCallback(
       (event: FocusEvent) => {

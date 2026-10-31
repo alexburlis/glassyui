@@ -739,7 +739,30 @@
     /* ---------- Fields: inputs, textareas, select triggers ----------
        A recessed well. Inputs cannot hold ::before or ::after, so the fill is a
        background image (clear it with `bg-none`) and the rim is the inset
-       shadow channel (clear it with `inset-shadow-none`). */
+       shadow channel (clear it with `inset-shadow-none`). A focused field fills
+       in and draws no ring: its ring takes the colour of its own edge. The
+       select trigger has no caret, so keyboard focus keeps the stock ring. */
+    :is([data-slot='input'], [data-slot='textarea']):not(.dark) {
+      --ring: var(--input);
+    }
+
+    :is([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger']):not(
+        .dark
+      ):focus {
+      background-image: linear-gradient(
+        color-mix(
+          in oklab,
+          var(--glassy-src-background) calc(var(--glassy-field) + 28%),
+          transparent
+        ),
+        color-mix(
+          in oklab,
+          var(--glassy-src-background) calc(var(--glassy-field) + 28%),
+          transparent
+        )
+      );
+    }
+
     :is([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger']):not(.dark) {
       --input: transparent;
       --tw-inset-shadow:
