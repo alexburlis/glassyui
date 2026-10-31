@@ -17,6 +17,9 @@ const nextConfig: NextConfig = {
   // Preserve RSC headers so Proxy can separate component reads from page POSTs.
   skipProxyUrlNormalize: true,
   images: {
+    // AVIF first: smaller than WebP, and the browser checks' Firefox stalls decoding the home
+    // page's templates as WebP.
+    formats: ['image/avif', 'image/webp'],
     localPatterns: [{ pathname: '/**', search: '' }, { pathname: '/share/blog/**' }],
   },
   env: { NEXT_PUBLIC_SENTRY_RELEASE: release ?? '' },
