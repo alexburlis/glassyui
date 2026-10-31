@@ -1514,30 +1514,6 @@ main :focus {
   height: 18px;
 }
 
-/* --------------------------------------------------- template window bar */
-
-.home-template-bar {
-  display: flex;
-  gap: 7px;
-  padding: 12px 14px;
-  background: #2a2a2c;
-}
-
-.home-template-bar i {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: rgb(255 255 255 / 0.2);
-}
-
-:root[data-lg-theme='light'] .home-template-bar {
-  background: #e6e6ea;
-}
-
-:root[data-lg-theme='light'] .home-template-bar i {
-  background: rgb(0 0 0 / 0.16);
-}
-
 /* ----------------------------------------------------------------- bento */
 
 .bento {
@@ -4238,12 +4214,19 @@ main :focus {
   color: #b02d14;
 }
 
-/* The gallery's last chapter: Glassy UI Pro's templates. */
-.components-templates > .template-cards {
+/* ------------------------------------------------------------ templates */
+
+/* The home page's templates, free and Pro in one grid: three across on a wide screen, two below
+   that, and one only where two would not fit. */
+.template-gallery {
+  --template-gap: 20px;
+
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
-  gap: 24px 20px;
-  margin-top: 20px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 40px var(--template-gap);
+  max-width: 1200px;
+  margin: 0 auto;
+  container-type: inline-size;
 }
 
 .template-card {
@@ -4254,57 +4237,81 @@ main :focus {
   color: var(--site-text);
 }
 
-.template-card-window {
-  display: block;
+.template-card-poster {
+  position: relative;
+  aspect-ratio: 16 / 10;
   overflow: hidden;
   border-radius: 16px;
-  background: var(--site-bg);
+  background: var(--site-tile);
   box-shadow:
     0 0 0 1px var(--site-hairline),
     var(--site-shadow);
 }
 
-.template-card-window {
-  transition: translate 500ms var(--lg-ease-out);
+.template-card-poster img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
 }
 
-.template-card:hover .template-card-window {
-  translate: 0 -4px;
-}
-
-.template-card-pro {
-  display: grid;
-  place-items: center;
-  aspect-ratio: 1800 / 1209;
-  background: var(--site-wallpaper) no-repeat;
-  background-position: 70% 30%;
-  background-size: 220% auto;
-}
-
-.template-card-pro-pane {
-  display: grid;
-  gap: 6px;
-  padding: 16px 28px;
-  border-radius: 16px;
-  background: var(--site-legible-tint);
-  box-shadow: inset 0 0 0 1px var(--site-hairline);
-  font-family: var(--site-font-display);
-  font-size: 16px;
+/* The tier sits on the poster in a small pane of glass, dense enough that its label keeps 4.5:1
+   over the darkest or lightest poster. */
+.template-chip {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgb(28 28 30 / 0.8);
+  box-shadow:
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.24),
+    0 1px 3px rgb(0 0 0 / 0.2);
+  font-size: 12px;
   font-weight: 600;
-  text-align: center;
-  backdrop-filter: blur(18px) saturate(1.5);
+  white-space: nowrap;
+  backdrop-filter: blur(12px) saturate(1.6);
+}
+
+.template-chip[data-tier='free'] {
+  color: #7cebc0;
+}
+
+.template-chip[data-tier='pro'] {
+  color: #ffb08c;
+}
+
+:root[data-lg-theme='light'] .template-chip {
+  background: rgb(255 255 255 / 0.86);
+  box-shadow:
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.7),
+    0 1px 3px rgb(0 0 0 / 0.15);
+}
+
+:root[data-lg-theme='light'] .template-chip[data-tier='free'] {
+  color: #08603f;
+}
+
+:root[data-lg-theme='light'] .template-chip[data-tier='pro'] {
+  color: #b02d14;
+}
+
+/* Glass that cannot be drawn becomes a plain tile. */
+:root[data-lg-reduce-transparency='1'] .template-chip {
+  background: var(--site-tile);
+  backdrop-filter: none;
 }
 
 .template-card-meta {
   display: grid;
-  gap: 4px;
+  gap: 2px;
 }
 
 .template-card-title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
   font-family: var(--site-font-display);
   font-size: 19px;
   font-weight: 600;
@@ -4312,7 +4319,7 @@ main :focus {
   transition: color 150ms ease;
 }
 
-.template-card:hover .template-card-title {
+a.template-card:hover .template-card-title {
   color: var(--site-link);
 }
 
@@ -4322,34 +4329,133 @@ main :focus {
   line-height: 1.43;
 }
 
-.template-tag {
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 9px;
-  border-radius: 999px;
-  background: var(--site-fill-strong);
-  color: var(--site-text);
-  font-family: var(--site-font);
-  font-size: 12px;
+.template-card-action {
+  margin-top: 4px;
+  font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0;
 }
 
-.template-tag--pro {
-  background: rgb(0 103 217 / 0.24);
-  color: #b2d6ff;
+.template-card[data-status='soon'] .template-card-action {
+  color: var(--site-text-2);
+  font-weight: 400;
 }
 
-:root[data-lg-theme='light'] .template-tag--pro {
-  background: rgb(0 103 217 / 0.12);
-  color: #0054b3;
+/* The one Vermilion card on the home page, in the Pro card's colours in both themes. It holds
+   still. Its red is anchored to its foot, where the copy sits, so the copy keeps 5:1 however
+   tall the tile grows. On three columns it is as tall as the poster beside it. */
+.template-pro-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  align-self: start;
+  gap: 10px;
+  grid-column: span 2;
+  min-height: calc((100cqi - 2 * var(--template-gap)) / 3 * 0.625);
+  padding: 24px;
+  border-radius: 16px;
+  background: linear-gradient(to top, #b02d14, #cc391b 150px, #f0502b 250px, #ff8656 360px);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.28),
+    0 0 0 1px rgb(150 30 10 / 0.25),
+    0 24px 48px -26px rgb(190 50 20 / 0.65);
+  color: #fff;
 }
 
-/* Glass that cannot be drawn becomes a plain tile. */
-:root[data-lg-reduce-transparency='1'] .template-card-pro-pane {
-  background: var(--site-tile);
-  backdrop-filter: none;
+.template-pro-tile-title {
+  font-family: var(--site-font-display);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+}
+
+.template-pro-tile-text {
+  max-width: 34em;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+/* White text on the lighter red falls short of 4.5:1, so the action turns over, as the Pro
+   card's badge does. */
+.template-pro-tile-action {
+  height: 36px;
+  line-height: 36px;
+  margin-top: 6px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: #fff;
+  color: #b02d14;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.template-gallery-note {
+  max-width: 1200px;
+  margin: 32px auto 0;
+  color: var(--site-text-2);
+  font-size: 14px;
+}
+
+@media (max-width: 1023px) {
+  .template-gallery {
+    --template-gap: 16px;
+
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 32px;
+  }
+
+  .template-pro-tile {
+    grid-column: 1 / -1;
+    min-height: 0;
+  }
+}
+
+@media (max-width: 639px) {
+  .template-gallery {
+    --template-gap: 12px;
+
+    row-gap: 28px;
+  }
+
+  .template-card {
+    gap: 10px;
+  }
+
+  .template-card-poster {
+    border-radius: 12px;
+  }
+
+  .template-chip {
+    top: 6px;
+    left: 6px;
+    height: 20px;
+    padding: 0 7px;
+    font-size: 11px;
+  }
+
+  .template-card-title {
+    font-size: 16px;
+  }
+
+  .template-card-text,
+  .template-card-action {
+    font-size: 13px;
+  }
+
+  .template-pro-tile {
+    padding: 20px;
+  }
+
+  .template-pro-tile-title {
+    font-size: 21px;
+  }
+}
+
+@media (max-width: 359px) {
+  .template-gallery {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* ---------------------------------------------------------------- legal */
@@ -4375,7 +4481,7 @@ main :focus {
   margin-top: 40px;
 }
 
-:is(.pro-card, .template-card, .site-footer-legal-links a):focus-visible {
+:is(.pro-card, .template-card, .template-pro-tile, .site-footer-legal-links a):focus-visible {
   outline: 2px solid var(--lg-focus-ring);
   outline-offset: 3px;
 }
@@ -4530,7 +4636,9 @@ main :focus {
   /* A link's arrow leans the way it goes. */
   :root:not([data-lg-reduce-motion='1']) .home-section-link > span[aria-hidden],
   :root:not([data-lg-reduce-motion='1']) .home-announce > span[aria-hidden]:last-child,
-  :root:not([data-lg-reduce-motion='1']) .pro-card-action > span[aria-hidden] {
+  :root:not([data-lg-reduce-motion='1']) .pro-card-action > span[aria-hidden],
+  :root:not([data-lg-reduce-motion='1']) .template-card-action > span[aria-hidden],
+  :root:not([data-lg-reduce-motion='1']) .template-pro-tile-action > span[aria-hidden] {
     position: relative;
     left: 0;
     transition: left 240ms var(--lg-ease-out);
@@ -4538,8 +4646,25 @@ main :focus {
 
   :root:not([data-lg-reduce-motion='1']) .home-section-link:hover > span[aria-hidden],
   :root:not([data-lg-reduce-motion='1']) .home-announce:hover > span[aria-hidden]:last-child,
-  :root:not([data-lg-reduce-motion='1']) .pro-card:hover .pro-card-action > span[aria-hidden] {
+  :root:not([data-lg-reduce-motion='1']) .pro-card:hover .pro-card-action > span[aria-hidden],
+  :root:not([data-lg-reduce-motion='1'])
+    a.template-card:hover
+    .template-card-action
+    > span[aria-hidden],
+  :root:not([data-lg-reduce-motion='1'])
+    .template-pro-tile:hover
+    .template-pro-tile-action
+    > span[aria-hidden] {
     left: 3px;
+  }
+
+  /* Pointing at a template lifts its poster off the page. */
+  :root:not([data-lg-reduce-motion='1']) .template-card-poster {
+    transition: translate 500ms var(--lg-ease-out);
+  }
+
+  :root:not([data-lg-reduce-motion='1']) a.template-card:hover .template-card-poster {
+    translate: 0 -4px;
   }
 
   /* The Pro card's art never stops, but only just moves: the ribbon sways over 16 seconds and
@@ -4585,6 +4710,8 @@ main :focus {
     :root:not([data-lg-reduce-motion='1']) .component-card,
     :root:not([data-lg-reduce-motion='1']) .bento-tile,
     :root:not([data-lg-reduce-motion='1']) .home-step,
+    :root:not([data-lg-reduce-motion='1']) .template-card,
+    :root:not([data-lg-reduce-motion='1']) .template-pro-tile,
     :root:not([data-lg-reduce-motion='1']) .home-cta > * {
       --site-rise: 28px;
 

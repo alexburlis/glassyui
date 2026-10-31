@@ -92,7 +92,7 @@ try {
   const browse = hero.getByRole('link', { name: 'Browse components', exact: true });
   const templates = hero.getByRole('link', { name: 'Browse Templates', exact: true });
   assert.equal(await browse.getAttribute('href'), '/components');
-  assert.equal(await templates.getAttribute('href'), 'https://pro.glassyui.com');
+  assert.equal(await templates.getAttribute('href'), '/#templates');
   assert.ok(
     (await templates.boundingBox()).x > (await browse.boundingBox()).x,
     'secondary templates button is on the right',

@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { shareCard, shareMetadata } from '@/lib/share';
 import { componentCategories, componentDocs } from '@/components/docs/component-docs-data';
 import { DocsShell } from '@/components/docs/docs-shell';
 import { ComponentGrid, ReleaseFeedbackProvider } from '@/components/site/component-grid';
 import { ProCard } from '@/components/site/pro-card';
-import { TemplatesSection } from '@/components/site/templates-section';
 
 const description = `Browse the ${componentDocs.length} Glassy UI components for React in the source registry, each one live.`;
 
@@ -73,7 +73,11 @@ export default function ComponentsPage() {
           </section>
         ))}
       </ReleaseFeedbackProvider>
-      <TemplatesSection />
+      <p className="docs-section" id="templates">
+        <Link className="home-section-link" href="/#templates">
+          Browse templates<span aria-hidden> ›</span>
+        </Link>
+      </p>
     </DocsShell>
   );
 }

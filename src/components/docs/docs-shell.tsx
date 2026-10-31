@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { GlassScrollArea } from '@/components/liquid/scroll-area';
 import { SiteFooter } from '@/components/site/site-footer';
 import { SiteNav } from '@/components/site/site-nav';
-import { PRO_ORIGIN, GITHUB, newIssueUrl, sourceUrl } from '@/lib/site-links';
+import { GITHUB, newIssueUrl, sourceUrl } from '@/lib/site-links';
 import { nativeComponentDocs, getNativeComponentDoc } from '@/lib/native-component-docs';
 import { componentCategories, componentDocs } from './component-docs-data';
 import { DocsMobileNav, DocsNavLink, type DocsMobileNavGroup } from './docs-mobile-nav';
@@ -54,7 +54,7 @@ const documentationGroup: DocsMobileNavGroup = {
     { href: '/mobile', label: 'React Native' },
     { href: '/guides', label: 'Guides' },
     { href: '/blog', label: 'Blog' },
-    { href: PRO_ORIGIN, label: 'Templates', external: true },
+    { href: '/#templates', label: 'Templates' },
     { href: GITHUB.repository, label: 'GitHub', external: true },
   ],
 };

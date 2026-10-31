@@ -150,10 +150,11 @@ token in `src/styles/liquid.css`.
 - Pages and cards use ivory, silver and graphite. Glass stays neutral and takes
   small accents from the artwork behind it; broad surfaces never become
   burgundy.
-- The Pro card beside the components gallery is the one card in Vermilion, in
-  both themes, so it reads as the way into Pro rather than another component.
-  Its copy and its link are white, and the red deepens down the card so the copy
-  keeps 5:1.
+- Pro is the one Vermilion card on each page, in both themes, so it reads as the
+  way into Pro rather than another component: the Pro card beside the components
+  gallery, and the tile that closes the home page's templates. Their copy is
+  white, and the red deepens down each card so the copy keeps 5:1. The tile is
+  the only place on the home page with a price.
 - Purple remains an opt-in badge API for consumers; site branding and default
   examples use no purple.
 - The dimmest text keeps 4.5:1 contrast on both the page and its tiles.
@@ -192,6 +193,10 @@ token in `src/styles/liquid.css`.
   every template. Increased contrast and forced colours keep an outline.
   Controls without a caret, such as buttons and the select trigger, keep the
   neutral ring for keyboard focus.
+- Template cards show a poster of the whole page, with the tier in a small glass
+  chip at its top left: Free, Free · Soon, Pro · First release or Pro · Planned.
+  The whole card is the link, except a template that is not out yet. Pro posters
+  are design previews, and the gallery says so.
 - The dock is a quiet glass shelf with space around its icons. Full app artwork
   fills an item; navigation glyphs stay small inside the same generous target.
   Hover and keyboard focus never resize the dock or its neighbours. Nothing is
@@ -215,9 +220,9 @@ token in `src/styles/liquid.css`.
   in Vermilion, Apricot, Graphite or Silver
   (`src/components/site/card-backdrop.tsx`). Cards take the next form and
   material in turn, so neighbours never match and one card in four is Vermilion;
-  the Pro card stays the one red card. Forms run pale in light mode and deep in
-  dark mode, keeping 3:1 against the demos' ink. Graphite keeps the logo's
-  Vermilion edge.
+  Pro stays the one red card. Forms run pale in light mode and deep in dark
+  mode, keeping 3:1 against the demos' ink. Graphite keeps the logo's Vermilion
+  edge.
 
 ## Motion
 
@@ -255,14 +260,16 @@ progress, spinners, skeletons and the Pro card's art.
 - **From where it came.** Menus, selects, popovers and tooltips grow out of
   their trigger and drift the last few pixels away from it. Dialogs rise
   slightly as they appear.
-- **Answers, not decoration.** Buttons set down under a press, a link's arrow
-  leans the way it goes, copying confirms with a small pop, and the theme switch
-  changes the whole page at once, including its first use. A Light and Dark
-  control changes the theme immediately while its bubble moves on the live page.
+- **Answers, not decoration.** Buttons set down under a press, a template's
+  poster lifts under a pointer, a link's arrow leans the way it goes, copying
+  confirms with a small pop, and the theme switch changes the whole page at
+  once, including its first use. A Light and Dark control changes the theme
+  immediately while its bubble moves on the live page.
 - **One quiet loop.** The Pro card beside the components gallery shows a Pro
   site in a glass window over a pale turning ribbon. The ribbon sways a few
   pixels over 16 seconds and the window floats over 7, so the card feels alive
-  without calling for attention. Pointing at the card raises the window.
+  without calling for attention. Pointing at the card raises the window. The
+  tile closing the home page's templates shares its colours and holds still.
 - **Glass keeps its backdrop.** Never fade, filter, mask or clip anything glass
   looks through: the glass would lose the page it bends until the animation
   ended. The keynote keeps the desktop and phone mounted throughout the turn.

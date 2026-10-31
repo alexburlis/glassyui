@@ -43,7 +43,8 @@ import { chromium, firefox, webkit } from 'playwright';
 // 15. Reduced motion is ignored by the header: with the system setting or the site preference,
 //     a frame falls between the two shapes.
 // 16. The Pro card's art stands still: with motion allowed, its ribbon or its window has no
-//     running animation, or pointing at the card does not raise the window.
+//     running animation, or pointing at the card does not raise the window. Or the home page's
+//     Pro tile, which shares the card's colours, loops.
 // 17. Reduced motion is ignored by the Pro card: with the system setting or the site preference,
 //     its ribbon or its window animates, or pointing at the card moves the window.
 // 18. The Pro card's window loses the ribbon it bends: the window or an ancestor animates
@@ -83,14 +84,21 @@ const HERO = [
   '.home-title',
   '.home-lead',
   '.home-hero .home-actions > .lg-button--prominent',
-  '.home-hero .home-actions a[href="https://pro.glassyui.com"]',
+  '.home-hero .home-actions a[href="/#templates"]',
   '.home-desk-frame',
   '.desk-widgets > :first-child',
   '.desk-dock',
   '.home-desk-caption',
 ];
 
-const REVEALS = ['.home-section-header', '.component-card', '.bento-tile', '.home-step'];
+const REVEALS = [
+  '.home-section-header',
+  '.component-card',
+  '.template-card',
+  '.template-pro-tile',
+  '.bento-tile',
+  '.home-step',
+];
 
 const failures = [];
 
@@ -944,6 +952,20 @@ async function checkProCard(browser, name) {
         assert.deepEqual(art.window, [], 'the window must hold still under reduced motion');
         assert.equal(art.lift, 'none', 'pointing at the card must not move the window');
       }
+
+      await page.goto(new URL('/#templates', baseUrl).href, { waitUntil: 'networkidle' });
+
+      const looping = await page.evaluate(() =>
+        [...document.querySelectorAll('.template-pro-tile, .template-pro-tile *')]
+          .flatMap((node) => node.getAnimations())
+          .flatMap((animation) =>
+            animation.effect?.getComputedTiming().iterations === Infinity
+              ? [animation.animationName]
+              : [],
+          ),
+      );
+
+      assert.deepEqual(looping, [], "the home page's Pro tile must hold still");
 
       await context.close();
     });

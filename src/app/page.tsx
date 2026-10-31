@@ -19,10 +19,11 @@ import { LiquidLab } from '@/components/site/liquid-lab';
 import { MobilePhones } from '@/components/site/mobile-phones';
 import { SiteFooter } from '@/components/site/site-footer';
 import { SiteNav } from '@/components/site/site-nav';
+import { TemplateGallery } from '@/components/site/template-gallery';
 import { AlertsTile, CommandTile, NavigationTile } from '@/components/site/showcase-tiles';
 import { HOME_CARD, shareMetadata } from '@/lib/share';
 import { siteDescription } from '@/lib/site-description';
-import { GITHUB, PRO_ORIGIN, SITE_URL } from '@/lib/site-links';
+import { GITHUB, SITE_URL } from '@/lib/site-links';
 import nativeRegistry from '../../registry-native.json';
 
 // Tiles without a custom demo use their component's docs example.
@@ -109,7 +110,7 @@ export default function Home() {
                 <Link href="/components">Browse components</Link>
               </GlassButton>
               <GlassButton asChild size="lg" variant="primary">
-                <a href={PRO_ORIGIN}>Browse Templates</a>
+                <Link href="/#templates">Browse Templates</Link>
               </GlassButton>
             </div>
             <KeynoteReplay />
@@ -143,6 +144,18 @@ export default function Home() {
           <ReleaseFeedbackProvider>
             <ComponentGrid components={showcase} lazy offset={SHOWCASE_BACKDROP_OFFSET} />
           </ReleaseFeedbackProvider>
+        </section>
+
+        <section aria-labelledby="home-templates-title" className="home-section" id="templates">
+          <header className="home-section-header">
+            <h2 className="home-section-title" id="home-templates-title">
+              Start from a whole page.
+            </h2>
+            <p className="home-section-lead">
+              Free ones install in one command. The rest come with Pro.
+            </p>
+          </header>
+          <TemplateGallery />
         </section>
 
         <section aria-labelledby="home-lab-title" className="home-section home-lab">

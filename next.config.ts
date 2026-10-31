@@ -33,7 +33,7 @@ const nextConfig: NextConfig = {
       { source: '/pro', destination: `${PRO_ORIGIN}/`, permanent: true },
       { source: '/pro/:path*', destination: `${PRO_ORIGIN}/:path*`, permanent: true },
       // The retired portfolio template and guide, and the old templates index, lead to Glassy UI
-      // Pro. The free templates' own pages live under /templates/<slug>.
+      // Pro. The free templates' pages and every template's poster live under /templates.
       ...[
         '/templates',
         '/templates/portfolio',

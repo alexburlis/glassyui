@@ -15,7 +15,7 @@
   <a href="https://glassyui.com/components">Components</a> &nbsp;·&nbsp;
   <a href="https://glassyui.com/guides">Guides</a> &nbsp;·&nbsp;
   <a href="https://glassyui.com/mobile">React Native</a> &nbsp;·&nbsp;
-  <a href="https://pro.glassyui.com">Templates</a>
+  <a href="https://glassyui.com/#templates">Templates</a>
 </p>
 
 <br>

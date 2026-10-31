@@ -18,7 +18,7 @@ import {
 } from '@/components/liquid/command';
 import { GlassKbd, GlassKbdGroup } from '@/components/liquid/kbd';
 import { usePreferences } from '@/components/liquid/provider';
-import { PRO_ORIGIN, REPOSITORY } from '@/lib/site-links';
+import { REPOSITORY } from '@/lib/site-links';
 import { changeTheme } from '@/lib/change-theme';
 
 type Entry = { category?: string; description: string; href: string; title: string };
@@ -40,7 +40,7 @@ const PAGES: Entry[] = [
     title: 'Getting started',
   },
   { description: 'Every component, live', href: '/components', title: 'All components' },
-  { description: 'Complete sites in Glassy UI Pro', href: PRO_ORIGIN, title: 'Templates' },
+  { description: 'Free and Pro landing pages', href: '/#templates', title: 'Templates' },
   { description: 'Step-by-step tutorials', href: '/guides', title: 'Guides' },
   { description: 'Liquid glass tutorials for web and mobile apps', href: '/blog', title: 'Blog' },
 ];

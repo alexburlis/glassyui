@@ -50,6 +50,8 @@
 //     its last frame, or a natural arrival exceeds the loading allowance.
 // 22. The lens retains native shader objects after linking, unmounting or an unsuccessful
 //     compile/link/setup; deleting its resources loses a context React can reuse.
+// 23. A Templates link misses the gallery: /#templates, loaded by address or reached by a soft
+//     navigation from the components page, plays the opener or lands away from the templates.
 //
 // Lens contracts own allocation/deletion at the real browser boundary. Existing image/input
 // checks cannot detect retained WebGL objects. Native compilation and linking still run during
@@ -103,7 +105,7 @@ const expect = (engine, condition, message) => {
 
 const HERO_ACTIONS = [
   '.home-hero .home-actions > .lg-button--prominent',
-  '.home-hero .home-actions a[href="https://pro.glassyui.com"]',
+  '.home-hero .home-actions a[href="/#templates"]',
 ];
 
 const HERO = [
@@ -293,6 +295,7 @@ async function open(
     javaScriptEnabled = true,
     lensFault = 'none',
     mobile = false,
+    path: route = '/',
     preferences = {},
     recordVideo,
     reducedMotion = 'no-preference',
@@ -348,7 +351,7 @@ async function open(
   // the document's own time.
   if (clock) await page.clock.install();
 
-  await page.goto(`${baseUrl}${hash}`, { waitUntil });
+  await page.goto(new URL(`${route}${hash}`, baseUrl).href, { waitUntil });
 
   if (javaScriptEnabled) {
     // A development server's badge floats over the page's corner.
@@ -2054,6 +2057,68 @@ async function checkEngine(browserType) {
         `the address does not take the page to its place (scrolled ${state.scrolled}px, target at ${state.target}px)`,
       );
       await hashContext.close();
+    }
+
+    // --------------------------------------------------------- templates
+    // Every Templates link leads to /#templates. A first visit there by address, or by a soft
+    // navigation from the components page, lands on the gallery without the opener.
+    {
+      const galleryState = (page) =>
+        page.evaluate(() => ({
+          intro: document.documentElement.hasAttribute('data-keynote-intro'),
+          keynote: document.documentElement.hasAttribute('data-keynote'),
+          players: document.querySelectorAll('.keynote-stage .__remotion-player').length,
+          soft: window.__keynoteSoftNavigation === true,
+          stage: getComputedStyle(document.querySelector('.keynote-stage')).display,
+          title: document.querySelector('#home-templates-title').getBoundingClientRect().top,
+          url: location.pathname + location.hash,
+          viewport: innerHeight,
+        }));
+
+      const expectGallery = (label, state) => {
+        expect(engine, state.url === '/#templates', `${label} ends at ${state.url}`);
+        expect(engine, state.keynote, `${label}: the turn does not run`);
+        expect(
+          engine,
+          !state.intro && state.stage === 'none' && state.players === 0,
+          `${label}: the opener plays`,
+        );
+        expect(
+          engine,
+          state.title > 0 && state.title < state.viewport / 2,
+          `${label}: the page does not land on the gallery (its title at ${state.title}px)`,
+        );
+      };
+
+      const { context: addressContext, page: addressPage } = await open(browser, {
+        hash: '#templates',
+      });
+
+      await addressPage.waitForTimeout(1000);
+      expectGallery('/#templates', await galleryState(addressPage));
+      await shot(addressPage, `${engine}-templates-address`);
+      await addressContext.close();
+
+      const { context: softContext, page: softPage } = await open(browser, {
+        path: '/components',
+      });
+
+      await softPage.evaluate(() => {
+        window.__keynoteSoftNavigation = true;
+      });
+      await softPage
+        .locator('.site-nav')
+        .getByRole('link', { exact: true, name: 'Templates' })
+        .click();
+      await softPage.waitForURL((url) => url.pathname === '/' && url.hash === '#templates');
+      await softPage.waitForTimeout(1000);
+
+      const softState = await galleryState(softPage);
+
+      expect(engine, softState.soft, 'the Templates link reloads the page instead of navigating');
+      expectGallery('the Templates link from /components', softState);
+      await shot(softPage, `${engine}-templates-from-components`);
+      await softContext.close();
     }
 
     // ---------------------------------------------------- reduced motion

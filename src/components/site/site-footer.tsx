@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { componentCategories, componentDocs } from '@/components/docs/component-docs-data';
-import { PRO_ORIGIN, GITHUB, newIssueUrl } from '@/lib/site-links';
+import { GITHUB, newIssueUrl } from '@/lib/site-links';
 import { BrandMark } from './app-icons';
 import { GithubMark } from './github-mark';
 import { PrivacySettingsButton } from './analytics-consent';
@@ -42,7 +42,7 @@ export function SiteFooter() {
             <Link href="/components">All components</Link>
             <Link href="/mobile">React Native</Link>
             <Link href="/components/glass-provider">Theming</Link>
-            <a href={PRO_ORIGIN}>Templates</a>
+            <Link href="/#templates">Templates</Link>
             <Link href="/guides">Guides</Link>
             <Link href="/blog">Blog</Link>
           </div>
