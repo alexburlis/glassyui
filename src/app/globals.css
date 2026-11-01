@@ -168,6 +168,12 @@ main :focus {
   outline-offset: 2px;
 }
 
+/* A section that holds the keyboard's place after a link to it is no control, so it shows no ring,
+   as after the browser's own fragment navigation (src/lib/fragment-focus.ts). */
+[data-fragment-target]:focus {
+  outline: none;
+}
+
 .site-glyph {
   flex: none;
   width: 20px;

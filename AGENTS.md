@@ -186,6 +186,10 @@
   presets; keep imports ordered by usage.
 - Naming: PascalCase for components, camelCase for hooks/utils, kebab-case for
   file names unless React component export (e.g., `button.tsx`).
+- A client-side navigation to a `#fragment` moves focus to its target, as the
+  browser does for a link it follows itself (`src/lib/fragment-focus.ts`).
+  `Link` clicks get this on their own; call `focusFragmentAfterNavigation`
+  beside a `router.push` to a fragment.
 
 - Copy: call the library, its look and its templates "Glassy UI". For the iOS 26
   material write "the system's own glass". Preserve literal API names.

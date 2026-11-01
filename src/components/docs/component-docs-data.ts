@@ -3319,7 +3319,7 @@ export function Launcher({ open, onOpenChange }: { open: boolean; onOpenChange: 
     ],
     types: ['GlassCommandDialogProps', 'GlassCommandSeparatorProps'],
     accessibility:
-      'GlassCommandDialog returns focus to the element that had it when the dialog opened.',
+      'GlassCommandDialog returns focus to the element that had it when the dialog opened, unless the chosen command has moved focus elsewhere.',
     pageToc: standardToc,
   },
   {

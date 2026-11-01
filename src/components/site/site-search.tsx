@@ -18,6 +18,7 @@ import {
 } from '@/components/liquid/command';
 import { GlassKbd, GlassKbdGroup } from '@/components/liquid/kbd';
 import { usePreferences } from '@/components/liquid/provider';
+import { focusFragmentAfterNavigation } from '@/lib/fragment-focus';
 import { REPOSITORY } from '@/lib/site-links';
 import { changeTheme } from '@/lib/change-theme';
 
@@ -191,6 +192,7 @@ export function SiteSearch() {
     captureSearchResult(href);
     setOpen(false);
     router.push(href);
+    focusFragmentAfterNavigation(href);
   };
 
   const light = preferences.theme === 'light';

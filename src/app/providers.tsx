@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { PreferencesProvider } from '@/components/liquid/provider';
 import { AnalyticsConsent } from '@/components/site/analytics-consent';
+import { FragmentNavigationFocus } from '@/components/site/fragment-navigation-focus';
 import type { GlassyUiTheme } from '@/lib/liquid/preferences';
 import { isTemplatePreviewPath } from '@/lib/templates';
 
@@ -24,6 +25,7 @@ export function Providers({
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
+      <FragmentNavigationFocus />
       <PreferencesProvider defaultTheme={defaultTheme}>
         <AnalyticsConsent>{children}</AnalyticsConsent>
       </PreferencesProvider>
