@@ -1854,14 +1854,12 @@ html:has(.halcyon-page) {
   padding: 0;
 }
 
-/* Without the lens the library's light frost leaves the hero's large type legible through the
-   note, and sharp where an engine draws no backdrop filter. There the sheet is solid navy, as
-   the library makes glass it cannot draw. */
+/* Without the lens the library's light tint leaves the hero's large type legible through the
+   note. There the sheet keeps the library's frost over a dense navy fill, which holds the note's
+   text at 4.5:1 or more over that type even where an engine draws no backdrop filter. */
 @supports not (-webkit-app-region: drag) {
   .halcyon-sheet {
-    background: var(--hc-navy);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
+    background: color-mix(in srgb, var(--hc-navy) 90%, transparent);
   }
 }
 
