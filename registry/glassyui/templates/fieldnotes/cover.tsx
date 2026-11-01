@@ -73,7 +73,7 @@ export function Cover({ onStartFree }: { onStartFree: () => void }) {
   useEffect(() => {
     const float = floatRef.current;
 
-    if (!float || !('IntersectionObserver' in window)) return;
+    if (!float) return;
 
     const observer = new IntersectionObserver(([entry]) =>
       float.toggleAttribute('data-live', entry.isIntersecting),

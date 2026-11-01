@@ -235,7 +235,7 @@ export function BreathGuide({
   useEffect(() => {
     const element = wordsRef.current;
 
-    if (!element || !words || motionReduced() || !element.animate) return;
+    if (!element || !words || motionReduced()) return;
 
     element.animate(
       [

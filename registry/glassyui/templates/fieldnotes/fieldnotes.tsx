@@ -85,8 +85,6 @@ function useCurrentSection() {
   const [current, setCurrent] = useState('');
 
   useEffect(() => {
-    if (!('IntersectionObserver' in window)) return;
-
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {

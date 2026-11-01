@@ -97,7 +97,7 @@ export function Count({ decimals = 0, to }: { decimals?: number; to: number }) {
   useEffect(() => {
     const element = ref.current;
 
-    if (!element || !('IntersectionObserver' in window) || motionReduced()) return;
+    if (!element || motionReduced()) return;
 
     let frame = 0;
 

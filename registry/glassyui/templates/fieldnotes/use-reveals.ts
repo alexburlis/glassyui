@@ -13,7 +13,7 @@ export function useReveals(rootRef: RefObject<HTMLElement | null>) {
   useEffect(() => {
     const root = rootRef.current;
 
-    if (!root || !('IntersectionObserver' in window) || motionReduced()) return;
+    if (!root || motionReduced()) return;
 
     const reveal = new IntersectionObserver(
       (entries) => {
