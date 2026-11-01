@@ -59,10 +59,13 @@ const MOSAIC = ['glass-button', 'glass-switch', 'glass-slider', 'glass-segmented
 );
 
 // A template's card shows its live preview at a desktop width, scaled down. The photograph leaves
-// out what would go stale in a picture: the sample launch date and signup count.
+// out what would go stale in a picture: its sample dates and counts.
 const TEMPLATE_STAGES: Partial<Record<FreeTemplateSlug, { zoom: number; hide: string }>> = {
   halcyon: { zoom: 0.6, hide: '.halcyon-hero-chip, .halcyon-avatars-text' },
-  fieldnotes: { zoom: 0.6, hide: '.fieldnotes-mast-issue' },
+  fieldnotes: {
+    zoom: 0.6,
+    hide: '.fieldnotes-mast-issue, .fieldnotes-dateline > :not(.fieldnotes-dateline-mid), .fieldnotes-cover-card-meta, .fieldnotes-cover-card-sub, .fieldnotes-cover-note',
+  },
 };
 
 /** What a card says and shows, from its address: /share-studio/card/<kind>/<name>. */
