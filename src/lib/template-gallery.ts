@@ -20,9 +20,7 @@ const GALLERY_ORDER = [
 ] as const;
 
 interface GalleryCard {
-  /** The line that says what a click does. */
   action: string;
-  /** The label on the poster: the tier, then the status. */
   chip: string;
   kind: string;
   name: string;
@@ -104,5 +102,4 @@ function inGalleryOrder(entries: GalleryEntry[]) {
   return ordered;
 }
 
-/** Every template, free and Pro, in the order the home page shows them. */
 export const GALLERY = inGalleryOrder([...freeEntries, ...proEntries]);

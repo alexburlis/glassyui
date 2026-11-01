@@ -28,9 +28,8 @@ export function focusFragmentTarget(target: HTMLElement) {
 
 /**
  * The router scrolls to a fragment once a client-side navigation lands, but leaves focus where it
- * was: on the link, on a menu that took it back, or nowhere on a new page. Once the address is
- * `href` and its target is on the page, the target takes focus. By then a menu or dialog that
- * closed as the navigation began has handed focus back.
+ * was: on the link, on a menu that took it back, or nowhere on a new page. Focus waits for the
+ * landing, by when a menu or dialog that closed as the navigation began has handed it back.
  */
 export function focusFragmentAfterNavigation(href: string) {
   const url = new URL(href, window.location.href);

@@ -4222,8 +4222,6 @@ main :focus {
 
 /* ------------------------------------------------------------ templates */
 
-/* The home page's templates, free and Pro in one grid: three across on a wide screen and two below
-   that, down to the narrowest phone. */
 .template-gallery {
   --template-gap: 20px;
 
@@ -4262,8 +4260,7 @@ main :focus {
   object-position: top;
 }
 
-/* The tier sits on the poster in a small pane of glass, dense enough that its label keeps 4.5:1
-   over the darkest or lightest poster. */
+/* The glass is dense enough that the label keeps 4.5:1 over the darkest or lightest poster. */
 .template-chip {
   position: absolute;
   top: 10px;
@@ -4346,8 +4343,8 @@ a.template-card:hover .template-card-title {
   font-weight: 400;
 }
 
-/* The one Vermilion card on the home page, in the Pro card's colours in both themes. It holds
-   still. On three columns it is as tall as the poster beside it. */
+/* The Pro card's colours, in both themes. On three columns the tile is as tall as the poster
+   beside it. */
 .template-pro-tile {
   --tile-padding: 24px;
 
@@ -4692,7 +4689,6 @@ a.template-card:hover .template-card-title {
     left: 3px;
   }
 
-  /* Pointing at a template lifts its poster off the page. */
   :root:not([data-lg-reduce-motion='1']) .template-card-poster {
     transition: translate 500ms var(--lg-ease-out);
   }

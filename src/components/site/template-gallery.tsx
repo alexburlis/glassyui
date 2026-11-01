@@ -64,7 +64,6 @@ function TemplateCard({ entry }: { entry: GalleryEntry }) {
   );
 }
 
-/** Every template, free and Pro, closed by the one Pro tile on the page and its price. */
 export function TemplateGallery() {
   return (
     <>

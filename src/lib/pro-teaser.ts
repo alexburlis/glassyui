@@ -7,7 +7,6 @@ export const PRO_OFFER = {
   regularPrice: 199,
 } as const;
 
-/** A Pro template as the free site advertises it. Only the first release has a release name. */
 export type ProTemplateTeaser =
   | { kind: string; name: string; release: string; slug: string; status: 'first-release' }
   | { kind: string; name: string; slug: string; status: 'planned' };
