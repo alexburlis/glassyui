@@ -417,17 +417,17 @@ export function FeatureTiles() {
 
   useEffect(() => {
     const section = sectionRef.current;
-    const tile = gridRef.current?.firstElementChild;
+    const grid = gridRef.current;
+    const tile = grid?.firstElementChild;
     const screen = tile?.querySelector<HTMLElement>('.halcyon-tile-screen');
 
-    if (!section || !(tile instanceof HTMLElement) || !screen) return;
+    if (!section || !grid || !(tile instanceof HTMLElement) || !screen) return;
 
     let frame = 0;
 
     // Offsets ignore the tiles' rise transform, so the line stays put while they move.
     const layout = () => {
-      const line =
-        gridRef.current!.offsetTop + tile.offsetTop + screen.offsetTop + screen.offsetHeight + 12;
+      const line = grid.offsetTop + tile.offsetTop + screen.offsetTop + screen.offsetHeight + 12;
 
       section.style.setProperty('--halcyon-what-line', `${line}px`);
     };

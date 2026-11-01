@@ -47,9 +47,9 @@ function curveAt(fraction: number) {
   );
 
   const a = CURVE_POINTS[next - 1];
-  const b = CURVE_POINTS[next] ?? a;
+  const b = CURVE_POINTS[next];
 
-  return a.y + (b.y - a.y) * ((x - a.x) / (b.x - a.x || 1));
+  return a.y + (b.y - a.y) * ((x - a.x) / (b.x - a.x));
 }
 
 /** The same sequence every time, so the sky never reshuffles between visits. */
@@ -124,7 +124,7 @@ export function useHeroArt(
       // On phones the card fills the width: the aurora's arms end level with its top edge, so
       // only the rays rise above it.
       const narrow = width <= 560;
-      const band = parseFloat(getComputedStyle(hero).getPropertyValue('--band-h')) || 600;
+      const band = parseFloat(getComputedStyle(hero).getPropertyValue('--band-h'));
       const bandY = narrow ? top - 16 + band * 0.25 : top + cardHeight / 2;
       const horizon = Math.round(Math.min(height - 40, top + cardHeight * (narrow ? 0.6 : 0.72)));
 

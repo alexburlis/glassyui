@@ -34,7 +34,9 @@ export function StatCounter({ count, from, label, spoken, hoursAndMinutes }: Sta
   useEffect(() => {
     const figure = figureRef.current;
 
-    if (!figure || motionReduced() || figure.getBoundingClientRect().top < innerHeight) return;
+    if (!figure || motionReduced() || figure.getBoundingClientRect().top < window.innerHeight) {
+      return;
+    }
 
     setStage('waiting');
 
