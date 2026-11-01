@@ -26,18 +26,18 @@ export async function GET() {
         href: `/guides/${guide.slug}`,
         title: guide.title,
       })),
-      ...FREE_TEMPLATES.flatMap((template) =>
-        template.status === 'available'
-          ? [
-              {
-                description: template.summary,
-                href: freeTemplatePath(template.slug),
-                title: `${template.name} template`,
-              },
-            ]
-          : [],
-      ),
     ],
+    templates: FREE_TEMPLATES.flatMap((template) =>
+      template.status === 'available'
+        ? [
+            {
+              description: template.summary,
+              href: freeTemplatePath(template.slug),
+              title: `${template.name} template`,
+            },
+          ]
+        : [],
+    ),
     articles: (await getBlogPosts()).map((post) => ({
       description: post.description,
       href: `/blog/${post.slug}`,

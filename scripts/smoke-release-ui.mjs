@@ -2833,6 +2833,15 @@ async function assertSiteSearch() {
     await expectText(heard, '1 result.', `${context}: one result is announced`);
     await input.fill('avatar');
     await exactlyOne(dialog.getByRole('option', { name: /^Avatar/ }), 'a title match ranks');
+    // Each kind of result sits under its own heading. Halcyon is the free template every release
+    // lists.
+    await input.fill('halcyon');
+    await exactlyOne(
+      dialog
+        .getByRole('group', { name: 'Templates' })
+        .getByRole('option', { name: 'Halcyon template' }),
+      `${context}: the Halcyon template under Templates`,
+    );
     await input.fill('zzzzzz');
     await exactlyOne(dialog.getByText('No results.', { exact: true }).first(), 'the empty state');
     await expectText(heard, 'No results.', `${context}: an empty list is announced`);

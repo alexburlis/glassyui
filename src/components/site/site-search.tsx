@@ -23,7 +23,12 @@ import { changeTheme } from '@/lib/change-theme';
 
 type Entry = { category?: string; description: string; href: string; title: string };
 
-type SearchIndex = { components: Entry[]; guides: Entry[]; articles: Entry[] };
+type SearchIndex = {
+  components: Entry[];
+  templates: Entry[];
+  guides: Entry[];
+  articles: Entry[];
+};
 
 /** Opens the search from anywhere, such as the desk's menu bar. */
 export const OPEN_SEARCH_EVENT = 'glassy:open-search';
@@ -231,6 +236,9 @@ export function SiteSearch() {
               <>
                 <GlassCommandGroup heading="Components">
                   {entries('Component', index.components)}
+                </GlassCommandGroup>
+                <GlassCommandGroup heading="Templates">
+                  {entries('Template', index.templates)}
                 </GlassCommandGroup>
                 <GlassCommandGroup heading="Guides">
                   {entries('Guide', index.guides)}
