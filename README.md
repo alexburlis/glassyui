@@ -198,9 +198,10 @@ token.
 
 ## Develop
 
-This repository holds the free library, its documentation site and the public
-Pro teaser. [Glassy UI Pro](https://pro.glassyui.com)'s templates and
-application live in a separate private repository.
+This repository holds the free library, its free page templates, its
+documentation site and the public Pro teaser.
+[Glassy UI Pro](https://pro.glassyui.com)'s templates and application live in a
+separate private repository.
 
 Use Node 22 and the pnpm version pinned in `package.json`:
 

@@ -97,6 +97,16 @@
   wallpapers, taken from the Expo fixture's. The turn projects the live desk.
   Remotion's free licence covers this project's size; keep `remotion` and
   `@remotion/player` on the same exact version.
+- `registry/glassyui/templates/<slug>` — the free page templates Halcyon,
+  Fieldnotes and Still. Each installs as one `template-<slug>` item in
+  `registry.json` whose registry dependencies are the components it uses;
+  `src/lib/templates.ts` lists them and their status. `/templates/<slug>`
+  (`src/app/templates/[slug]`) shows one live in a frame with its install
+  command and source. `/templates/<slug>/preview` renders the installed source
+  alone, without the site's providers, nav, consent notice or analytics;
+  `src/components/site/framed-preview-anchors.tsx` keeps its in-page links
+  inside the frame. `src/lib/template-fonts.ts` serves each template's faces
+  from `src/fonts`, beside their SIL Open Font License files.
 
 ## Build, test, and development commands
 
