@@ -216,7 +216,11 @@ export function Fieldnotes({ onStart }: { onStart?: StartTrial }) {
               <a className="fieldnotes-mast-signin" href="#start" onClick={startFree}>
                 Sign in
               </a>
-              <GlassButton {...slotted} className="fieldnotes-button-sm" size="sm">
+              <GlassButton
+                {...slotted}
+                className="fieldnotes-button-sm fieldnotes-mast-start"
+                size="sm"
+              >
                 <a href="#start" onClick={startFree}>
                   Start free
                 </a>

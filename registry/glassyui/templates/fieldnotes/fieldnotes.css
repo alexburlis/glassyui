@@ -679,6 +679,7 @@ html:has(.fieldnotes-page) {
   padding: 14px 8px 4px;
   font: 500 15px/1 var(--fn-serif);
   text-align: center;
+  text-decoration: underline;
 }
 
 /* Cover */
@@ -3493,6 +3494,7 @@ html:has(.fieldnotes-page) {
 
 .fieldnotes-postscript a {
   color: var(--fn-ox);
+  text-decoration: underline;
   text-underline-offset: 3px;
 }
 
@@ -4076,7 +4078,9 @@ html:has(.fieldnotes-page) {
 
 @media (max-width: 640px) {
   .fieldnotes-dateline {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: auto auto;
+    justify-content: space-between;
+    gap: 12px;
   }
 
   .fieldnotes-dateline-mid {
@@ -4213,6 +4217,13 @@ html:has(.fieldnotes-page) {
 
 @media (max-width: 380px) {
   .fieldnotes-roomy-only {
+    display: none;
+  }
+}
+
+/* Under 360 px the masthead keeps the brand and the menu, whose sheet has Start free. */
+@media (max-width: 359px) {
+  .fieldnotes .fieldnotes-mast-start {
     display: none;
   }
 }
