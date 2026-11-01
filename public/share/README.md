@@ -14,6 +14,7 @@ card fails the build.
 | `guides/<slug>.jpg`              | Each guide's demo beside its title                          | Share studio                   |
 | `blog.jpg`, `blog/<slug>.jpg`    | The blog and each article, illustrated with live web demos  | Share studio                   |
 | `components/<slug>.jpg`          | Each component's live demo beside its name, overlays opened | Share studio                   |
+| `templates/<slug>.jpg`           | Each free template's live preview beside its name           | Share studio                   |
 
 Expo-only components share the React Native card; pages without tags of their
 own share the home card.

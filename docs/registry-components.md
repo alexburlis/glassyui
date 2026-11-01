@@ -1,7 +1,8 @@
 # Registry components
 
-The registry exposes 37 source-copy component items. The shadcn registry
-directory maps `@glassyui`, so an item installs by name with no mapping:
+The registry exposes 37 source-copy component items and free page templates. The
+shadcn registry directory maps `@glassyui`, so an item installs by name with no
+mapping:
 
 ```bash
 npx shadcn@4.14.1 add @glassyui/<item-name>
@@ -608,6 +609,115 @@ Both displays share one accessible description. Reduced motion skips folding and
 view rotation; reduced transparency removes screen reflections. WebGL 2 is
 required. Supply same-origin or CORS-enabled images. The registry contains its
 renderer, with no graphics package, device images or demo captures.
+
+## Templates
+
+### `template-halcyon`
+
+Files, installed under `components/glassyui/templates/halcyon/`:
+
+- `registry/glassyui/templates/halcyon/halcyon.tsx`
+- `registry/glassyui/templates/halcyon/waitlist-form.tsx`
+- `registry/glassyui/templates/halcyon/feature-tiles.tsx`
+- `registry/glassyui/templates/halcyon/countdown.tsx`
+- `registry/glassyui/templates/halcyon/stat-counter.tsx`
+- `registry/glassyui/templates/halcyon/hero-art.tsx`
+- `registry/glassyui/templates/halcyon/icons.tsx`
+- `registry/glassyui/templates/halcyon/use-count-to.ts`
+- `registry/glassyui/templates/halcyon/halcyon.css`
+
+Package dependencies: none of its own; its components bring theirs.
+
+Registry dependencies: `@glassyui/glass-accordion`, `@glassyui/glass-avatar`,
+`@glassyui/glass-badge`, `@glassyui/glass-button`, `@glassyui/glass-header`,
+`@glassyui/glass-input`, `@glassyui/glass-panel`, `@glassyui/glass-progress`,
+`@glassyui/glass-scroll-area`, `@glassyui/glass-segmented-control`,
+`@glassyui/glass-sheet`, `@glassyui/glass-spinner`, `@glassyui/glass-switch` and
+`@glassyui/glass-toast`.
+
+Purpose: a dark waitlist page, rendered by `<Halcyon />`. Its waitlist form
+calls an `onJoin(email)` prop that you wire to your own endpoint; without it the
+form shows success locally, says "Demo. Nothing was sent." and sends nothing.
+The countdown, signup count, avatar stack, copy field and waitlist form live in
+the template's folder, not the library. The page reads its accent and fonts from
+`--halcyon-accent`, `--halcyon-accent-rotate`, `--halcyon-serif` and
+`--halcyon-sans`, with system fonts until they are set, and expects
+`data-lg-theme="dark"` on `<html>`. Its page at `/templates/halcyon` frames a
+live preview of the same source.
+
+### `template-fieldnotes`
+
+Files, installed under `components/glassyui/templates/fieldnotes/`:
+
+- `registry/glassyui/templates/fieldnotes/fieldnotes.tsx`
+- `registry/glassyui/templates/fieldnotes/cover.tsx`
+- `registry/glassyui/templates/fieldnotes/letter.tsx`
+- `registry/glassyui/templates/fieldnotes/tag-a-moment.tsx`
+- `registry/glassyui/templates/fieldnotes/chapters.tsx`
+- `registry/glassyui/templates/fieldnotes/field.tsx`
+- `registry/glassyui/templates/fieldnotes/rates.tsx`
+- `registry/glassyui/templates/fieldnotes/letters.tsx`
+- `registry/glassyui/templates/fieldnotes/sign-off.tsx`
+- `registry/glassyui/templates/fieldnotes/parts.tsx`
+- `registry/glassyui/templates/fieldnotes/icons.tsx`
+- `registry/glassyui/templates/fieldnotes/use-reveals.ts`
+- `registry/glassyui/templates/fieldnotes/fieldnotes.css`
+
+Package dependencies: none of its own; its components bring theirs.
+
+Registry dependencies: `@glassyui/glass-accordion`, `@glassyui/glass-avatar`,
+`@glassyui/glass-badge`, `@glassyui/glass-button`, `@glassyui/glass-header`,
+`@glassyui/glass-input`, `@glassyui/glass-kbd`, `@glassyui/glass-panel`,
+`@glassyui/glass-progress`, `@glassyui/glass-scroll-area`,
+`@glassyui/glass-segmented-control`, `@glassyui/glass-sheet`,
+`@glassyui/glass-switch` and `@glassyui/glass-toast`.
+
+Purpose: a founder letter on warm paper, rendered by `<Fieldnotes />`. Its
+sign-up form calls an `onStart(email)` prop that you wire to your own endpoint;
+without it the form confirms locally, says "Demo. Nothing was sent." and sends
+nothing. The margin notes, pull quotes, taggable transcript with its selection
+menu and insights board, and the pricing table live in the template's folder,
+not the library. The page reads its accent and fonts from `--fieldnotes-accent`,
+`--fieldnotes-accent-rotate`, `--fieldnotes-serif`, `--fieldnotes-sans` and, for
+headlines, `--fieldnotes-display`, with system fonts until they are set, and
+expects `data-lg-theme="light"` on `<html>`. Its page at `/templates/fieldnotes`
+frames a live preview of the same source.
+
+### `template-still`
+
+Files, installed under `components/glassyui/templates/still/`:
+
+- `registry/glassyui/templates/still/still.tsx`
+- `registry/glassyui/templates/still/breath-guide.tsx`
+- `registry/glassyui/templates/still/sky.tsx`
+- `registry/glassyui/templates/still/sound-scenes.tsx`
+- `registry/glassyui/templates/still/scene-art.tsx`
+- `registry/glassyui/templates/still/story-carousel.tsx`
+- `registry/glassyui/templates/still/story-art.tsx`
+- `registry/glassyui/templates/still/evening-phone.tsx`
+- `registry/glassyui/templates/still/pricing-plan.tsx`
+- `registry/glassyui/templates/still/store-menu.tsx`
+- `registry/glassyui/templates/still/icons.tsx`
+- `registry/glassyui/templates/still/still.css`
+
+Package dependencies: none of its own; its components bring theirs.
+
+Registry dependencies: `@glassyui/glass-accordion`, `@glassyui/glass-avatar`,
+`@glassyui/glass-badge`, `@glassyui/glass-button`, `@glassyui/glass-header`,
+`@glassyui/glass-kbd`, `@glassyui/glass-menu`, `@glassyui/glass-panel`,
+`@glassyui/glass-progress`, `@glassyui/glass-segmented-control`,
+`@glassyui/glass-surface`, `@glassyui/glass-switch` and `@glassyui/glass-toast`.
+
+Purpose: a dark landing page for a meditation app, rendered by `<Still />`. Its
+download buttons open a menu of the two stores; pass
+`storeLinks={{ iphone, android }}` with your store pages, and a store without a
+link shows "Demo. No store was opened." and opens nothing. The breathing guide,
+sound scenes, story carousel and phone screen live in the template's folder, not
+the library. The page reads its accent and fonts from `--still-accent`,
+`--still-accent-rotate`, `--still-accent-ink`, `--still-serif` and
+`--still-sans`, with system fonts until they are set, and expects
+`data-lg-theme="dark"` on `<html>`. Its page at `/templates/still` frames a live
+preview of the same source.
 
 ## Expo-only interactions
 

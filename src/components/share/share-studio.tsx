@@ -7,8 +7,11 @@ import { CopyChip } from '@/components/site/copy-chip';
 import { HomePhone } from '@/components/site/home-phone';
 import { installCommand } from '@/lib/install-command';
 
-/** A live demo in a card, magnified by `zoom`. */
-type StageSpec = { id: string; zoom: number };
+/**
+ * A live demo in a card, magnified by `zoom`. A page other than a studio stage, such as a
+ * template's preview, gives its address; `hide` lists what the photograph leaves out of it.
+ */
+type StageSpec = { id: string; zoom: number; src?: string; hide?: string };
 
 export type ShareCardProps = {
   /** A small line in the link colour above the title. */
@@ -58,8 +61,9 @@ function Stage({
   return (
     <div className={clsx('share-stage', className)} style={{ height, width }}>
       <iframe
+        data-share-hide={spec.hide}
         data-share-stage={spec.id}
-        src={`/share-studio/stage/${spec.id}`}
+        src={spec.src ?? `/share-studio/stage/${spec.id}`}
         style={{ height: height / spec.zoom, width: width / spec.zoom, zoom: spec.zoom }}
         title={spec.id}
       />

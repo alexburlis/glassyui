@@ -182,5 +182,6 @@ pnpm exec node scripts/smoke-liquid-interactions.mjs http://127.0.0.1:3101/diagn
 
 See [`registry.json`](../registry.json) for web items and
 [`registry-native.json`](../registry-native.json) for React Native items. Each
-item declares its source files, install targets and dependencies. Complete site
-templates are offered through Glassy UI Pro.
+item declares its source files, install targets and dependencies. The free page
+templates install the same way; more templates are offered through Glassy UI
+Pro.

@@ -118,7 +118,10 @@ export function GlassCommandDialog({
           {...radixSlotProps}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
-            openedFrom.current?.focus();
+
+            // A command that moved focus on, such as a link to a section, keeps it there.
+            if (document.activeElement === document.body) openedFrom.current?.focus();
+
             openedFrom.current = null;
           }}
           onOpenAutoFocus={() => {

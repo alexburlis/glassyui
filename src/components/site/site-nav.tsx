@@ -8,7 +8,7 @@ import { usePathname } from 'next/navigation';
 import { GlassButton } from '@/components/liquid/button';
 import { GlassHeader } from '@/components/liquid/header';
 import { usePreferences } from '@/components/liquid/provider';
-import { PRO_ORIGIN, GITHUB } from '@/lib/site-links';
+import { GITHUB } from '@/lib/site-links';
 import { BrandMark } from './app-icons';
 import { GithubMark } from './github-mark';
 import { SiteSearch } from './site-search';
@@ -18,7 +18,7 @@ const NAV_LINKS = [
   { href: '/components', label: 'Components' },
   { href: '/mobile', label: 'Mobile' },
   { href: '/docs', label: 'Docs' },
-  { href: PRO_ORIGIN, label: 'Templates' },
+  { href: '/#templates', label: 'Templates' },
   { href: '/guides', label: 'Guides' },
   { href: '/blog', label: 'Blog' },
 ];

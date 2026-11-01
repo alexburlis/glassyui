@@ -61,7 +61,7 @@ const checks = [
   })),
   {
     path: '/mobile',
-    markers: ['Glassy UI, in your app.', '/r/native/glass-button.json', '/guides/expo'],
+    markers: ['Glassy UI, in your app.', '@glassyui-native/glass-button', '/guides/expo'],
   },
   {
     path: '/guides/expo',
@@ -71,9 +71,9 @@ const checks = [
     path: '/guides/shadcn-theme',
     markers: [
       'Make a shadcn/ui app glassy with one command',
-      '/r/glassy-theme.json',
-      '/r/glassy-ui-new-york.json',
-      'glassy-ui-base-nova.json',
+      '@glassyui/glassy-theme',
+      '@glassyui/glassy-ui-new-york',
+      '@glassyui/glassy-ui-base-nova',
       '--overwrite',
     ],
   },

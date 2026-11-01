@@ -1015,13 +1015,13 @@ try {
       await go(session, `${MAIN}/privacy`);
       await accept(session);
       await until(() => session.events.length === 1, 'permission ready');
-      await session.page.locator('footer a[href="https://pro.glassyui.com"]').first().click();
+      await session.page.locator('a.template-pro-tile').click();
       await until(
         () => session.allEvents.some((event) => event.event === 'pro_link_click'),
         'Pro footer intent',
       );
       const click = session.allEvents.find((event) => event.event === 'pro_link_click');
-      assert.equal(click.properties.source, 'footer');
+      assert.equal(click.properties.source, 'template');
       await until(
         () => session.events.filter((event) => event.event === '$pageview').length === 2,
         'Pro ready',

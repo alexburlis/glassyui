@@ -2533,6 +2533,247 @@
           "target": "components/ui/textarea.tsx"
         }
       ]
+    },
+    {
+      "name": "template-halcyon",
+      "type": "registry:ui",
+      "title": "Halcyon",
+      "description": "A dark waitlist page with a launch countdown, a live signup count and a referral link, built from Glassy UI components.",
+      "registryDependencies": [
+        "@glassyui/glass-accordion",
+        "@glassyui/glass-avatar",
+        "@glassyui/glass-badge",
+        "@glassyui/glass-button",
+        "@glassyui/glass-header",
+        "@glassyui/glass-input",
+        "@glassyui/glass-panel",
+        "@glassyui/glass-progress",
+        "@glassyui/glass-scroll-area",
+        "@glassyui/glass-segmented-control",
+        "@glassyui/glass-sheet",
+        "@glassyui/glass-spinner",
+        "@glassyui/glass-switch",
+        "@glassyui/glass-toast"
+      ],
+      "files": [
+        {
+          "path": "registry/glassyui/templates/halcyon/halcyon.tsx",
+          "type": "registry:block",
+          "target": "components/glassyui/templates/halcyon/halcyon.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/halcyon/waitlist-form.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/halcyon/waitlist-form.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/halcyon/feature-tiles.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/halcyon/feature-tiles.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/halcyon/countdown.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/halcyon/countdown.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/halcyon/stat-counter.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/halcyon/stat-counter.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/halcyon/hero-art.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/halcyon/hero-art.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/halcyon/icons.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/halcyon/icons.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/halcyon/use-count-to.ts",
+          "type": "registry:hook",
+          "target": "components/glassyui/templates/halcyon/use-count-to.ts"
+        },
+        {
+          "path": "registry/glassyui/templates/halcyon/halcyon.css",
+          "type": "registry:file",
+          "target": "components/glassyui/templates/halcyon/halcyon.css"
+        }
+      ]
+    },
+    {
+      "name": "template-fieldnotes",
+      "type": "registry:ui",
+      "title": "Fieldnotes",
+      "description": "A founder letter on warm paper, with margin notes, pull quotes, a transcript to tag and pricing, built from Glassy UI components.",
+      "registryDependencies": [
+        "@glassyui/glass-accordion",
+        "@glassyui/glass-avatar",
+        "@glassyui/glass-badge",
+        "@glassyui/glass-button",
+        "@glassyui/glass-header",
+        "@glassyui/glass-input",
+        "@glassyui/glass-kbd",
+        "@glassyui/glass-panel",
+        "@glassyui/glass-progress",
+        "@glassyui/glass-scroll-area",
+        "@glassyui/glass-segmented-control",
+        "@glassyui/glass-sheet",
+        "@glassyui/glass-switch",
+        "@glassyui/glass-toast"
+      ],
+      "files": [
+        {
+          "path": "registry/glassyui/templates/fieldnotes/fieldnotes.tsx",
+          "type": "registry:block",
+          "target": "components/glassyui/templates/fieldnotes/fieldnotes.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/cover.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/cover.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/letter.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/letter.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/tag-a-moment.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/tag-a-moment.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/chapters.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/chapters.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/field.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/field.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/rates.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/rates.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/letters.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/letters.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/sign-off.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/sign-off.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/parts.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/parts.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/icons.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/fieldnotes/icons.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/use-reveals.ts",
+          "type": "registry:hook",
+          "target": "components/glassyui/templates/fieldnotes/use-reveals.ts"
+        },
+        {
+          "path": "registry/glassyui/templates/fieldnotes/fieldnotes.css",
+          "type": "registry:file",
+          "target": "components/glassyui/templates/fieldnotes/fieldnotes.css"
+        }
+      ]
+    },
+    {
+      "name": "template-still",
+      "type": "registry:ui",
+      "title": "Still",
+      "description": "A dark landing page for a meditation app, with a breathing guide, sound scenes, a story carousel and store links, built from Glassy UI components.",
+      "registryDependencies": [
+        "@glassyui/glass-accordion",
+        "@glassyui/glass-avatar",
+        "@glassyui/glass-badge",
+        "@glassyui/glass-button",
+        "@glassyui/glass-header",
+        "@glassyui/glass-kbd",
+        "@glassyui/glass-menu",
+        "@glassyui/glass-panel",
+        "@glassyui/glass-progress",
+        "@glassyui/glass-segmented-control",
+        "@glassyui/glass-surface",
+        "@glassyui/glass-switch",
+        "@glassyui/glass-toast"
+      ],
+      "files": [
+        {
+          "path": "registry/glassyui/templates/still/still.tsx",
+          "type": "registry:block",
+          "target": "components/glassyui/templates/still/still.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/breath-guide.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/still/breath-guide.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/sky.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/still/sky.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/sound-scenes.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/still/sound-scenes.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/scene-art.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/still/scene-art.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/story-carousel.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/still/story-carousel.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/story-art.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/still/story-art.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/evening-phone.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/still/evening-phone.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/pricing-plan.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/still/pricing-plan.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/store-menu.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/still/store-menu.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/icons.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/still/icons.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/still.css",
+          "type": "registry:file",
+          "target": "components/glassyui/templates/still/still.css"
+        }
+      ]
     }
   ]
 }

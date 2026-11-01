@@ -18,12 +18,18 @@ import {
 } from '@/components/liquid/command';
 import { GlassKbd, GlassKbdGroup } from '@/components/liquid/kbd';
 import { usePreferences } from '@/components/liquid/provider';
-import { PRO_ORIGIN, REPOSITORY } from '@/lib/site-links';
+import { focusFragmentAfterNavigation } from '@/lib/fragment-focus';
+import { REPOSITORY } from '@/lib/site-links';
 import { changeTheme } from '@/lib/change-theme';
 
 type Entry = { category?: string; description: string; href: string; title: string };
 
-type SearchIndex = { components: Entry[]; guides: Entry[]; articles: Entry[] };
+type SearchIndex = {
+  components: Entry[];
+  templates: Entry[];
+  guides: Entry[];
+  articles: Entry[];
+};
 
 /** Opens the search from anywhere, such as the desk's menu bar. */
 export const OPEN_SEARCH_EVENT = 'glassy:open-search';
@@ -35,7 +41,7 @@ const PAGES: Entry[] = [
     title: 'Getting started',
   },
   { description: 'Every component, live', href: '/components', title: 'All components' },
-  { description: 'Complete sites in Glassy UI Pro', href: PRO_ORIGIN, title: 'Templates' },
+  { description: 'Free and Pro landing pages', href: '/#templates', title: 'Templates' },
   { description: 'Step-by-step tutorials', href: '/guides', title: 'Guides' },
   { description: 'Liquid glass tutorials for web and mobile apps', href: '/blog', title: 'Blog' },
 ];
@@ -186,6 +192,7 @@ export function SiteSearch() {
     captureSearchResult(href);
     setOpen(false);
     router.push(href);
+    focusFragmentAfterNavigation(href);
   };
 
   const light = preferences.theme === 'light';
@@ -231,6 +238,9 @@ export function SiteSearch() {
               <>
                 <GlassCommandGroup heading="Components">
                   {entries('Component', index.components)}
+                </GlassCommandGroup>
+                <GlassCommandGroup heading="Templates">
+                  {entries('Template', index.templates)}
                 </GlassCommandGroup>
                 <GlassCommandGroup heading="Guides">
                   {entries('Guide', index.guides)}

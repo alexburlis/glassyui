@@ -17,6 +17,9 @@ const nextConfig: NextConfig = {
   // Preserve RSC headers so Proxy can separate component reads from page POSTs.
   skipProxyUrlNormalize: true,
   images: {
+    // AVIF first: smaller than WebP, and the browser checks' Firefox stalls decoding the home
+    // page's templates as WebP.
+    formats: ['image/avif', 'image/webp'],
     localPatterns: [{ pathname: '/**', search: '' }, { pathname: '/share/blog/**' }],
   },
   env: { NEXT_PUBLIC_SENTRY_RELEASE: release ?? '' },
@@ -32,8 +35,14 @@ const nextConfig: NextConfig = {
     return [
       { source: '/pro', destination: `${PRO_ORIGIN}/`, permanent: true },
       { source: '/pro/:path*', destination: `${PRO_ORIGIN}/:path*`, permanent: true },
-      // Retired template and guide addresses lead to Glassy UI Pro.
-      ...['/templates', '/templates/:path*', '/guides/portfolio'].map((source) => ({
+      // The retired portfolio template and guide, and the old templates index, lead to Glassy UI
+      // Pro. The free templates' pages and every template's poster live under /templates.
+      ...[
+        '/templates',
+        '/templates/portfolio',
+        '/templates/portfolio/:path*',
+        '/guides/portfolio',
+      ].map((source) => ({
         source,
         destination: PRO_ORIGIN,
         permanent: true,

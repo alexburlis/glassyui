@@ -73,6 +73,10 @@ const cards = [
     file: `blog/${slug}.jpg`,
     route: `post/${slug}`,
   })),
+  ...slugUnder('/templates/').map((slug) => ({
+    file: `templates/${slug}.jpg`,
+    route: `template/${slug}`,
+  })),
   ...slugUnder('/components/').flatMap((slug) =>
     webComponents.has(slug) ? [{ file: `components/${slug}.jpg`, route: `component/${slug}` }] : [],
   ),
@@ -176,6 +180,24 @@ try {
 
     // Every stage frame has drawn its demo.
     for (const frame of page.frames().filter((entry) => entry !== page.mainFrame())) {
+      const element = await frame.frameElement();
+      const hide = await element.getAttribute('data-share-hide');
+
+      // A page of its own, such as a template's preview, rather than a studio stage: it is
+      // ready once its fonts have loaded and its entrance has landed.
+      if (!(await element.getAttribute('src')).startsWith('/share-studio/')) {
+        await frame.waitForSelector('main');
+        await frame.evaluate(() => document.fonts.ready);
+
+        // The development overlay stays out of the photograph, as it does on the studio's page.
+        await frame.addStyleTag({
+          content: `nextjs-portal { display: none !important; }${hide ? ` ${hide} { visibility: hidden !important; }` : ''}`,
+        });
+
+        await page.waitForTimeout(2400);
+        continue;
+      }
+
       await frame.waitForSelector('[data-share-stage-page]');
       await frame.evaluate(() => document.fonts.ready);
 

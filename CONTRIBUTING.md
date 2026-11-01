@@ -154,7 +154,9 @@ the server setup and smoke commands.
   proves the home page entrance runs, lands and stays still under reduced
   motion, that scroll reveals never hide content, that menus grow from their
   trigger, that the Pro card's art drifts only when motion is allowed and that
-  the theme switch keeps working in Chromium, WebKit and Firefox.
+  the theme switch keeps working in Chromium, WebKit and Firefox. For a bounded
+  rerun, set `GLASS_ENGINES` to a subset of `chromium,webkit,firefox`, here and
+  for the keynote; the manifest records the engines that ran.
 - **Keynote:** `pnpm check:keynote <base-url> <artifact-directory>` proves, in
   the same three engines, that the home page's opener plays on its own with a
   poster drawn by a worker, lands the hero exactly in place, plays on through a

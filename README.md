@@ -15,7 +15,7 @@
   <a href="https://glassyui.com/components">Components</a> &nbsp;·&nbsp;
   <a href="https://glassyui.com/guides">Guides</a> &nbsp;·&nbsp;
   <a href="https://glassyui.com/mobile">React Native</a> &nbsp;·&nbsp;
-  <a href="https://pro.glassyui.com">Templates</a>
+  <a href="https://glassyui.com/#templates">Templates</a>
 </p>
 
 <br>
@@ -198,9 +198,10 @@ token.
 
 ## Develop
 
-This repository holds the free library, its documentation site and the public
-Pro teaser. [Glassy UI Pro](https://pro.glassyui.com)'s templates and
-application live in a separate private repository.
+This repository holds the free library, its free page templates, its
+documentation site and the public Pro teaser.
+[Glassy UI Pro](https://pro.glassyui.com)'s templates and application live in a
+separate private repository.
 
 Use Node 22 and the pnpm version pinned in `package.json`:
 

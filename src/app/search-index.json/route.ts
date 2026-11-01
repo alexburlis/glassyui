@@ -1,6 +1,7 @@
 import { componentDocs } from '@/components/docs/component-docs-data';
 import { guides } from '@/components/docs/guide-data';
 import { getBlogPosts } from '@/lib/blog';
+import { FREE_TEMPLATES, freeTemplatePath } from '@/lib/templates';
 
 export const revalidate = 900;
 
@@ -26,6 +27,17 @@ export async function GET() {
         title: guide.title,
       })),
     ],
+    templates: FREE_TEMPLATES.flatMap((template) =>
+      template.status === 'available'
+        ? [
+            {
+              description: template.summary,
+              href: freeTemplatePath(template.slug),
+              title: `${template.name} template`,
+            },
+          ]
+        : [],
+    ),
     articles: (await getBlogPosts()).map((post) => ({
       description: post.description,
       href: `/blog/${post.slug}`,

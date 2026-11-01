@@ -29,6 +29,18 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+## Template fonts
+
+The site serves Instrument Sans and Instrument Serif from `src/fonts/` for the
+free templates' previews. They are under the SIL Open Font License 1.1, whose
+text and copyright notices are in `src/fonts/OFL.txt`. Installed templates
+include no font files.
+
+Fraunces and Literata, for the Fieldnotes preview, are under the same licence;
+their notices are in `src/fonts/OFL-fraunces-literata.txt`. Cormorant Garamond
+and Karla, for the Still preview, are too; their notices are in
+`src/fonts/OFL-cormorant-garamond.txt` and `src/fonts/OFL-karla.txt`.
+
 ## Vendored lint rules
 
 The anti-slop and ESLint Stylistic notices and provenance remain beside their

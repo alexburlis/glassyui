@@ -97,6 +97,19 @@
   wallpapers, taken from the Expo fixture's. The turn projects the live desk.
   Remotion's free licence covers this project's size; keep `remotion` and
   `@remotion/player` on the same exact version.
+- `registry/glassyui/templates/<slug>` — the free page templates Halcyon,
+  Fieldnotes and Still. Each installs as one `template-<slug>` item in
+  `registry.json` whose registry dependencies are the components it uses;
+  `src/lib/templates.ts` lists them and their status. `/templates/<slug>`
+  (`src/app/templates/[slug]`) shows one live in a frame with its install
+  command and source. `/templates/<slug>/preview` renders the installed source
+  alone, without the site's providers, nav, consent notice or analytics;
+  `src/components/site/framed-preview-anchors.tsx` keeps its in-page links
+  inside the frame. `src/lib/template-fonts.ts` serves each template's faces
+  from `src/fonts`, beside their SIL Open Font License files, and preloads
+  none, so a preview fetches only its own. The home page's gallery
+  (`src/lib/template-gallery.ts`, `src/components/site/template-gallery.tsx`)
+  mixes them with the Pro templates; every poster is in `public/templates`.
 
 ## Build, test, and development commands
 
@@ -176,6 +189,10 @@
   presets; keep imports ordered by usage.
 - Naming: PascalCase for components, camelCase for hooks/utils, kebab-case for
   file names unless React component export (e.g., `button.tsx`).
+- A client-side navigation to a `#fragment` moves focus to its target, as the
+  browser does for a link it follows itself (`src/lib/fragment-focus.ts`).
+  `Link` clicks get this on their own; call `focusFragmentAfterNavigation`
+  beside a `router.push` to a fragment.
 
 - Copy: call the library, its look and its templates "Glassy UI". For the iOS 26
   material write "the system's own glass". Preserve literal API names.
@@ -229,8 +246,12 @@
 - Use `src/components/liquid/provider.tsx` and `src/lib/liquid/preferences.ts`
   for persisted toggles instead of reimplementing storage logic.
 - Glassy UI Pro is a separate private application repository. This site owns
-  only external Pro links and the public teaser in `src/lib/pro-teaser.ts`.
-  Keep its visible prices and template names in sync with the private offer.
+  only external Pro links and public teaser copies: the offer and template
+  names in `src/lib/pro-teaser.ts`, the Pro slugs in `GALLERY_ORDER` in
+  `src/lib/template-gallery.ts`, and the Pro posters in `public/templates`,
+  byte-identical to the Pro catalogue's. Gallery cards link to
+  `<Pro origin>/#<slug>`, so the Pro catalogue must carry those ids. Keep the
+  prices, names, slugs and posters in sync with the private offer.
   `src/lib/site-links.ts` owns the public Pro origin. `/pro` addresses redirect
   there on every host; never add Pro routes or paid source to this repository.
 - The development-only `/share-studio` route draws each page's link-preview card

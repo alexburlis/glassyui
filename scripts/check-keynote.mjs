@@ -50,6 +50,10 @@
 //     its last frame, or a natural arrival exceeds the loading allowance.
 // 22. The lens retains native shader objects after linking, unmounting or an unsuccessful
 //     compile/link/setup; deleting its resources loses a context React can reuse.
+// 23. A Templates link misses the gallery: /#templates, loaded by address or reached by a soft
+//     navigation from the components page, plays the opener or lands away from the templates; or,
+//     followed from the hero, the header, its narrow menu, the footer or the search, it leaves the
+//     keyboard behind, so the next Tab goes on from the link or the top of the page.
 //
 // Lens contracts own allocation/deletion at the real browser boundary. Existing image/input
 // checks cannot detect retained WebGL objects. Native compilation and linking still run during
@@ -93,7 +97,20 @@ fs.mkdirSync(artifactDirectory, { recursive: true });
 
 const failures = [];
 
-const manifest = { baseUrl, engines: {}, failures, suite: process.argv[4] ?? 'keynote' };
+// A bounded rerun can name its engines; the manifest records which ran.
+const selectedEngines = (process.env.GLASS_ENGINES ?? 'chromium,webkit,firefox').split(',');
+
+if (selectedEngines.some((engine) => !['chromium', 'webkit', 'firefox'].includes(engine))) {
+  throw new Error(`Unknown engine in GLASS_ENGINES: ${selectedEngines.join(', ')}`);
+}
+
+const manifest = {
+  baseUrl,
+  engines: {},
+  failures,
+  selectedEngines,
+  suite: process.argv[4] ?? 'keynote',
+};
 
 const fail = (engine, message) => failures.push(`${engine}: ${message}`);
 
@@ -103,7 +120,7 @@ const expect = (engine, condition, message) => {
 
 const HERO_ACTIONS = [
   '.home-hero .home-actions > .lg-button--prominent',
-  '.home-hero .home-actions a[href="https://pro.glassyui.com"]',
+  '.home-hero .home-actions a[href="/#templates"]',
 ];
 
 const HERO = [
@@ -293,6 +310,7 @@ async function open(
     javaScriptEnabled = true,
     lensFault = 'none',
     mobile = false,
+    path: route = '/',
     preferences = {},
     recordVideo,
     reducedMotion = 'no-preference',
@@ -348,7 +366,7 @@ async function open(
   // the document's own time.
   if (clock) await page.clock.install();
 
-  await page.goto(`${baseUrl}${hash}`, { waitUntil });
+  await page.goto(new URL(`${route}${hash}`, baseUrl).href, { waitUntil });
 
   if (javaScriptEnabled) {
     // A development server's badge floats over the page's corner.
@@ -2056,6 +2074,140 @@ async function checkEngine(browserType) {
       await hashContext.close();
     }
 
+    // --------------------------------------------------------- templates
+    // Every Templates link leads to /#templates. A first visit there by address, or by a soft
+    // navigation from the components page, lands on the gallery without the opener. However the
+    // link is followed, the next Tab goes on inside the gallery, as it does after a link the
+    // browser follows itself.
+    {
+      // Safari moves focus between links and buttons with Option-Tab.
+      const tab = engine === 'webkit' ? 'Alt+Tab' : 'Tab';
+
+      const tabsIntoGallery = async (page, label) => {
+        await page.waitForURL((url) => url.pathname === '/' && url.hash === '#templates');
+        await page.waitForTimeout(1000);
+        await page.keyboard.press(tab);
+
+        const focus = await page.evaluate(() => ({
+          inGallery: Boolean(document.activeElement?.closest('#templates')),
+          name: (document.activeElement?.textContent ?? '').trim().slice(0, 40),
+        }));
+
+        expect(
+          engine,
+          focus.inGallery,
+          `${label}: the next Tab goes to "${focus.name}" instead of the gallery`,
+        );
+      };
+
+      const galleryState = (page) =>
+        page.evaluate(() => ({
+          intro: document.documentElement.hasAttribute('data-keynote-intro'),
+          keynote: document.documentElement.hasAttribute('data-keynote'),
+          players: document.querySelectorAll('.keynote-stage .__remotion-player').length,
+          soft: window.__keynoteSoftNavigation === true,
+          stage: getComputedStyle(document.querySelector('.keynote-stage')).display,
+          title: document.querySelector('#home-templates-title').getBoundingClientRect().top,
+          url: location.pathname + location.hash,
+          viewport: innerHeight,
+        }));
+
+      const expectGallery = (label, state) => {
+        expect(engine, state.url === '/#templates', `${label} ends at ${state.url}`);
+        expect(engine, state.keynote, `${label}: the turn does not run`);
+        expect(
+          engine,
+          !state.intro && state.stage === 'none' && state.players === 0,
+          `${label}: the opener plays`,
+        );
+        expect(
+          engine,
+          state.title > 0 && state.title < state.viewport / 2,
+          `${label}: the page does not land on the gallery (its title at ${state.title}px)`,
+        );
+      };
+
+      const { context: addressContext, page: addressPage } = await open(browser, {
+        hash: '#templates',
+      });
+
+      await addressPage.waitForTimeout(1000);
+      expectGallery('/#templates', await galleryState(addressPage));
+      await shot(addressPage, `${engine}-templates-address`);
+      await addressContext.close();
+
+      const { context: softContext, page: softPage } = await open(browser, {
+        path: '/components',
+      });
+
+      await softPage.evaluate(() => {
+        window.__keynoteSoftNavigation = true;
+      });
+      await softPage
+        .locator('.site-nav')
+        .getByRole('link', { exact: true, name: 'Templates' })
+        .click();
+      await softPage.waitForURL((url) => url.pathname === '/' && url.hash === '#templates');
+      await softPage.waitForTimeout(1000);
+
+      const softState = await galleryState(softPage);
+
+      expect(engine, softState.soft, 'the Templates link reloads the page instead of navigating');
+      expectGallery('the Templates link from /components', softState);
+      await shot(softPage, `${engine}-templates-from-components`);
+      await tabsIntoGallery(softPage, 'the Templates link from /components');
+      await softContext.close();
+
+      const { context: footerContext, page: footerPage } = await open(browser, {
+        path: '/components',
+      });
+
+      await footerPage
+        .locator('.site-footer')
+        .getByRole('link', { exact: true, name: 'Templates' })
+        .focus();
+      await footerPage.keyboard.press('Enter');
+      await tabsIntoGallery(footerPage, "the footer's Templates link from /components");
+      await footerContext.close();
+
+      const { context: homeContext, page: homePage } = await open(browser);
+
+      await landing(homePage);
+      await homePage.locator('.home-hero .home-actions a[href="/#templates"]').focus();
+      await homePage.keyboard.press('Enter');
+      await tabsIntoGallery(homePage, 'Browse Templates');
+
+      // The search hands focus back to its button as it closes, unless the page took it.
+      await homePage.goto(new URL('/', baseUrl).href, { waitUntil: 'networkidle' });
+      await homePage
+        .locator('.site-nav')
+        .getByRole('button', { exact: true, name: 'Search' })
+        .click();
+      await homePage
+        .getByRole('dialog', { name: 'Search Glassy UI' })
+        .getByRole('combobox')
+        .fill('Templates');
+      await homePage.getByRole('option', { exact: true, name: 'Templates' }).click();
+      await tabsIntoGallery(homePage, 'the search result Templates');
+      await homeContext.close();
+
+      // The narrow header's menu takes focus back to its button as a link closes it.
+      const { context: menuContext, page: menuPage } = await open(browser, {
+        height: 844,
+        width: 390,
+      });
+
+      await landing(menuPage);
+      await menuPage.locator('.site-nav .lg-header-menu > summary').click();
+      await menuPage
+        .locator('.site-nav .lg-header-menu-links')
+        .getByRole('link', { exact: true, name: 'Templates' })
+        .focus();
+      await menuPage.keyboard.press('Enter');
+      await tabsIntoGallery(menuPage, "the narrow menu's Templates link");
+      await menuContext.close();
+    }
+
     // ---------------------------------------------------- reduced motion
     await checkReduced(
       browser,
@@ -2105,6 +2257,8 @@ if (!lensContractsOnly) {
 }
 
 for (const browserType of [chromium, webkit, firefox]) {
+  if (!selectedEngines.includes(browserType.name())) continue;
+
   try {
     await checkEngine(browserType);
   } catch (error) {

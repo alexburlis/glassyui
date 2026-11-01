@@ -5,6 +5,7 @@ import { getGuide, guides } from '@/components/docs/guide-data';
 import { ShareCard, ShareStage, type ShareCardProps } from '@/components/share/share-studio';
 import { getNativeUsage } from '@/lib/native-usage-source';
 import { getBlogPostForStudio } from '@/lib/blog';
+import { freeTemplatePath, getAvailableTemplate, type FreeTemplateSlug } from '@/lib/templates';
 import '@/styles/share-studio.css';
 
 export const metadata: Metadata = {
@@ -56,6 +57,17 @@ const stage = (id: string) => ({ id, zoom: STAGE_ZOOM.get(id) ?? DEFAULT_ZOOM })
 const MOSAIC = ['glass-button', 'glass-switch', 'glass-slider', 'glass-segmented-control'].map(
   (id) => ({ id, zoom: 1.3 }),
 );
+
+// A template's card shows its live preview at a desktop width, scaled down. The photograph leaves
+// out what would go stale in a picture: its sample dates and counts.
+const TEMPLATE_STAGES: Partial<Record<FreeTemplateSlug, { zoom: number; hide: string }>> = {
+  halcyon: { zoom: 0.6, hide: '.halcyon-hero-chip, .halcyon-avatars-text' },
+  fieldnotes: {
+    zoom: 0.6,
+    hide: '.fieldnotes-mast-issue, .fieldnotes-dateline > :not(.fieldnotes-dateline-mid), .fieldnotes-cover-card-meta, .fieldnotes-cover-card-sub, .fieldnotes-cover-note',
+  },
+  still: { zoom: 0.6, hide: '' },
+};
 
 /** What a card says and shows, from its address: /share-studio/card/<kind>/<name>. */
 async function cardFor(kind: string, name: string | undefined): Promise<ShareCardProps | null> {
@@ -114,6 +126,24 @@ async function cardFor(kind: string, name: string | undefined): Promise<ShareCar
     if (!guide) return null;
 
     return { eyebrow: 'Guide', title: guide.title, stage: stage(GUIDE_STAGES[guide.slug]) };
+  }
+
+  if (kind === 'template' && name) {
+    const template = getAvailableTemplate(name);
+    const templateStage = template ? TEMPLATE_STAGES[template.slug] : undefined;
+
+    if (!template || !templateStage) return null;
+
+    return {
+      eyebrow: 'Free template',
+      title: template.name,
+      detail: template.kind,
+      stage: {
+        id: `template-${template.slug}`,
+        src: `${freeTemplatePath(template.slug)}/preview`,
+        ...templateStage,
+      },
+    };
   }
 
   if (kind === 'components') {

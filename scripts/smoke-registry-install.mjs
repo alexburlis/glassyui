@@ -104,6 +104,51 @@ async function pictureDifference(page, before, after) {
   );
 }
 
+// Reads the reveal's drawn frames from the page from a replay until it lands. A screenshot cannot
+// catch them: on software GL it returns only once the frame loop has stopped, showing the landing.
+async function readRevealFrames(section) {
+  const replaced = section.querySelector('canvas');
+  const copy = document.createElement('canvas');
+  const frames = [];
+  const begun = performance.now();
+
+  while (performance.now() - begun < 60_000) {
+    // Asking for a frame between frames runs this after the reveal's own frame callback, while
+    // the drawing buffer still holds what that callback drew.
+    await new Promise((resolve) => setTimeout(resolve));
+    await new Promise(requestAnimationFrame);
+
+    const figure = section.querySelector('.lg-logo-reveal');
+    const canvas = figure.querySelector('canvas');
+
+    if (canvas === replaced || figure.dataset.state === 'waiting') continue;
+
+    if (figure.dataset.state !== 'playing') break;
+
+    const canvasStyle = getComputedStyle(canvas);
+
+    // The screen must show this frame: the canvas on top and the real mark still hidden.
+    if (
+      canvasStyle.opacity !== '1' ||
+      canvasStyle.visibility !== 'visible' ||
+      getComputedStyle(figure.querySelector('img')).visibility !== 'hidden'
+    )
+      continue;
+
+    copy.width = canvas.width;
+    copy.height = canvas.height;
+
+    const pen = copy.getContext('2d');
+
+    pen.fillStyle = getComputedStyle(figure).backgroundColor;
+    pen.fillRect(0, 0, copy.width, copy.height);
+    pen.drawImage(canvas, 0, 0);
+    frames.push(copy.toDataURL('image/png').split(',')[1]);
+  }
+
+  return frames;
+}
+
 const nextPaint = (page) =>
   page.evaluate(
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
@@ -278,6 +323,53 @@ const expectedLibraryFiles = [
     'components/glassyui/styles/logo-reveal.css',
   ]),
 ];
+
+// The free Halcyon template: its own folder on top of the library components it uses. Also
+// hand-derived, from the template's files rather than from its payload.
+const expectedTemplateFiles = [
+  'halcyon.tsx',
+  'waitlist-form.tsx',
+  'feature-tiles.tsx',
+  'countdown.tsx',
+  'stat-counter.tsx',
+  'hero-art.tsx',
+  'icons.tsx',
+  'use-count-to.ts',
+  'halcyon.css',
+].map((file) => `components/glassyui/templates/halcyon/${file}`);
+
+// The free Fieldnotes template, hand-derived the same way.
+const expectedFieldnotesFiles = [
+  'fieldnotes.tsx',
+  'cover.tsx',
+  'letter.tsx',
+  'tag-a-moment.tsx',
+  'chapters.tsx',
+  'field.tsx',
+  'rates.tsx',
+  'letters.tsx',
+  'sign-off.tsx',
+  'parts.tsx',
+  'icons.tsx',
+  'use-reveals.ts',
+  'fieldnotes.css',
+].map((file) => `components/glassyui/templates/fieldnotes/${file}`);
+
+// The free Still template, derived the same way.
+const expectedStillFiles = [
+  'still.tsx',
+  'breath-guide.tsx',
+  'sky.tsx',
+  'sound-scenes.tsx',
+  'scene-art.tsx',
+  'story-carousel.tsx',
+  'story-art.tsx',
+  'evening-phone.tsx',
+  'pricing-plan.tsx',
+  'store-menu.tsx',
+  'icons.tsx',
+  'still.css',
+].map((file) => `components/glassyui/templates/still/${file}`);
 
 for (const dependency of expectedLibraryDependencies) {
   assert.equal(
@@ -753,6 +845,86 @@ try {
       `namespace compatibility changed ${file}`,
     );
 
+  // A template installs by URL like a component, adds only its own folder and no packages the
+  // library has not already brought, and renders as a page of the consumer's app.
+  run(process.execPath, [
+    shadcnBin,
+    'add',
+    `${baseUrl.replace(/\/$/, '')}/r/template-halcyon.json`,
+    '--yes',
+  ]);
+  assertExactSet(
+    'library and template file closure',
+    listFiles(path.join(temporaryRoot, 'components', 'glassyui'), 'components/glassyui'),
+    [...expectedLibraryFiles, ...expectedTemplateFiles],
+  );
+  assert.deepEqual(
+    JSON.parse(fs.readFileSync(path.join(temporaryRoot, 'package.json'), 'utf8')).dependencies,
+    libraryDependencies,
+    'the template install changed the consumer packages',
+  );
+  fs.mkdirSync(path.join(temporaryRoot, 'app', 'halcyon'), { recursive: true });
+  fs.writeFileSync(
+    path.join(temporaryRoot, 'app', 'halcyon', 'page.tsx'),
+    `import { Halcyon } from '@/components/glassyui/templates/halcyon/halcyon';\n\nexport default function Page() {\n  return <Halcyon />;\n}\n`,
+  );
+  report.template = { item: 'template-halcyon', files: expectedTemplateFiles, route: '/halcyon' };
+
+  run(process.execPath, [
+    shadcnBin,
+    'add',
+    `${baseUrl.replace(/\/$/, '')}/r/template-fieldnotes.json`,
+    '--yes',
+  ]);
+  assertExactSet(
+    'library and Fieldnotes file closure',
+    listFiles(path.join(temporaryRoot, 'components', 'glassyui'), 'components/glassyui'),
+    [...expectedLibraryFiles, ...expectedTemplateFiles, ...expectedFieldnotesFiles],
+  );
+  assert.deepEqual(
+    JSON.parse(fs.readFileSync(path.join(temporaryRoot, 'package.json'), 'utf8')).dependencies,
+    libraryDependencies,
+    'the Fieldnotes install changed the consumer packages',
+  );
+  fs.mkdirSync(path.join(temporaryRoot, 'app', 'fieldnotes'), { recursive: true });
+  fs.writeFileSync(
+    path.join(temporaryRoot, 'app', 'fieldnotes', 'page.tsx'),
+    `import { Fieldnotes } from '@/components/glassyui/templates/fieldnotes/fieldnotes';\n\nexport default function Page() {\n  return <Fieldnotes />;\n}\n`,
+  );
+  report.fieldnotes = {
+    item: 'template-fieldnotes',
+    files: expectedFieldnotesFiles,
+    route: '/fieldnotes',
+  };
+
+  run(process.execPath, [
+    shadcnBin,
+    'add',
+    `${baseUrl.replace(/\/$/, '')}/r/template-still.json`,
+    '--yes',
+  ]);
+  assertExactSet(
+    'library and Still template file closure',
+    listFiles(path.join(temporaryRoot, 'components', 'glassyui'), 'components/glassyui'),
+    [
+      ...expectedLibraryFiles,
+      ...expectedTemplateFiles,
+      ...expectedFieldnotesFiles,
+      ...expectedStillFiles,
+    ],
+  );
+  assert.deepEqual(
+    JSON.parse(fs.readFileSync(path.join(temporaryRoot, 'package.json'), 'utf8')).dependencies,
+    libraryDependencies,
+    'the Still install changed the consumer packages',
+  );
+  fs.mkdirSync(path.join(temporaryRoot, 'app', 'still'), { recursive: true });
+  fs.writeFileSync(
+    path.join(temporaryRoot, 'app', 'still', 'page.tsx'),
+    `import { Still } from '@/components/glassyui/templates/still/still';\n\nexport default function Page() {\n  return <Still />;\n}\n`,
+  );
+  report.stillTemplate = { item: 'template-still', files: expectedStillFiles, route: '/still' };
+
   report.primary = {
     packageManager: 'pnpm',
     urlWithoutMapping: true,
@@ -774,6 +946,31 @@ try {
   assert.ok(
     cssAssets.some((css) => css.includes(liquidCssSentinel)),
     `built consumer CSS is missing the installed liquid.css sentinel ${liquidCssSentinel}`,
+  );
+
+  assert.ok(
+    cssAssets.some((css) => css.includes('.halcyon-waitlist')),
+    'built consumer CSS is missing the installed Halcyon stylesheet',
+  );
+  assert.ok(
+    fs.existsSync(path.join(temporaryRoot, '.next', 'server', 'app', 'halcyon.html')),
+    'the installed Halcyon page must prerender',
+  );
+  assert.ok(
+    cssAssets.some((css) => css.includes('.fieldnotes-highlighter')),
+    'built consumer CSS is missing the installed Fieldnotes stylesheet',
+  );
+  assert.ok(
+    fs.existsSync(path.join(temporaryRoot, '.next', 'server', 'app', 'fieldnotes.html')),
+    'the installed Fieldnotes page must prerender',
+  );
+  assert.ok(
+    cssAssets.some((css) => css.includes('.still-breath-orb')),
+    'built consumer CSS is missing the installed Still stylesheet',
+  );
+  assert.ok(
+    fs.existsSync(path.join(temporaryRoot, '.next', 'server', 'app', 'still.html')),
+    'the installed Still page must prerender',
   );
 
   report.build = 'passed';
@@ -937,19 +1134,22 @@ try {
     await reveal
       .getByRole('img', { name: 'Installed reveal', exact: true })
       .scrollIntoViewIfNeeded();
-    await replay.click();
-    await reveal.locator('.lg-logo-reveal[data-state="playing"]').waitFor();
+    const [revealFrames] = await Promise.all([reveal.evaluate(readRevealFrames), replay.click()]);
+
     assert.equal(
       await sting.getAttribute('data-renderer'),
       'webgl',
       `${browserName}: the reveal must draw with WebGL2`,
     );
-    await page.waitForTimeout(450);
+    assert.ok(revealFrames.length >= 4, `${browserName}: the reveal must draw while it plays`);
 
-    const moving = await sting.screenshot({
-      path: path.join(artifactDirectory, `installed-logo-reveal-${browserName}-moving.png`),
-    });
+    const frames = revealFrames.map((frame) => Buffer.from(frame, 'base64'));
+    const moving = frames[frames.length >> 1];
 
+    fs.writeFileSync(
+      path.join(artifactDirectory, `installed-logo-reveal-${browserName}-moving.png`),
+      moving,
+    );
     await reveal.locator('.lg-logo-reveal[data-state="ended"]').waitFor({ timeout: 5000 });
 
     const canvasOnly = await page.addStyleTag({
@@ -971,7 +1171,8 @@ try {
     });
 
     assert.ok(
-      (await pictureDifference(page, moving, lockup)) > 2,
+      (await pictureDifference(page, frames[frames.length >> 2], moving)) > 2 &&
+        (await pictureDifference(page, moving, frames.at(-1))) > 2,
       `${browserName}: the reveal must move before it lands`,
     );
 
