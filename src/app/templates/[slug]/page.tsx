@@ -22,7 +22,6 @@ export function generateStaticParams() {
 
 type TemplatePageProps = { params: Promise<{ slug: string }> };
 
-/** The template's registry item, and the Glassy UI components it depends on. */
 function installation(registryItem: string) {
   const item = registry.items.find((candidate) => candidate.name === registryItem);
 

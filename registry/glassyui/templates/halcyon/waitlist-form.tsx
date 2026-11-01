@@ -108,8 +108,8 @@ function AvatarStack() {
 }
 
 /**
- * The waitlist: one field and one button. After joining, the same pane rolls round to the
- * visitor's place in line and their invite link. Without `onJoin` it is a demo and says so.
+ * After joining, the same pane rolls round to the visitor's place in line and their invite link.
+ * Without `onJoin` it is a demo and says so.
  */
 export function WaitlistForm({ onJoin, onJoinedChange, onNotice, ref }: WaitlistFormProps) {
   const cardRef = useRef<HTMLDivElement>(null);

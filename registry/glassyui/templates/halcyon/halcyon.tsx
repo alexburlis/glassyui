@@ -86,7 +86,6 @@ function subscribeToWidth(onChange: () => void) {
   return () => query.removeEventListener('change', onChange);
 }
 
-/** Whether an element is on screen, for as long as it is mounted. */
 function useOnScreen(ref: React.RefObject<HTMLElement | null>) {
   const [onScreen, setOnScreen] = useState(false);
 
@@ -238,7 +237,6 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
     setSheetOpen(true);
   };
 
-  // Every secondary call to action leads back to the one field.
   const goToField = useCallback(() => {
     if (sheetOpen) {
       sheetOpenerRef.current = null;

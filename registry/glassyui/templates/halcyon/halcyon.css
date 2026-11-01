@@ -217,7 +217,7 @@ html:has(.halcyon-page) {
   font-weight: 600;
 }
 
-/* Header: open across the top of the page, condensing into glass once it scrolls. */
+/* Header */
 .halcyon-header {
   font-family: var(--hc-sans);
 }
@@ -277,7 +277,7 @@ html:has(.halcyon-page) {
     --lg-button-rise var(--lg-button-rise-time) var(--lg-ease-out);
 }
 
-/* Hero: one viewport, one field. */
+/* Hero */
 .halcyon-hero {
   --band-h: 600px;
   position: relative;
@@ -765,7 +765,7 @@ html:has(.halcyon-page) {
   }
 }
 
-/* AvatarStack: sample faces as initials, first on top. */
+/* AvatarStack */
 .halcyon-avatars {
   display: inline-flex;
   align-items: center;
@@ -818,7 +818,7 @@ html:has(.halcyon-page) {
   font-weight: 600;
 }
 
-/* CopyField: the invite link, selected on focus, and a button that confirms. */
+/* The invite link */
 .halcyon-copy-box {
   position: relative;
   display: flex;
@@ -1621,7 +1621,7 @@ html:has(.halcyon-page) {
   line-height: 1.6;
 }
 
-/* The footer: dawn, with the countdown resting on the horizon. */
+/* The footer */
 .halcyon-footer {
   position: relative;
   isolation: isolate;
@@ -1775,7 +1775,7 @@ html:has(.halcyon-page) {
   font-size: 13px;
 }
 
-/* Countdown: digits roll only while it is on screen. */
+/* Countdown */
 .halcyon-countdown {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 148px));
@@ -1837,7 +1837,7 @@ html:has(.halcyon-page) {
   animation: halcyon-digit-out 260ms var(--hc-ease-in) both;
 }
 
-/* The sheet: the founders' note and the privacy note. */
+/* The sheet */
 .halcyon-sheet {
   color: var(--hc-ink);
 }

@@ -408,8 +408,8 @@ function ProtectsTile() {
 }
 
 /**
- * What it will do: three tiles, each with a small working demo. A dawn line runs behind them
- * where the first tile's screen meets its copy, so every lens rim has a horizon to bend.
+ * A dawn line runs behind the tiles where the first tile's screen meets its copy, so every lens
+ * rim has a horizon to bend.
  */
 export function FeatureTiles() {
   const sectionRef = useRef<HTMLElement>(null);

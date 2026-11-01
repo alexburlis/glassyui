@@ -172,7 +172,6 @@ export function useHeroArt(
   return art;
 }
 
-/** The dawn behind the hero: sky, stars, the aurora with its rays, the sea and the horizon. */
 export function HeroArt({ art }: { art: Art | null }) {
   return (
     <div aria-hidden className="halcyon-hero-art">
