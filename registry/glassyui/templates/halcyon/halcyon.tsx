@@ -505,7 +505,9 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
             side={narrow ? 'bottom' : 'right'}
             onCloseAutoFocus={(event) => {
               event.preventDefault();
-              sheetOpenerRef.current?.focus();
+              // Without scrolling, as the dialog itself returns focus: a plain focus() would also
+              // scroll a page that shows this one in a frame.
+              sheetOpenerRef.current?.focus({ preventScroll: true });
             }}
           >
             <div className="halcyon-sheet-head">

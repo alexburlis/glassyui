@@ -36,9 +36,15 @@ export function FramedPreviewAnchors() {
 
       window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - padding });
 
-      // The navigation would have moved the keyboard's place to the target, so a target that can
-      // take focus, such as the skip link's field, takes it.
-      if (target.tabIndex >= 0) target.focus({ preventScroll: true });
+      // The navigation would have moved the keyboard's place to the target, so the next Tab goes
+      // on from there. A target that cannot take focus, such as a section, takes it until it
+      // loses it again.
+      if (target.tabIndex < 0 && !target.hasAttribute('tabindex')) {
+        target.setAttribute('tabindex', '-1');
+        target.addEventListener('blur', () => target.removeAttribute('tabindex'), { once: true });
+      }
+
+      target.focus({ preventScroll: true });
     };
 
     document.addEventListener('click', onClick);

@@ -66,6 +66,25 @@ function demoSlug(email: string) {
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Centres an element in the room below the page's scroll padding by scrolling this window alone.
+ * scrollIntoView, and focus without preventScroll, would also scroll a page that shows this one
+ * in a frame.
+ */
+function centreInWindow(element: HTMLElement, onlyIfHidden = false) {
+  const padding =
+    Number.parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
+
+  const box = element.getBoundingClientRect();
+
+  if (onlyIfHidden && box.top >= padding && box.bottom <= window.innerHeight) return;
+
+  window.scrollTo({
+    top: window.scrollY + box.top - padding - (window.innerHeight - padding - box.height) / 2,
+    behavior: motionReduced() ? 'auto' : 'smooth',
+  });
+}
+
 /** Four sample faces and this week's count. Initials stand in for photos. */
 function AvatarStack() {
   return (
@@ -113,10 +132,8 @@ export function WaitlistForm({ onJoin, onJoinedChange, onNotice, ref }: Waitlist
     () => ({
       focus: () => {
         (joined ? copyRef.current : emailRef.current)?.focus({ preventScroll: true });
-        cardRef.current?.scrollIntoView({
-          behavior: motionReduced() ? 'auto' : 'smooth',
-          block: 'center',
-        });
+
+        if (cardRef.current) centreInWindow(cardRef.current);
       },
     }),
     [joined],
@@ -136,7 +153,10 @@ export function WaitlistForm({ onJoin, onJoinedChange, onNotice, ref }: Waitlist
 
   const showError = (message: string) => {
     setError(message);
-    emailRef.current?.focus();
+    emailRef.current?.focus({ preventScroll: true });
+
+    // A join that failed late may find the visitor elsewhere on the page.
+    if (cardRef.current) centreInWindow(cardRef.current, true);
 
     if (!motionReduced()) {
       cardRef.current?.animate(
@@ -229,7 +249,8 @@ export function WaitlistForm({ onJoin, onJoinedChange, onNotice, ref }: Waitlist
     try {
       await navigator.clipboard.writeText(joined.inviteLink);
     } catch {
-      linkRef.current?.focus();
+      // The field sits beside the button just pressed.
+      linkRef.current?.focus({ preventScroll: true });
       selectLink();
       const mac = /Mac|iPhone|iPad/.test(navigator.platform);
 
