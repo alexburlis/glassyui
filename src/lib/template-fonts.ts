@@ -6,6 +6,9 @@ import type { FreeTemplateSlug } from './templates';
   CSS variable its template reads; an installed template falls back to system fonts until its
   owner sets the variable. Instrument Sans and Instrument Serif are under the SIL Open Font
   License (src/fonts/OFL.txt), as are Fraunces and Literata (src/fonts/OFL-fraunces-literata.txt).
+
+  Every template's preview is one route, so a preloaded face would be fetched by every template's
+  preview. None is preloaded: a face loads when its own template's text uses it.
 */
 
 const instrumentSerif = localFont({
@@ -15,6 +18,7 @@ const instrumentSerif = localFont({
   ],
   variable: '--halcyon-serif',
   display: 'swap',
+  preload: false,
   adjustFontFallback: 'Times New Roman',
 });
 
@@ -23,10 +27,9 @@ const instrumentSans = localFont({
   weight: '400 700',
   variable: '--halcyon-sans',
   display: 'swap',
+  preload: false,
 });
 
-// Fieldnotes' faces are large variable fonts, so they load with its own preview rather than being
-// preloaded on every template's.
 const fraunces = localFont({
   src: [
     { path: '../fonts/fraunces.woff2', style: 'normal', weight: '100 900' },
