@@ -11,11 +11,13 @@ import {
 } from '@/lib/templates';
 import { Fieldnotes } from '../../../../../registry/glassyui/templates/fieldnotes/fieldnotes';
 import { Halcyon } from '../../../../../registry/glassyui/templates/halcyon/halcyon';
+import { Still } from '../../../../../registry/glassyui/templates/still/still';
 
 // The installed source itself, so the preview is exactly what the command adds.
 const PREVIEWS: Partial<Record<FreeTemplateSlug, ReactNode>> = {
   halcyon: <Halcyon />,
   fieldnotes: <Fieldnotes />,
+  still: <Still />,
 };
 
 export const dynamicParams = false;

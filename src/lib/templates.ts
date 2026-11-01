@@ -44,8 +44,10 @@ export const FREE_TEMPLATES: readonly FreeTemplate[] = [
     kind: 'Landing page for a meditation app',
     name: 'Still',
     slug: 'still',
-    status: 'soon',
+    status: 'available',
     summary: 'A calm landing page for an app, with a breathing guide and store links.',
+    registryItem: 'template-still',
+    theme: 'dark',
   },
 ];
 

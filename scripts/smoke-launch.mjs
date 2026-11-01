@@ -175,6 +175,10 @@ try {
     sitemap.includes('<loc>https://glassyui.com/templates/fieldnotes</loc>'),
     'The Fieldnotes template page is in the sitemap',
   );
+  assert.ok(
+    sitemap.includes('<loc>https://glassyui.com/templates/still</loc>'),
+    'The Still template page is in the sitemap',
+  );
   assert.equal(sitemap.includes('/preview<'), false, 'Template previews are out of the sitemap');
 
   // A free template's page frames its live preview; the preview stands alone, unindexed.
@@ -252,6 +256,44 @@ try {
     route: '/templates/fieldnotes',
     sitemap: true,
     preview: '/templates/fieldnotes/preview',
+  });
+
+  await visit('/templates/still');
+  await assertContained('/templates/still');
+  assert.equal(await page.locator('main h1').innerText(), 'Still');
+  assert.match(
+    await page.locator('link[rel="canonical"]').getAttribute('href'),
+    /\/templates\/still$/,
+  );
+  assert.equal(
+    await page.locator('iframe[src="/templates/still/preview"]').count(),
+    1,
+    'The Still page frames its preview',
+  );
+  assert.match(
+    await page.locator('.copy-chip-command').innerText(),
+    /shadcn@4\.14\.1 add @glassyui\/template-still/,
+  );
+  await visit('/templates/still/preview');
+  await assertContained('/templates/still/preview');
+  assert.match(
+    await page.locator('meta[name="robots"]').getAttribute('content'),
+    /noindex, follow/,
+  );
+  assert.match(
+    await page.locator('link[rel="canonical"]').getAttribute('href'),
+    /\/templates\/still$/,
+  );
+  assert.equal(await page.locator('html').getAttribute('data-lg-theme'), 'dark');
+  assert.equal(
+    await page.locator('.analytics-consent').count(),
+    0,
+    'No consent notice in a preview',
+  );
+  checks.push({
+    route: '/templates/still',
+    sitemap: true,
+    preview: '/templates/still/preview',
   });
 
   for (const route of guideRoutes) {

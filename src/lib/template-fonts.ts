@@ -4,8 +4,9 @@ import type { FreeTemplateSlug } from './templates';
 /*
   The free templates' own faces, served from this site rather than a font service. Each fills the
   CSS variable its template reads; an installed template falls back to system fonts until its
-  owner sets the variable. Instrument Sans and Instrument Serif are under the SIL Open Font
-  License (src/fonts/OFL.txt), as are Fraunces and Literata (src/fonts/OFL-fraunces-literata.txt).
+  owner sets the variable. Instrument Sans and Instrument Serif (src/fonts/OFL.txt), Fraunces and
+  Literata (src/fonts/OFL-fraunces-literata.txt), Cormorant Garamond and Karla (src/fonts/OFL-*.txt)
+  are under the SIL Open Font License.
 
   Every template's preview is one route, so a preloaded face would be fetched by every template's
   preview. None is preloaded: a face loads when its own template's text uses it.
@@ -52,6 +53,23 @@ const literata = localFont({
   adjustFontFallback: 'Times New Roman',
 });
 
+const cormorantGaramond = localFont({
+  src: [
+    { path: '../fonts/cormorant-garamond.woff2', style: 'normal', weight: '300 700' },
+    { path: '../fonts/cormorant-garamond-italic.woff2', style: 'italic', weight: '300 700' },
+  ],
+  variable: '--still-serif',
+  display: 'swap',
+  adjustFontFallback: 'Times New Roman',
+});
+
+const karla = localFont({
+  src: '../fonts/karla.woff2',
+  weight: '400 700',
+  variable: '--still-sans',
+  display: 'swap',
+});
+
 /**
  * A template's font variables, by template, as declarations for the document root: its sheets
  * and toasts render outside the template, at the end of the body, and read them there too.
@@ -59,4 +77,5 @@ const literata = localFont({
 export const TEMPLATE_FONTS: Partial<Record<FreeTemplateSlug, string>> = {
   halcyon: `--halcyon-serif: ${instrumentSerif.style.fontFamily}; --halcyon-sans: ${instrumentSans.style.fontFamily};`,
   fieldnotes: `--fieldnotes-display: ${fraunces.style.fontFamily}; --fieldnotes-serif: ${literata.style.fontFamily};`,
+  still: `--still-serif: ${cormorantGaramond.style.fontFamily}; --still-sans: ${karla.style.fontFamily};`,
 };

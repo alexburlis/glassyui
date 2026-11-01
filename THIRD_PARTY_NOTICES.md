@@ -37,7 +37,9 @@ text and copyright notices are in `src/fonts/OFL.txt`. Installed templates
 include no font files.
 
 Fraunces and Literata, for the Fieldnotes preview, are under the same licence;
-their notices are in `src/fonts/OFL-fraunces-literata.txt`.
+their notices are in `src/fonts/OFL-fraunces-literata.txt`. Cormorant Garamond
+and Karla, for the Still preview, are too; their notices are in
+`src/fonts/OFL-cormorant-garamond.txt` and `src/fonts/OFL-karla.txt`.
 
 ## Vendored lint rules
 

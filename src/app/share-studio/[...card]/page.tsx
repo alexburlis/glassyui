@@ -66,6 +66,7 @@ const TEMPLATE_STAGES: Partial<Record<FreeTemplateSlug, { zoom: number; hide: st
     zoom: 0.6,
     hide: '.fieldnotes-mast-issue, .fieldnotes-dateline > :not(.fieldnotes-dateline-mid), .fieldnotes-cover-card-meta, .fieldnotes-cover-card-sub, .fieldnotes-cover-note',
   },
+  still: { zoom: 0.6, hide: '' },
 };
 
 /** What a card says and shows, from its address: /share-studio/card/<kind>/<name>. */
