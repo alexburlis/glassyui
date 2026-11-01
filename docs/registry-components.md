@@ -683,6 +683,42 @@ headlines, `--fieldnotes-display`, with system fonts until they are set, and
 expects `data-lg-theme="light"` on `<html>`. Its page at `/templates/fieldnotes`
 frames a live preview of the same source.
 
+### `template-still`
+
+Files, installed under `components/glassyui/templates/still/`:
+
+- `registry/glassyui/templates/still/still.tsx`
+- `registry/glassyui/templates/still/breath-guide.tsx`
+- `registry/glassyui/templates/still/sky.tsx`
+- `registry/glassyui/templates/still/sound-scenes.tsx`
+- `registry/glassyui/templates/still/scene-art.tsx`
+- `registry/glassyui/templates/still/story-carousel.tsx`
+- `registry/glassyui/templates/still/story-art.tsx`
+- `registry/glassyui/templates/still/evening-phone.tsx`
+- `registry/glassyui/templates/still/pricing-plan.tsx`
+- `registry/glassyui/templates/still/store-menu.tsx`
+- `registry/glassyui/templates/still/icons.tsx`
+- `registry/glassyui/templates/still/still.css`
+
+Package dependencies: none of its own; its components bring theirs.
+
+Registry dependencies: `@glassyui/glass-accordion`, `@glassyui/glass-avatar`,
+`@glassyui/glass-badge`, `@glassyui/glass-button`, `@glassyui/glass-header`,
+`@glassyui/glass-kbd`, `@glassyui/glass-menu`, `@glassyui/glass-panel`,
+`@glassyui/glass-progress`, `@glassyui/glass-segmented-control`,
+`@glassyui/glass-surface`, `@glassyui/glass-switch` and `@glassyui/glass-toast`.
+
+Purpose: a dark landing page for a meditation app, rendered by `<Still />`. Its
+download buttons open a menu of the two stores; pass
+`storeLinks={{ iphone, android }}` with your store pages, and a store without a
+link shows "Demo. No store was opened." and opens nothing. The breathing guide,
+sound scenes, story carousel and phone screen live in the template's folder, not
+the library. The page reads its accent and fonts from `--still-accent`,
+`--still-accent-rotate`, `--still-accent-ink`, `--still-serif` and
+`--still-sans`, with system fonts until they are set, and expects
+`data-lg-theme="dark"` on `<html>`. Its page at `/templates/still` frames a live
+preview of the same source.
+
 ## Expo-only interactions
 
 These SDK 57 components ship from `registry/glassyui-native` through

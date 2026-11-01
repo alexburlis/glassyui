@@ -2691,6 +2691,89 @@
           "target": "components/glassyui/templates/fieldnotes/fieldnotes.css"
         }
       ]
+    },
+    {
+      "name": "template-still",
+      "type": "registry:ui",
+      "title": "Still",
+      "description": "A dark landing page for a meditation app, with a breathing guide, sound scenes, a story carousel and store links, built from Glassy UI components.",
+      "registryDependencies": [
+        "@glassyui/glass-accordion",
+        "@glassyui/glass-avatar",
+        "@glassyui/glass-badge",
+        "@glassyui/glass-button",
+        "@glassyui/glass-header",
+        "@glassyui/glass-kbd",
+        "@glassyui/glass-menu",
+        "@glassyui/glass-panel",
+        "@glassyui/glass-progress",
+        "@glassyui/glass-segmented-control",
+        "@glassyui/glass-surface",
+        "@glassyui/glass-switch",
+        "@glassyui/glass-toast"
+      ],
+      "files": [
+        {
+          "path": "registry/glassyui/templates/still/still.tsx",
+          "type": "registry:block",
+          "target": "components/glassyui/templates/still/still.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/breath-guide.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/still/breath-guide.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/sky.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/still/sky.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/sound-scenes.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/still/sound-scenes.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/scene-art.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/still/scene-art.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/story-carousel.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/still/story-carousel.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/story-art.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/still/story-art.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/evening-phone.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/still/evening-phone.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/pricing-plan.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/still/pricing-plan.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/store-menu.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/still/store-menu.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/icons.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/still/icons.tsx"
+        },
+        {
+          "path": "registry/glassyui/templates/still/still.css",
+          "type": "registry:file",
+          "target": "components/glassyui/templates/still/still.css"
+        }
+      ]
     }
   ]
 }

@@ -355,6 +355,22 @@ const expectedFieldnotesFiles = [
   'fieldnotes.css',
 ].map((file) => `components/glassyui/templates/fieldnotes/${file}`);
 
+// The free Still template, derived the same way.
+const expectedStillFiles = [
+  'still.tsx',
+  'breath-guide.tsx',
+  'sky.tsx',
+  'sound-scenes.tsx',
+  'scene-art.tsx',
+  'story-carousel.tsx',
+  'story-art.tsx',
+  'evening-phone.tsx',
+  'pricing-plan.tsx',
+  'store-menu.tsx',
+  'icons.tsx',
+  'still.css',
+].map((file) => `components/glassyui/templates/still/${file}`);
+
 for (const dependency of expectedLibraryDependencies) {
   assert.equal(
     fixtureDependencies[dependency],
@@ -881,6 +897,34 @@ try {
     route: '/fieldnotes',
   };
 
+  run(process.execPath, [
+    shadcnBin,
+    'add',
+    `${baseUrl.replace(/\/$/, '')}/r/template-still.json`,
+    '--yes',
+  ]);
+  assertExactSet(
+    'library and Still template file closure',
+    listFiles(path.join(temporaryRoot, 'components', 'glassyui'), 'components/glassyui'),
+    [
+      ...expectedLibraryFiles,
+      ...expectedTemplateFiles,
+      ...expectedFieldnotesFiles,
+      ...expectedStillFiles,
+    ],
+  );
+  assert.deepEqual(
+    JSON.parse(fs.readFileSync(path.join(temporaryRoot, 'package.json'), 'utf8')).dependencies,
+    libraryDependencies,
+    'the Still install changed the consumer packages',
+  );
+  fs.mkdirSync(path.join(temporaryRoot, 'app', 'still'), { recursive: true });
+  fs.writeFileSync(
+    path.join(temporaryRoot, 'app', 'still', 'page.tsx'),
+    `import { Still } from '@/components/glassyui/templates/still/still';\n\nexport default function Page() {\n  return <Still />;\n}\n`,
+  );
+  report.stillTemplate = { item: 'template-still', files: expectedStillFiles, route: '/still' };
+
   report.primary = {
     packageManager: 'pnpm',
     urlWithoutMapping: true,
@@ -919,6 +963,14 @@ try {
   assert.ok(
     fs.existsSync(path.join(temporaryRoot, '.next', 'server', 'app', 'fieldnotes.html')),
     'the installed Fieldnotes page must prerender',
+  );
+  assert.ok(
+    cssAssets.some((css) => css.includes('.still-breath-orb')),
+    'built consumer CSS is missing the installed Still stylesheet',
+  );
+  assert.ok(
+    fs.existsSync(path.join(temporaryRoot, '.next', 'server', 'app', 'still.html')),
+    'the installed Still page must prerender',
   );
 
   report.build = 'passed';
