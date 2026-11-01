@@ -104,6 +104,51 @@ async function pictureDifference(page, before, after) {
   );
 }
 
+// Reads the reveal's drawn frames from the page from a replay until it lands. A screenshot cannot
+// catch them: on software GL it returns only once the frame loop has stopped, showing the landing.
+async function readRevealFrames(section) {
+  const replaced = section.querySelector('canvas');
+  const copy = document.createElement('canvas');
+  const frames = [];
+  const begun = performance.now();
+
+  while (performance.now() - begun < 60_000) {
+    // Asking for a frame between frames runs this after the reveal's own frame callback, while
+    // the drawing buffer still holds what that callback drew.
+    await new Promise((resolve) => setTimeout(resolve));
+    await new Promise(requestAnimationFrame);
+
+    const figure = section.querySelector('.lg-logo-reveal');
+    const canvas = figure.querySelector('canvas');
+
+    if (canvas === replaced || figure.dataset.state === 'waiting') continue;
+
+    if (figure.dataset.state !== 'playing') break;
+
+    const canvasStyle = getComputedStyle(canvas);
+
+    // The screen must show this frame: the canvas on top and the real mark still hidden.
+    if (
+      canvasStyle.opacity !== '1' ||
+      canvasStyle.visibility !== 'visible' ||
+      getComputedStyle(figure.querySelector('img')).visibility !== 'hidden'
+    )
+      continue;
+
+    copy.width = canvas.width;
+    copy.height = canvas.height;
+
+    const pen = copy.getContext('2d');
+
+    pen.fillStyle = getComputedStyle(figure).backgroundColor;
+    pen.fillRect(0, 0, copy.width, copy.height);
+    pen.drawImage(canvas, 0, 0);
+    frames.push(copy.toDataURL('image/png').split(',')[1]);
+  }
+
+  return frames;
+}
+
 const nextPaint = (page) =>
   page.evaluate(
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
@@ -937,19 +982,22 @@ try {
     await reveal
       .getByRole('img', { name: 'Installed reveal', exact: true })
       .scrollIntoViewIfNeeded();
-    await replay.click();
-    await reveal.locator('.lg-logo-reveal[data-state="playing"]').waitFor();
+    const [revealFrames] = await Promise.all([reveal.evaluate(readRevealFrames), replay.click()]);
+
     assert.equal(
       await sting.getAttribute('data-renderer'),
       'webgl',
       `${browserName}: the reveal must draw with WebGL2`,
     );
-    await page.waitForTimeout(450);
+    assert.ok(revealFrames.length >= 4, `${browserName}: the reveal must draw while it plays`);
 
-    const moving = await sting.screenshot({
-      path: path.join(artifactDirectory, `installed-logo-reveal-${browserName}-moving.png`),
-    });
+    const frames = revealFrames.map((frame) => Buffer.from(frame, 'base64'));
+    const moving = frames[frames.length >> 1];
 
+    fs.writeFileSync(
+      path.join(artifactDirectory, `installed-logo-reveal-${browserName}-moving.png`),
+      moving,
+    );
     await reveal.locator('.lg-logo-reveal[data-state="ended"]').waitFor({ timeout: 5000 });
 
     const canvasOnly = await page.addStyleTag({
@@ -971,7 +1019,8 @@ try {
     });
 
     assert.ok(
-      (await pictureDifference(page, moving, lockup)) > 2,
+      (await pictureDifference(page, frames[frames.length >> 2], moving)) > 2 &&
+        (await pictureDifference(page, moving, frames.at(-1))) > 2,
       `${browserName}: the reveal must move before it lands`,
     );
 
