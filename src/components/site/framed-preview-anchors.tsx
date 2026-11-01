@@ -37,8 +37,10 @@ export function FramedPreviewAnchors() {
 
       window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - padding });
 
-      // The navigation would have moved the keyboard's place to the target.
-      focusFragmentTarget(target);
+      // The navigation would have moved the keyboard's place to the target. Focus waits for the
+      // template's own click handlers to commit: a menu the link closes keeps its focus trap
+      // until then, and the trap would refuse the target.
+      queueMicrotask(() => focusFragmentTarget(target));
     };
 
     document.addEventListener('click', onClick);
