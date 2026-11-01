@@ -18,10 +18,7 @@ const STORES = [
   { platform: 'android', name: 'For Android', detail: 'Android 10 and later', Glyph: HandsetIcon },
 ] as const;
 
-/**
- * The download button: one prominent button that opens a menu of the two stores, drawn with
- * Still's own glyphs rather than any store's badge.
- */
+/** Its menu draws the stores with Still's own glyphs rather than any store's badge. */
 export function StoreMenu({
   label = 'Start your free week',
   links,

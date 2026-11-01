@@ -58,8 +58,8 @@ const FEATURES: readonly { name: string; cells: string[]; absent?: string }[] = 
 ];
 
 /**
- * Rates: three plans in a table with the recommended one under a pane of glass. The prices count
- * over to yearly billing, and on a phone one plan shows at a time beside the features.
+ * The prices count over to yearly billing, and on a phone one plan shows at a time beside the
+ * features.
  */
 export function Rates({ onStartFree }: { onStartFree: () => void }) {
   const [billing, setBilling] = useState<Billing>('monthly');

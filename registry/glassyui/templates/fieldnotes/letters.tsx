@@ -53,7 +53,6 @@ const LETTERS = [
   ],
 ];
 
-/** Letters to the editor: readers' questions, each with the founder's reply folded under it. */
 export function Letters() {
   return (
     <section

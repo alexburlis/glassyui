@@ -82,15 +82,13 @@ const STORIES: Story[] = [
 type View = { first: number; last: number; atStart: boolean; atEnd: boolean };
 
 /**
- * The sleep stories as a row that snaps to each card, running to the screen's edge while its
- * first card lines up with the page. The buttons and the arrow keys move one story; Home and End
- * go to either end. The count says which stories are in view.
+ * The buttons and the arrow keys move one story; Home and End go to either end. The count says
+ * which stories are in view.
  */
 export function StoryCarousel() {
   const trackRef = useRef<HTMLUListElement>(null);
   const [view, setView] = useState<View>({ first: 1, last: 4, atStart: true, atEnd: false });
 
-  // The distance from one card to the next.
   const stride = () => {
     const [first, second] = trackRef.current?.querySelectorAll('li') ?? [];
 

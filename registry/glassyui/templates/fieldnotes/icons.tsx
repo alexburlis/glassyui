@@ -75,7 +75,6 @@ const PATHS = {
 
 export type IconName = keyof typeof PATHS;
 
-/** One of the page's line icons: 20 px artwork, drawn in the current colour. */
 export function Icon({ className, name }: { className?: string; name: IconName }) {
   return (
     <svg aria-hidden className={clsx('fieldnotes-icon', className)} viewBox="0 0 20 20">
@@ -110,7 +109,7 @@ export function FieldnotesMark({ className }: { className?: string }) {
   );
 }
 
-/** A rubber stamp: a ring of words round a centre mark, roughened by the page's ink filter. */
+/** A rubber stamp, roughened by the page's ink filter. */
 export function Stamp({
   centre,
   className,

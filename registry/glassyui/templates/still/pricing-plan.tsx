@@ -58,7 +58,6 @@ function useCountedPrice(target: number) {
   return shown;
 }
 
-/** Still's one plan, with its billing period, what it includes and the way to start. */
 export function PricingPlan({
   storeLinks,
   onDemo,

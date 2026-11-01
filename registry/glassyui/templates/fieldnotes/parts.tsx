@@ -9,7 +9,7 @@ import { motionReduced } from '../../lib/liquid-motion';
 // rewrites a literal asChild prop into a render prop, which these Radix-based parts do not take.
 export const slotted = { asChild: true };
 
-/** A section's running head: its name and its page in the issue. */
+/** A section's running head. */
 export function Folio({ name, page }: { name: string; page: string }) {
   return (
     <div className="fieldnotes-folio">
@@ -21,7 +21,7 @@ export function Folio({ name, page }: { name: string; page: string }) {
 
 export type Tone = 'oxblood' | 'ochre' | 'sage' | 'plum' | 'ink';
 
-/** Initials on a round of the page's own colours. Decorative: the name always sits beside it. */
+/** Decorative: the name always sits beside it. */
 export function Initials({
   initials,
   small,
@@ -42,7 +42,6 @@ export function Initials({
   );
 }
 
-/** A quotation set large in the display italic, with who said it. */
 export function PullQuote({
   initials,
   large,

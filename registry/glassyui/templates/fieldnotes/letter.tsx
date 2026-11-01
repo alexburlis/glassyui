@@ -66,7 +66,6 @@ function NoteAnchor({ children, note }: { children: ReactNode; note: number }) {
   );
 }
 
-/** A margin note: beside its paragraph on wide screens, under it on narrow ones. */
 function Sidenote({ children, note }: { children: ReactNode; note: number }) {
   const { lit, light } = use(NotesContext);
 
@@ -101,7 +100,6 @@ function Noted({ children, note }: { children: ReactNode; note: ReactNode }) {
   );
 }
 
-/** The founder's letter, with a drop cap, four margin notes and a pull quote. */
 export function Letter() {
   const [lit, setLit] = useState<number | null>(null);
   const holdTimer = useRef(0);

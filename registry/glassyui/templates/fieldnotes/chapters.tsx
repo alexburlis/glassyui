@@ -10,7 +10,6 @@ import { GlassSwitch } from '../../glass-switch';
 import { Icon, type IconName } from './icons';
 import { Folio, Initials, type Tone } from './parts';
 
-/** One chapter: what the tool does in words on one side, and a figure of it on the other. */
 function Chapter({
   body,
   figure,
@@ -492,7 +491,6 @@ function ShareFigure() {
   );
 }
 
-/** The tool in four chapters: capture, tag, find and share, each with its figure. */
 export function Chapters() {
   return (
     <section

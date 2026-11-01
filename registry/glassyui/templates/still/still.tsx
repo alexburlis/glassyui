@@ -168,7 +168,6 @@ const FOOTER = [
   },
 ];
 
-/** Whether an element is on screen, for as long as it is mounted. */
 function useOnScreen(ref: React.RefObject<HTMLElement | null>) {
   const [onScreen, setOnScreen] = useState(true);
 

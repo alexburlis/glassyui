@@ -66,7 +66,6 @@ function Collage() {
   );
 }
 
-/** The cover: the founder's headline and standfirst beside a desk of interview scraps. */
 export function Cover({ onStartFree }: { onStartFree: () => void }) {
   const floatRef = useRef<HTMLDivElement>(null);
 
@@ -285,7 +284,6 @@ const MARKS = [
   },
 ];
 
-/** The researchers who already use it, and six of their teams' wordmarks. */
 export function Proof() {
   return (
     <section aria-label="Teams using Fieldnotes" className="fieldnotes-proof">

@@ -10,10 +10,7 @@ export type StartTrial = (email: string) => Promise<void>;
 
 const looksLikeEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value);
 
-/**
- * The sign-off: the founder's thanks and signature, and the one form on the page. Without
- * `onStart` the form is a demo: it confirms on screen and sends nothing.
- */
+/** Without `onStart` the form is a demo: it confirms on screen and sends nothing. */
 export function SignOff({
   emailRef,
   onNotice,

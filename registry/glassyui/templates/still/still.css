@@ -263,7 +263,7 @@ html:has(.still-page) {
   }
 }
 
-/* Header: a capsule of glass over the sky, which steps aside while you breathe. */
+/* Header */
 .still-header.lg-header {
   top: 16px;
   width: min(880px, calc(100vw - 32px));
@@ -324,8 +324,7 @@ html:has(.still-page) {
   margin-left: 6px;
 }
 
-/* On a phone the links move into the menu, a float of large serif rows with the download at its
-   foot. */
+/* The menu on phones */
 .still-header .lg-header-menu summary {
   gap: 8px;
   height: 40px;
@@ -422,7 +421,7 @@ html:has(.still-page) {
   }
 }
 
-/* Hero: the dusk, and the orb resting on its horizon. */
+/* Hero */
 .still-hero {
   --nav-h: 92px;
   --orb: min(72vw, 34svh, 360px);
@@ -1132,7 +1131,7 @@ html:has(.still-page) {
   }
 }
 
-/* Sleep stories: a carousel */
+/* Sleep stories */
 .still-carousel-bar {
   display: flex;
   align-items: flex-end;
@@ -1943,7 +1942,7 @@ html:has(.still-page) {
   color: var(--st-ink-2);
 }
 
-/* StoreMenu: the download button opens a menu of the two stores, grown from it. */
+/* StoreMenu */
 .still-store-trigger .still-icon {
   width: 18px;
   height: 18px;
@@ -2110,8 +2109,7 @@ html:has(.still-page) {
   line-height: 1.6;
 }
 
-/* Download: the closing horizon answers the hero's, an afterglow above the line and still
-   water below. */
+/* Download */
 .still-download {
   position: relative;
   isolation: isolate;

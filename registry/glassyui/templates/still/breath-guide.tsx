@@ -232,7 +232,6 @@ export function BreathGuide({
     if (target === 'start') startRef.current?.focus({ preventScroll: true });
   }, [state]);
 
-  // Each new instruction comes into focus.
   useEffect(() => {
     const element = wordsRef.current;
 

@@ -7,7 +7,6 @@ const STATS = [
   { label: 'free readers for every researcher', value: 11 },
 ];
 
-/** From the field: what researchers say, and four numbers that count up as they arrive. */
 export function Field() {
   return (
     <section

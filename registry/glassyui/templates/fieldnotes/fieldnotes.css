@@ -22,7 +22,6 @@
   --fn-work-mark: rgb(232 176 52 / 0.36);
   --fn-quote: #286450;
   --fn-quote-mark: rgb(86 164 128 / 0.28);
-  /* Headlines use the text serif unless they are given a face of their own. */
   --fn-display: var(
     --fieldnotes-display,
     var(--fieldnotes-serif, ui-serif, 'Iowan Old Style', Georgia, serif)
@@ -250,7 +249,7 @@ html:has(.fieldnotes-page) {
   margin-top: 20px;
 }
 
-/* A section's running head: a double rule, its name and its page in the issue. */
+/* A section's running head */
 .fieldnotes-folio {
   position: relative;
   display: flex;
@@ -309,7 +308,6 @@ html:has(.fieldnotes-page) {
   letter-spacing: 0;
 }
 
-/* Initials on rounds of the page's own inks. */
 .fieldnotes-avatar {
   --lg-avatar-size: 44px;
   --fn-avatar: #c0395c, #7a0d2b 62%, #4f0a1e;
@@ -478,7 +476,7 @@ html:has(.fieldnotes-page) {
   }
 }
 
-/* Masthead: the library's header, set as the issue's nameplate. */
+/* Masthead */
 .fieldnotes-mast {
   inset: 12px 0 auto;
   width: min(1312px, 100% - 2 * var(--fn-gutter));
@@ -601,7 +599,6 @@ html:has(.fieldnotes-page) {
   padding: 0;
 }
 
-/* How far the reader has come: a hairline of ink along the masthead's foot. */
 .fieldnotes-mast-progress {
   position: absolute;
   left: 20px;
@@ -628,7 +625,7 @@ html:has(.fieldnotes-page) {
   }
 }
 
-/* The menu on narrow screens: the issue's contents, under the masthead. */
+/* The menu on narrow screens */
 .fieldnotes-sheet {
   color: var(--fn-ink);
 }
@@ -897,7 +894,7 @@ html:has(.fieldnotes-page) {
   inset: 0;
 }
 
-/* Desk things: scraps of paper, tape and stamps, each turned a little. */
+/* Desk things */
 .fieldnotes-piece {
   position: absolute;
   transform: rotate(var(--r, 0deg));
@@ -1137,7 +1134,6 @@ html:has(.fieldnotes-page) {
   font-size: 14px;
 }
 
-/* Nine of fourteen participants: the pattern forming. */
 .fieldnotes-dots {
   display: flex;
   flex-wrap: wrap;
@@ -1229,7 +1225,6 @@ html:has(.fieldnotes-page) {
   font: italic 500 15px/1 var(--fn-display);
 }
 
-/* The title runs into a dotted leader to its page number. */
 .fieldnotes-contents-title {
   display: flex;
   align-items: baseline;
@@ -1448,7 +1443,7 @@ html:has(.fieldnotes-page) {
   text-underline-offset: 4px;
 }
 
-/* Margin notes: small panes in the margin, lit with their reference. */
+/* Margin notes */
 .fieldnotes-sidenote.lg-glass-surface {
   --lg-panel-radius: 16px;
   grid-column: 9 / -1;
@@ -1657,7 +1652,7 @@ html:has(.fieldnotes-page) {
   font-size: 13.5px;
 }
 
-/* Highlighter: the transcript, sentence by sentence. */
+/* The transcript */
 .fieldnotes-highlighter {
   position: relative;
 }
@@ -1745,7 +1740,6 @@ html:has(.fieldnotes-page) {
   border-radius: 3px;
 }
 
-/* The selection menu grows from the text and drifts the last few pixels away from it. */
 .fieldnotes-selection-menu.lg-glass-surface {
   --lg-panel-radius: 16px;
   position: absolute;
@@ -2317,7 +2311,6 @@ html:has(.fieldnotes-page) {
   text-transform: uppercase;
 }
 
-/* A plate: a board of desk things, with a pane of the product resting on it. */
 .fieldnotes-plate {
   position: relative;
   display: grid;
@@ -2717,7 +2710,6 @@ html:has(.fieldnotes-page) {
   bottom: 8%;
 }
 
-/* Red string from pin to pin. */
 .fieldnotes-string {
   position: absolute;
   inset: 0;
@@ -3219,7 +3211,7 @@ html:has(.fieldnotes-page) {
   font-size: 14px;
 }
 
-/* Letters to the editor: each letter is the button that folds its reply open. */
+/* Letters to the editor */
 .fieldnotes-letters-list {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -3602,7 +3594,7 @@ html:has(.fieldnotes-page) {
   height: 15px;
 }
 
-/* Toast: a capsule at the foot of the screen. */
+/* Toast */
 .fieldnotes-toasts.lg-toast-viewport {
   top: auto;
   right: auto;
@@ -3930,7 +3922,6 @@ html:has(.fieldnotes-page) {
     grid-column: 1 / -1;
   }
 
-  /* Margin notes fall in under their paragraphs. */
   .fieldnotes-letter-body::before {
     display: none;
   }
@@ -4015,7 +4006,6 @@ html:has(.fieldnotes-page) {
     display: grid;
   }
 
-  /* On a phone the table shows the features beside the one plan picked above it. */
   .fieldnotes-pricing {
     grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
   }
@@ -4159,7 +4149,6 @@ html:has(.fieldnotes-page) {
     display: none;
   }
 
-  /* On phones only the round postmark remains, half under the glass field. */
   .fieldnotes-start-art {
     top: 2px;
     right: -26px;
@@ -4228,7 +4217,6 @@ html:has(.fieldnotes-page) {
   }
 }
 
-/* Reduced motion keeps every end state and drops the movement, including the loop. */
 @media (prefers-reduced-motion: reduce) {
   .fieldnotes *,
   .fieldnotes *::before,
