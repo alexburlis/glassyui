@@ -14,7 +14,7 @@ import { useCountTo } from './use-count-to';
 export type WaitlistPlace = {
   /** The signup's place in line. */
   place: number;
-  /** The signup's own referral address, such as https://halcyon.day/r/maya-3f2a. */
+  /** The signup's own referral address, such as https://halcyon.example/r/maya-3f2a. */
   inviteLink: string;
 };
 
@@ -198,7 +198,7 @@ export function WaitlistForm({ onJoin, onJoinedChange, onNotice, ref }: Waitlist
         await wait(motionReduced() ? 200 : 760);
         result = {
           place: 2481 + demoJoins.current++,
-          inviteLink: `https://halcyon.day/r/${demoSlug(value)}`,
+          inviteLink: `https://halcyon.example/r/${demoSlug(value)}`,
         };
       }
     } catch {

@@ -58,7 +58,7 @@ const FAQ = [
   {
     question: 'Which calendars does it work with?',
     answer:
-      'Google Calendar and Microsoft 365 at launch, on the web and in apps for macOS and iPhone. iCloud calendars follow in the spring. Halcyon only changes events it booked or that you hand to it.',
+      'Your work and personal calendars at launch, on the web and in apps for macOS and iPhone. Shared team calendars follow in the spring. Halcyon only changes events it booked or that you hand to it.',
   },
   {
     question: 'Does it act without asking?',
@@ -399,8 +399,9 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
                   Questions, <em>answered</em>.
                 </h2>
                 <p className="halcyon-section-lede">
-                  Anything else, write to <a href="mailto:hello@halcyon.day">hello@halcyon.day</a>.
-                  One of us replies.
+                  Anything else, write to{' '}
+                  <a href="mailto:hello@halcyon.example">hello@halcyon.example</a>. One of us
+                  replies.
                 </p>
               </div>
               <GlassPanel className="halcyon-pane halcyon-faq-list" lens variant="card">
@@ -485,8 +486,8 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
                     </a>
                   </li>
                   <li>
-                    <a className="halcyon-footer-link" href="mailto:hello@halcyon.day">
-                      hello@halcyon.day
+                    <a className="halcyon-footer-link" href="mailto:hello@halcyon.example">
+                      hello@halcyon.example
                     </a>
                   </li>
                 </ul>
