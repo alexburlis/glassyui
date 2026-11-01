@@ -7,22 +7,23 @@ export const PRO_OFFER = {
   regularPrice: 199,
 } as const;
 
-export type ProTemplateTeaser =
-  | { kind: string; name: string; release: string; slug: string; status: 'first-release' }
-  | { kind: string; name: string; slug: string; status: 'planned' };
+export interface ProTemplateTeaser {
+  kind: string;
+  name: string;
+  slug: string;
+  status: 'first-release' | 'planned';
+}
 
 export const PRO_TEMPLATE_TEASERS: readonly ProTemplateTeaser[] = [
   {
     kind: 'Launch template · product site',
     name: 'Northstar',
-    release: 'Launch',
     slug: 'northstar',
     status: 'first-release',
   },
   {
     kind: 'App template · landing page for a habit app',
     name: 'Tempo',
-    release: 'App',
     slug: 'tempo',
     status: 'first-release',
   },

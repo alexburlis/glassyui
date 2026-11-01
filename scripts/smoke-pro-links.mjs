@@ -293,23 +293,23 @@ try {
     await gallery.scrollIntoViewIfNeeded();
 
     const cards = await gallery.locator('.template-card').evaluateAll((nodes) =>
-      nodes.map((node) => ({
-        chipInside: (() => {
-          const chip = node.querySelector('.template-chip').getBoundingClientRect();
-          const poster = node.querySelector('.template-card-poster').getBoundingClientRect();
+      nodes.map((node) => {
+        const chip = node.querySelector('.template-chip');
+        const chipBox = chip.getBoundingClientRect();
+        const poster = node.querySelector('.template-card-poster').getBoundingClientRect();
 
-          return chip.right <= poster.right && chip.bottom <= poster.bottom;
-        })(),
-        focusable:
-          node.matches('a[href], [tabindex]') || Boolean(node.querySelector('a, [tabindex]')),
-        href: node.getAttribute('href'),
-        name: node.querySelector('.template-card-title')?.textContent,
-        pro: node.querySelector('.template-chip')?.dataset.tier === 'pro',
-        source: node.getAttribute('data-analytics-source'),
-        tag: node.tagName,
-        top: Math.round(node.getBoundingClientRect().top),
-        width: node.getBoundingClientRect().width,
-      })),
+        return {
+          chipInside: chipBox.right <= poster.right && chipBox.bottom <= poster.bottom,
+          focusable:
+            node.matches('a[href], [tabindex]') || Boolean(node.querySelector('a, [tabindex]')),
+          href: node.getAttribute('href'),
+          name: node.querySelector('.template-card-title')?.textContent,
+          pro: chip.dataset.tier === 'pro',
+          source: node.getAttribute('data-analytics-source'),
+          tag: node.tagName,
+          top: Math.round(node.getBoundingClientRect().top),
+        };
+      }),
     );
 
     assert.deepEqual(
