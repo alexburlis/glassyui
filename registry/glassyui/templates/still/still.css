@@ -2141,7 +2141,7 @@ html:has(.still-page) {
   left: calc(50% + clamp(90px, 16vw, 250px));
   width: clamp(64px, 6vw, 92px);
   height: auto;
-  filter: drop-shadow(0 0 24px rgb(220 200 255 / 0.45));
+  overflow: visible;
 }
 
 .still-download h2 {

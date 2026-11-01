@@ -522,14 +522,27 @@ export function Still({ storeLinks }: { storeLinks?: StoreLinks }) {
                     <stop offset="0" stopColor="#fdfaff" />
                     <stop offset="1" stopColor="#d8caf6" />
                   </radialGradient>
+                  {/* The glow is drawn inside the SVG: WebKit can paint a CSS filter on a masked
+                      SVG as a stray square at the top of the page. */}
+                  <filter height="400%" id="still-moon-glow" width="400%" x="-150%" y="-150%">
+                    <feDropShadow
+                      dx="0"
+                      dy="0"
+                      floodColor="rgb(220 200 255)"
+                      floodOpacity=".45"
+                      stdDeviation="28"
+                    />
+                  </filter>
                 </defs>
-                <circle
-                  cx="50"
-                  cy="50"
-                  fill="url(#still-moon-fill)"
-                  mask="url(#still-crescent)"
-                  r="40"
-                />
+                <g filter="url(#still-moon-glow)">
+                  <circle
+                    cx="50"
+                    cy="50"
+                    fill="url(#still-moon-fill)"
+                    mask="url(#still-crescent)"
+                    r="40"
+                  />
+                </g>
               </svg>
             </div>
             <div className="still-wrap">
