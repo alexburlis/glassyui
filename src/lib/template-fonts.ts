@@ -5,11 +5,12 @@ import type { FreeTemplateSlug } from './templates';
   The free templates' own faces, served from this site rather than a font service. Each fills the
   CSS variable its template reads; an installed template falls back to system fonts until its
   owner sets the variable. Instrument Sans and Instrument Serif (src/fonts/OFL.txt), Fraunces and
-  Literata (src/fonts/OFL-fraunces-literata.txt), Cormorant Garamond and Karla (src/fonts/OFL-*.txt)
-  are under the SIL Open Font License.
+  Literata (src/fonts/OFL-fraunces-literata.txt), Cormorant Garamond
+  (src/fonts/OFL-cormorant-garamond.txt) and Karla (src/fonts/OFL-karla.txt) are under the SIL
+  Open Font License.
 
-  Every template's preview is one route, so a preloaded face would be fetched by every template's
-  preview. None is preloaded: a face loads when its own template's text uses it.
+  None is preloaded: one preview route serves every template, so a preload would make each
+  preview fetch every template's faces. A page fetches only the faces its styles draw.
 */
 
 const instrumentSerif = localFont({
@@ -60,6 +61,7 @@ const cormorantGaramond = localFont({
   ],
   variable: '--still-serif',
   display: 'swap',
+  preload: false,
   adjustFontFallback: 'Times New Roman',
 });
 
@@ -68,6 +70,7 @@ const karla = localFont({
   weight: '400 700',
   variable: '--still-sans',
   display: 'swap',
+  preload: false,
 });
 
 /**

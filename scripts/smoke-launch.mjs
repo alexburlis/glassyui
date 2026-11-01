@@ -71,6 +71,64 @@ async function assertContained(route) {
   );
 }
 
+// One route serves every template's preview, so a first visit to a preview must fetch only the
+// faces it draws, never another template's. A new context starts with an empty cache.
+async function assertFetchesOnlyDrawnFonts(route) {
+  const firstVisit = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const fetched = new Set();
+
+  try {
+    const preview = await firstVisit.newPage();
+    preview.on('request', (request) => {
+      if (request.resourceType() === 'font') {
+        fetched.add(request.url());
+      }
+    });
+    await preview.goto(new URL(route, baseUrl).href, { waitUntil: 'networkidle' });
+
+    // The files behind the faces the page has drawn with.
+    const drawnFiles = await preview.evaluate(async () => {
+      await document.fonts.ready;
+
+      const drawn = new Set();
+
+      for (const face of document.fonts) {
+        if (face.status === 'loaded') {
+          drawn.add(`${face.family.replaceAll('"', '')} ${face.style}`);
+        }
+      }
+
+      const files = [];
+
+      for (const sheet of document.styleSheets) {
+        for (const rule of sheet.cssRules) {
+          if (!(rule instanceof CSSFontFaceRule)) {
+            continue;
+          }
+
+          const family = rule.style.getPropertyValue('font-family').replaceAll(/["']/g, '');
+          const style = rule.style.getPropertyValue('font-style') || 'normal';
+          const sources = rule.style.getPropertyValue('src').matchAll(/url\("?([^")]+)/g);
+
+          if (drawn.has(`${family} ${style}`)) {
+            for (const [, file] of sources) {
+              files.push(new URL(file, sheet.href ?? document.baseURI).href);
+            }
+          }
+        }
+      }
+
+      return files;
+    });
+
+    const unused = [...fetched].filter((file) => !drawnFiles.includes(file));
+
+    assert.deepEqual(unused, [], `${route} fetches only the fonts it draws`);
+  } finally {
+    await firstVisit.close();
+  }
+}
+
 try {
   await visit('/');
   await page.screenshot({ path: path.join(artifactDirectory, 'home-desktop.png'), fullPage: true });
@@ -200,6 +258,7 @@ try {
   );
   await visit('/templates/halcyon/preview');
   await assertContained('/templates/halcyon/preview');
+  await assertFetchesOnlyDrawnFonts('/templates/halcyon/preview');
   assert.match(
     await page.locator('meta[name="robots"]').getAttribute('content'),
     /noindex, follow/,
@@ -276,6 +335,7 @@ try {
   );
   await visit('/templates/still/preview');
   await assertContained('/templates/still/preview');
+  await assertFetchesOnlyDrawnFonts('/templates/still/preview');
   assert.match(
     await page.locator('meta[name="robots"]').getAttribute('content'),
     /noindex, follow/,
