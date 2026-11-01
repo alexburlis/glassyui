@@ -72,8 +72,9 @@ async function assertContained(route) {
 }
 
 // One route serves every template's preview, so a first visit to a preview must fetch only the
-// faces it draws, never another template's. A new context starts with an empty cache.
-async function assertFetchesOnlyDrawnFonts(route) {
+// faces it draws, and draw only those its own font variables name, never another template's. A new
+// context starts with an empty cache.
+async function assertFetchesOnlyOwnFonts(route, fontVariables) {
   const firstVisit = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const fetched = new Set();
 
@@ -86,9 +87,20 @@ async function assertFetchesOnlyDrawnFonts(route) {
     });
     await preview.goto(new URL(route, baseUrl).href, { waitUntil: 'networkidle' });
 
-    // The files behind the faces the page has drawn with.
-    const drawnFiles = await preview.evaluate(async () => {
+    // The files behind the faces the page has drawn with, and any face not its template's own.
+    const { drawnFiles, foreignFaces } = await preview.evaluate(async (variables) => {
       await document.fonts.ready;
+
+      const root = getComputedStyle(document.documentElement);
+
+      const own = new Set(
+        variables.flatMap((variable) =>
+          root
+            .getPropertyValue(variable)
+            .split(',')
+            .map((family) => family.trim().replaceAll(/["']/g, '')),
+        ),
+      );
 
       const drawn = new Set();
 
@@ -118,12 +130,19 @@ async function assertFetchesOnlyDrawnFonts(route) {
         }
       }
 
-      return files;
-    });
+      return {
+        drawnFiles: files,
+        foreignFaces: [...drawn].filter((face) => !own.has(face.slice(0, face.lastIndexOf(' ')))),
+      };
+    }, fontVariables);
 
     const unused = [...fetched].filter((file) => !drawnFiles.includes(file));
 
+    assert.ok(fetched.size > 0, `${route} fetches its own fonts`);
     assert.deepEqual(unused, [], `${route} fetches only the fonts it draws`);
+    assert.deepEqual(foreignFaces, [], `${route} draws only its own template's fonts`);
+
+    return fetched.size;
   } finally {
     await firstVisit.close();
   }
@@ -258,7 +277,12 @@ try {
   );
   await visit('/templates/halcyon/preview');
   await assertContained('/templates/halcyon/preview');
-  await assertFetchesOnlyDrawnFonts('/templates/halcyon/preview');
+
+  const halcyonFonts = await assertFetchesOnlyOwnFonts('/templates/halcyon/preview', [
+    '--halcyon-serif',
+    '--halcyon-sans',
+  ]);
+
   assert.match(
     await page.locator('meta[name="robots"]').getAttribute('content'),
     /noindex, follow/,
@@ -277,6 +301,7 @@ try {
     route: '/templates/halcyon',
     sitemap: true,
     preview: '/templates/halcyon/preview',
+    previewFontFiles: halcyonFonts,
   });
 
   await visit('/templates/fieldnotes');
@@ -297,6 +322,12 @@ try {
   );
   await visit('/templates/fieldnotes/preview');
   await assertContained('/templates/fieldnotes/preview');
+
+  const fieldnotesFonts = await assertFetchesOnlyOwnFonts('/templates/fieldnotes/preview', [
+    '--fieldnotes-display',
+    '--fieldnotes-serif',
+  ]);
+
   assert.match(
     await page.locator('meta[name="robots"]').getAttribute('content'),
     /noindex, follow/,
@@ -315,6 +346,7 @@ try {
     route: '/templates/fieldnotes',
     sitemap: true,
     preview: '/templates/fieldnotes/preview',
+    previewFontFiles: fieldnotesFonts,
   });
 
   await visit('/templates/still');
@@ -335,7 +367,12 @@ try {
   );
   await visit('/templates/still/preview');
   await assertContained('/templates/still/preview');
-  await assertFetchesOnlyDrawnFonts('/templates/still/preview');
+
+  const stillFonts = await assertFetchesOnlyOwnFonts('/templates/still/preview', [
+    '--still-serif',
+    '--still-sans',
+  ]);
+
   assert.match(
     await page.locator('meta[name="robots"]').getAttribute('content'),
     /noindex, follow/,
@@ -354,6 +391,7 @@ try {
     route: '/templates/still',
     sitemap: true,
     preview: '/templates/still/preview',
+    previewFontFiles: stillFonts,
   });
 
   for (const route of guideRoutes) {
