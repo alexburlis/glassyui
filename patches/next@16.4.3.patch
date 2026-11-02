@@ -1,20 +1,20 @@
 diff --git a/dist/build/templates/app-page-runtime.js b/dist/build/templates/app-page-runtime.js
 --- a/dist/build/templates/app-page-runtime.js
 +++ b/dist/build/templates/app-page-runtime.js
-@@ -464,5 +464,5 @@
+@@ -478,5 +478,5 @@
          };
          try {
 -            const varyHeader = routeModule.getVaryHeader(resolvedPathname, interceptionRoutePatterns);
 +            const varyHeader = [res.getHeader("Vary"), routeModule.getVaryHeader(resolvedPathname, interceptionRoutePatterns)].filter(Boolean).join(", ");
              res.setHeader('Vary', varyHeader);
-             let parentSpan;
+             const invokeRouteModule = async (span, context, renderOperation)=>{
 diff --git a/dist/esm/build/templates/app-page-runtime.js b/dist/esm/build/templates/app-page-runtime.js
 --- a/dist/esm/build/templates/app-page-runtime.js
 +++ b/dist/esm/build/templates/app-page-runtime.js
-@@ -483,5 +483,5 @@
+@@ -497,5 +497,5 @@
          };
          try {
 -            const varyHeader = routeModule.getVaryHeader(resolvedPathname, interceptionRoutePatterns);
 +            const varyHeader = [res.getHeader("Vary"), routeModule.getVaryHeader(resolvedPathname, interceptionRoutePatterns)].filter(Boolean).join(", ");
              res.setHeader('Vary', varyHeader);
-             let parentSpan;
+             const invokeRouteModule = async (span, context, renderOperation)=>{
