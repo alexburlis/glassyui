@@ -152,9 +152,9 @@ token in `src/styles/liquid.css`.
   burgundy.
 - Pro is the one Vermilion card on each page, in both themes, so it reads as the
   way into Pro rather than another component: the Pro card beside the components
-  gallery, and the tile that closes the home page's templates. Their copy is
-  white, and the red deepens down each card so the copy keeps 5:1. The tile is
-  the only place on the home page with a price.
+  gallery, and the tile beside Pro's first release in the home page's templates.
+  Their copy is white, and the red deepens down each card so the copy keeps 5:1.
+  The tile and the Pro dialog are the only places on the home page with a price.
 - Purple remains an opt-in badge API for consumers; site branding and default
   examples use no purple.
 - The dimmest text keeps 4.5:1 contrast on both the page and its tiles.
@@ -193,10 +193,17 @@ token in `src/styles/liquid.css`.
   every template. Increased contrast and forced colours keep an outline.
   Controls without a caret, such as buttons and the select trigger, keep the
   neutral ring for keyboard focus.
-- Template cards show a poster of the whole page, with the tier in a small glass
-  chip at its top left: Free, Free · Soon, Pro · First release or Pro · Planned.
-  The whole card is the link, except a template that is not out yet. Pro posters
-  are design previews, and the gallery says so.
+- Template cards show a poster of the whole page, with a small glass chip at its
+  top left: Free or Free · Soon, and for Pro, Coming with the first release's
+  month, or Coming soon. The free templates come first. Pro's follow under
+  Coming soon to Pro: the first release beside the Pro tile, then the planned
+  templates, four to a row. A free card links to its page, except a template
+  that is not out yet. A Pro card opens one dialog that sells the pre-order: the
+  poster, a strip that switches between the Pro templates, when it ships, the
+  price, the refund promise and one call to action. While open it sits above the
+  analytics prompt. Without script, or with a modifier key, the card links to
+  the Pro site. Pro posters are design previews, and the gallery and the dialog
+  say so.
 - The dock is a quiet glass shelf with space around its icons. Full app artwork
   fills an item; navigation glyphs stay small inside the same generous target.
   Hover and keyboard focus never resize the dock or its neighbours. Nothing is
@@ -268,8 +275,8 @@ progress, spinners, skeletons and the Pro card's art.
 - **One quiet loop.** The Pro card beside the components gallery shows a Pro
   site in a glass window over a pale turning ribbon. The ribbon sways a few
   pixels over 16 seconds and the window floats over 7, so the card feels alive
-  without calling for attention. Pointing at the card raises the window. The
-  tile closing the home page's templates shares its colours and holds still.
+  without calling for attention. Pointing at the card raises the window. The Pro
+  tile in the home page's templates shares its colours and holds still.
 - **Glass keeps its backdrop.** Never fade, filter, mask or clip anything glass
   looks through: the glass would lose the page it bends until the animation
   ended. The keynote keeps the desktop and phone mounted throughout the turn.
