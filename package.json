@@ -133,7 +133,7 @@
     "patchedDependencies": {
       "braces@3.0.3": "patches/braces@3.0.3.patch",
       "mdx-blog-kit@0.1.2": "patches/mdx-blog-kit@0.1.2.patch",
-      "next@16.4.1": "patches/next@16.4.1.patch",
+      "next@16.4.3": "patches/next@16.4.3.patch",
       "posthog-js@1.434.15": "patches/posthog-js@1.434.15.patch"
     }
   },
