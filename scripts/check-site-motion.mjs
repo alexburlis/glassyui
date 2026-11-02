@@ -94,6 +94,7 @@ const HERO = [
 const REVEALS = [
   '.home-section-header',
   '.component-card',
+  '.template-group-header',
   '.template-card',
   '.template-pro-tile',
   '.bento-tile',

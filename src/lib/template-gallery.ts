@@ -1,105 +1,80 @@
-import { PRO_TEMPLATE_TEASERS, type ProTemplateTeaser } from '@/lib/pro-teaser';
+import { PRO_OFFER, PRO_TEMPLATE_TEASERS, type ProTemplateTeaser } from '@/lib/pro-teaser';
 import { PRO_ORIGIN } from '@/lib/site-links';
-import { FREE_TEMPLATES, freeTemplatePath, type FreeTemplateSlug } from '@/lib/templates';
+import {
+  FREE_TEMPLATES,
+  freeTemplatePath,
+  type FreeTemplate,
+  type FreeTemplateSlug,
+} from '@/lib/templates';
 
-/** The home page's gallery mixes the tiers, so the first row already shows free and Pro. */
-const GALLERY_ORDER = [
-  'northstar',
-  'halcyon',
-  'tempo',
-  'fieldnotes',
-  'relay',
-  'quill',
-  'penny',
-  'orbit',
-  'still',
-  'beacon',
-  'tally',
-  'cohort',
-  'hush',
-] as const;
-
-interface GalleryCard {
-  action: string;
-  chip: string;
+interface Card {
   kind: string;
   name: string;
   poster: string;
 }
 
-export type GalleryEntry =
-  | (GalleryCard & { href: string; slug: FreeTemplateSlug; status: 'available'; tier: 'free' })
-  | (GalleryCard & { slug: FreeTemplateSlug; status: 'soon'; tier: 'free' })
-  | (GalleryCard & {
-      href: string;
-      slug: string;
-      status: ProTemplateTeaser['status'];
-      tier: 'pro';
-    });
+export type FreeCard =
+  | (Card & { href: string; slug: FreeTemplateSlug; status: 'available' })
+  | (Card & { slug: FreeTemplateSlug; status: 'soon' });
+
+export interface ProCard extends Card {
+  /** "Coming <month>" for the first release, "Coming soon" for the rest. */
+  chip: string;
+  /** Where the card leads without script or with a modifier key: `${PRO_ORIGIN}/#${slug}`. */
+  href: string;
+  slug: string;
+  status: ProTemplateTeaser['status'];
+  /** The Pro site's own line: "First release, estimated <month> <year>" or "Planned, no date yet". */
+  timing: string;
+}
+
+const { month, year } = PRO_OFFER.firstRelease;
+
+const PRO_STATUS: Record<ProTemplateTeaser['status'], Pick<ProCard, 'chip' | 'timing'>> = {
+  'first-release': { chip: `Coming ${month}`, timing: `First release, estimated ${month} ${year}` },
+  planned: { chip: 'Coming soon', timing: 'Planned, no date yet' },
+};
 
 const poster = (slug: string) => `/templates/${slug}.jpg`;
 
-const freeEntries = FREE_TEMPLATES.map((template): GalleryEntry => {
-  const card = { kind: template.kind, name: template.name, poster: poster(template.slug) };
+function freeCard(template: FreeTemplate): FreeCard {
+  const card = {
+    kind: template.kind,
+    name: template.name,
+    poster: poster(template.slug),
+    slug: template.slug,
+  };
 
   return template.status === 'available'
-    ? {
-        ...card,
-        action: 'Use free template',
-        chip: 'Free',
-        href: freeTemplatePath(template.slug),
-        slug: template.slug,
-        status: 'available',
-        tier: 'free',
-      }
-    : {
-        ...card,
-        action: 'Coming soon',
-        chip: 'Free · Soon',
-        slug: template.slug,
-        status: 'soon',
-        tier: 'free',
-      };
-});
-
-const proEntries = PRO_TEMPLATE_TEASERS.map((template): GalleryEntry => ({
-  action: template.status === 'first-release' ? 'Pre-order in Pro' : 'See in Pro',
-  chip: template.status === 'first-release' ? 'Pro · First release' : 'Pro · Planned',
-  href: `${PRO_ORIGIN}/#${template.slug}`,
-  kind: template.kind,
-  name: template.name,
-  poster: poster(template.slug),
-  slug: template.slug,
-  status: template.status,
-  tier: 'pro',
-}));
-
-function inGalleryOrder(entries: GalleryEntry[]) {
-  const bySlug = new Map<string, GalleryEntry>();
-
-  for (const entry of entries) {
-    if (bySlug.has(entry.slug)) throw new Error(`Two templates use the slug ${entry.slug}.`);
-    bySlug.set(entry.slug, entry);
-  }
-
-  const ordered = GALLERY_ORDER.map((slug, index) => {
-    if (GALLERY_ORDER.indexOf(slug) !== index) {
-      throw new Error(`The gallery order lists ${slug} twice.`);
-    }
-
-    const entry = bySlug.get(slug);
-
-    if (!entry) throw new Error(`The gallery order lists ${slug}, which no catalogue has.`);
-    bySlug.delete(slug);
-
-    return entry;
-  });
-
-  if (bySlug.size > 0) {
-    throw new Error(`The gallery order leaves out ${[...bySlug.keys()].join(', ')}.`);
-  }
-
-  return ordered;
+    ? { ...card, href: freeTemplatePath(template.slug), status: 'available' }
+    : { ...card, status: 'soon' };
 }
 
-export const GALLERY = inGalleryOrder([...freeEntries, ...proEntries]);
+function proCard(template: ProTemplateTeaser): ProCard {
+  return {
+    ...PRO_STATUS[template.status],
+    href: `${PRO_ORIGIN}/#${template.slug}`,
+    kind: template.kind,
+    name: template.name,
+    poster: poster(template.slug),
+    slug: template.slug,
+    status: template.status,
+  };
+}
+
+export const FREE_CARDS: readonly FreeCard[] = [
+  ...FREE_TEMPLATES.filter((template) => template.status === 'available'),
+  ...FREE_TEMPLATES.filter((template) => template.status === 'soon'),
+].map(freeCard);
+
+export const PRO_CARDS: readonly ProCard[] = [
+  ...PRO_TEMPLATE_TEASERS.filter((template) => template.status === 'first-release'),
+  ...PRO_TEMPLATE_TEASERS.filter((template) => template.status === 'planned'),
+].map(proCard);
+
+// Both tiers name their posters in public/templates by slug, so no two templates may share one.
+const slugs = [...FREE_CARDS, ...PRO_CARDS].map((card) => card.slug);
+
+const repeated = slugs.find((slug, index) => slugs.indexOf(slug) !== index);
+
+if (repeated) throw new Error(`Two templates use the slug ${repeated}.`);

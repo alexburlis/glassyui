@@ -4224,13 +4224,48 @@ main :focus {
 
 .template-gallery {
   --template-gap: 20px;
+  --template-row-gap: 40px;
 
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 40px var(--template-gap);
   max-width: 1200px;
   margin: 0 auto;
-  container-type: inline-size;
+}
+
+.template-group + .template-group {
+  margin-top: 72px;
+}
+
+.template-group-header {
+  margin-bottom: 24px;
+}
+
+.template-group-title {
+  font-family: var(--site-font-display);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+
+.template-group-lead {
+  margin-top: 4px;
+  color: var(--site-text-2);
+  font-size: 15px;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--template-row-gap) var(--template-gap);
+}
+
+.template-grid[data-status='planned'] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.template-grid + .template-grid {
+  margin-top: var(--template-row-gap);
 }
 
 .template-card {
@@ -4336,6 +4371,7 @@ a.template-card:hover .template-card-title {
   margin-top: 4px;
   font-size: 14px;
   font-weight: 600;
+  text-wrap: balance;
 }
 
 .template-card[data-status='soon'] .template-card-action {
@@ -4343,8 +4379,7 @@ a.template-card:hover .template-card-title {
   font-weight: 400;
 }
 
-/* The Pro card's colours, in both themes. On three columns the tile is as tall as the poster
-   beside it. */
+/* The Pro card's colours, in both themes. Beside the first release it is as tall as their cards. */
 .template-pro-tile {
   --tile-padding: 24px;
 
@@ -4352,9 +4387,6 @@ a.template-card:hover .template-card-title {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  align-self: start;
-  grid-column: span 2;
-  min-height: calc((100cqi - 2 * var(--template-gap)) / 3 * 0.625);
   overflow: hidden;
   padding: var(--tile-padding);
   border-radius: 16px;
@@ -4428,8 +4460,7 @@ a.template-card:hover .template-card-title {
 }
 
 .template-gallery-note {
-  max-width: 1200px;
-  margin: 32px auto 0;
+  margin-top: 32px;
   color: var(--site-text-2);
   font-size: 14px;
 }
@@ -4437,22 +4468,36 @@ a.template-card:hover .template-card-title {
 @media (max-width: 1023px) {
   .template-gallery {
     --template-gap: 16px;
-
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    row-gap: 32px;
+    --template-row-gap: 32px;
   }
 
+  .template-grid,
+  .template-grid[data-status='planned'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .template-card[data-wide],
   .template-pro-tile {
     grid-column: 1 / -1;
-    min-height: 0;
   }
 }
 
 @media (max-width: 639px) {
   .template-gallery {
     --template-gap: 12px;
+    --template-row-gap: 28px;
+  }
 
-    row-gap: 28px;
+  .template-group + .template-group {
+    margin-top: 56px;
+  }
+
+  .template-group-header {
+    margin-bottom: 20px;
+  }
+
+  .template-group-title {
+    font-size: 20px;
   }
 
   .template-card {
@@ -4489,6 +4534,254 @@ a.template-card:hover .template-card-title {
   }
 }
 
+/* ----------------------------------------------------------- Pro dialog */
+
+.template-dialog {
+  display: grid;
+  grid-template-areas: 'eyebrow' 'poster' 'details' 'strip';
+  gap: 20px;
+  max-width: 940px;
+}
+
+/* Over the analytics prompt, which would otherwise cover the call to action on a phone while the
+   open dialog leaves it inert. The prompt is back, still unanswered, when the dialog closes. */
+.template-dialog,
+.lg-dialog-overlay:has(+ .template-dialog) {
+  z-index: 10001;
+}
+
+.template-dialog-poster {
+  grid-area: poster;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--site-tile);
+  box-shadow: 0 0 0 1px var(--site-hairline);
+}
+
+.template-dialog-poster img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+.template-dialog-details {
+  display: flex;
+  grid-area: details;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  text-wrap: pretty;
+}
+
+/* The library's muted colour rather than the site's secondary grey, which falls short of 4.5:1
+   where a dark poster shows through the light glass. */
+.template-dialog-kind,
+.template-dialog-timing,
+.template-dialog-check,
+.template-dialog-regular,
+.template-dialog-terms,
+.template-dialog-strip-label,
+.template-dialog-note {
+  color: var(--lg-muted-foreground);
+}
+
+/* Opaque, because the glass lets a dark poster through and the label keeps 4.5:1 over it. */
+.template-dialog-eyebrow {
+  display: inline-flex;
+  grid-area: eyebrow;
+  justify-self: start;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #4e3a34;
+  color: #ffb08c;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+:root[data-lg-theme='light'] .template-dialog-eyebrow {
+  background: #ffeee7;
+  color: #b02d14;
+}
+
+.template-dialog-title {
+  font-family: var(--site-font-display);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+}
+
+.template-dialog-kind {
+  margin-top: 6px;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.template-dialog-timing {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.template-dialog-description {
+  margin-top: 16px;
+  font-size: 17px;
+  line-height: 1.4;
+  text-wrap: balance;
+}
+
+.template-dialog-benefits {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.template-dialog-benefits li {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.template-dialog-check {
+  width: 16px;
+  height: 16px;
+  margin-top: 2.5px;
+}
+
+.template-dialog-price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  margin-top: 20px;
+}
+
+.template-dialog-amount {
+  font-family: var(--site-font-display);
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+}
+
+.template-dialog-regular {
+  font-size: 17px;
+}
+
+.template-dialog-terms {
+  font-size: 14px;
+}
+
+.template-dialog-cta {
+  margin-top: 16px;
+}
+
+.template-dialog-strip {
+  grid-area: strip;
+  min-width: 0;
+}
+
+.template-dialog-strip-label {
+  font-size: 13px;
+}
+
+/* The padding makes room for the rings, which the scrolling strip would otherwise clip. */
+.template-dialog-thumbs {
+  display: flex;
+  gap: 8px;
+  margin: 2px -6px 0;
+  padding: 6px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-padding-inline: 6px;
+  scroll-snap-type: x mandatory;
+}
+
+.template-dialog-thumb {
+  position: relative;
+  flex: 1 0 64px;
+  max-width: 96px;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--site-tile);
+  box-shadow: 0 0 0 1px var(--site-hairline);
+  cursor: pointer;
+  scroll-snap-align: start;
+}
+
+.template-dialog-thumb:hover {
+  box-shadow: 0 0 0 1px var(--lg-muted-foreground);
+}
+
+.template-dialog-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+/* A border rather than a shadow, so forced colours keep the ring. */
+.template-dialog-thumb[aria-current='true']::after {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--site-link);
+  border-radius: inherit;
+  content: '';
+}
+
+.template-dialog-note {
+  margin-top: 4px;
+  font-size: 12.5px;
+}
+
+/* The eyebrow shares the close button's row, centred on it: the button sits 16 px down and is
+   36 px tall, so the poster starts clear of it. */
+@media (max-width: 767px) {
+  .template-dialog {
+    padding-top: 21px;
+  }
+}
+
+/* The strip sits under the poster it switches, and the spare height of the taller column falls
+   between them. */
+@media (min-width: 768px) {
+  .template-dialog {
+    grid-template-areas:
+      'poster eyebrow'
+      'poster details'
+      'strip details';
+    grid-template-rows: auto 1fr auto;
+    grid-template-columns: minmax(0, 55fr) minmax(0, 45fr);
+    gap: 12px 32px;
+  }
+
+  .template-dialog-poster {
+    align-self: start;
+  }
+
+  .template-dialog-strip {
+    align-self: end;
+  }
+
+  .template-dialog-thumbs {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    overflow: visible;
+  }
+
+  .template-dialog-thumb {
+    max-width: none;
+  }
+}
+
 /* ---------------------------------------------------------------- legal */
 
 .legal-page {
@@ -4512,7 +4805,13 @@ a.template-card:hover .template-card-title {
   margin-top: 40px;
 }
 
-:is(.pro-card, .template-card, .template-pro-tile, .site-footer-legal-links a):focus-visible {
+:is(
+  .pro-card,
+  .template-card,
+  .template-pro-tile,
+  .template-dialog-thumb,
+  .site-footer-legal-links a
+):focus-visible {
   outline: 2px solid var(--lg-focus-ring);
   outline-offset: 3px;
 }
@@ -4740,6 +5039,7 @@ a.template-card:hover .template-card-title {
     :root:not([data-lg-reduce-motion='1']) .component-card,
     :root:not([data-lg-reduce-motion='1']) .bento-tile,
     :root:not([data-lg-reduce-motion='1']) .home-step,
+    :root:not([data-lg-reduce-motion='1']) .template-group-header,
     :root:not([data-lg-reduce-motion='1']) .template-card,
     :root:not([data-lg-reduce-motion='1']) .template-pro-tile,
     :root:not([data-lg-reduce-motion='1']) .home-cta > * {

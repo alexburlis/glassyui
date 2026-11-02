@@ -3,7 +3,8 @@ export const PRO_OFFER = {
   earlyBirdCap: 100,
   earlyBirdOpen: true,
   earlyBirdPrice: 99,
-  firstReleaseEstimate: 'November 2026',
+  firstRelease: { month: 'November', year: 2026 },
+  refundDays: 14,
   regularPrice: 199,
 } as const;
 
