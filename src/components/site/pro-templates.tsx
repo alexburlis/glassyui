@@ -11,8 +11,9 @@ import {
   GlassDialogTitle,
 } from '@/components/liquid';
 import { TemplateCardBody } from '@/components/site/template-card';
+import { captureAction } from '@/lib/analytics/browser';
 import { PRO_OFFER } from '@/lib/pro-teaser';
-import { PRO_ORIGIN } from '@/lib/site-links';
+import { PRO_CHECKOUT_URL, PRO_ORIGIN } from '@/lib/site-links';
 import { PRO_CARDS, type ProCard } from '@/lib/template-gallery';
 
 const price = PRO_OFFER.earlyBirdOpen ? PRO_OFFER.earlyBirdPrice : PRO_OFFER.regularPrice;
@@ -88,6 +89,24 @@ export function ProTemplates() {
     opener.current = event.currentTarget;
     setShown(card);
     setOpen(true);
+    captureAction({
+      source: 'template',
+      action: 'pro_preview',
+      outcome: 'opened',
+      template: card.slug,
+    });
+  };
+
+  const pick = (card: ProCard) => {
+    if (card === shown) return;
+
+    setShown(card);
+    captureAction({
+      source: 'template',
+      action: 'pro_preview',
+      outcome: 'selected',
+      template: card.slug,
+    });
   };
 
   return (
@@ -191,11 +210,12 @@ export function ProTemplates() {
                 </span>
               </p>
               <GlassButton asChild className="template-dialog-cta" size="lg" variant="prominent">
-                <a data-analytics-source="template" href={PRO_ORIGIN}>
+                <a data-analytics-checkout data-analytics-source="template" href={PRO_CHECKOUT_URL}>
                   Pre-order for ${price}
                   <span aria-hidden> ↗</span>
                 </a>
               </GlassButton>
+              <p className="template-dialog-tax">Plus any tax</p>
             </div>
             <div className="template-dialog-strip">
               <p className="template-dialog-strip-label" id={stripLabel}>
@@ -208,7 +228,7 @@ export function ProTemplates() {
                     aria-label={`Show ${card.name}`}
                     className="template-dialog-thumb"
                     key={card.slug}
-                    onClick={() => setShown(card)}
+                    onClick={() => pick(card)}
                     type="button"
                   >
                     <Image alt="" height={800} sizes="96px" src={card.poster} width={1280} />

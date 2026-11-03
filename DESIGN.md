@@ -202,10 +202,13 @@ token in `src/styles/liquid.css`.
   templates, four to a row. A free card links to its page, except a template
   that is not out yet. A Pro card opens one dialog that sells the pre-order: the
   poster, a strip that switches between the Pro templates, when it ships, the
-  price, the refund promise and one call to action. While open it sits above the
-  analytics prompt. Without script, or with a modifier key, the card links to
-  the Pro site. Pro posters are design previews, and the gallery and the dialog
-  say so.
+  price, the refund promise and one call to action, which opens Pro's checkout
+  itself, with Plus any tax under it as on the Pro site. On a phone the price
+  and the button come before the benefits, and a short phone crops the poster
+  lower, so the dialog opens with the button in view. While open it sits above
+  the analytics prompt. Without script, or with a modifier key, the card links
+  to the Pro site. Pro posters are design previews, and the gallery and the
+  dialog say so.
 - The dock is a quiet glass shelf with space around its icons. Full app artwork
   fills an item; navigation glyphs stay small inside the same generous target.
   Hover and keyboard focus never resize the dock or its neighbours. Nothing is

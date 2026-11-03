@@ -4585,6 +4585,7 @@ a.template-card:hover .template-card-title {
 .template-dialog-timing,
 .template-dialog-check,
 .template-dialog-terms,
+.template-dialog-tax,
 .template-dialog-strip-label,
 .template-dialog-note {
   color: var(--lg-muted-foreground);
@@ -4680,6 +4681,11 @@ a.template-card:hover .template-card-title {
   margin-top: 16px;
 }
 
+.template-dialog-tax {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
 .template-dialog-strip {
   grid-area: strip;
   min-width: 0;
@@ -4745,6 +4751,38 @@ a.template-card:hover .template-card-title {
 @media (max-width: 767px) {
   .template-dialog {
     padding-top: 21px;
+  }
+
+  /* After the button rather than before it, so a phone opens with the price and the button in
+     view. */
+  .template-dialog-benefits {
+    order: 1;
+    margin-top: 20px;
+  }
+}
+
+/* A short phone, such as an iPhone SE in Safari, crops the poster lower and closes up the copy so
+   the price and the button still open in view. 640 px covers Safari's height with its toolbars
+   showing and without them. */
+@media (max-width: 767px) and (max-height: 640px) {
+  .template-dialog-body {
+    gap: 12px;
+  }
+
+  .template-dialog-poster {
+    aspect-ratio: 2 / 1;
+  }
+
+  .template-dialog-description {
+    margin-top: 8px;
+  }
+
+  .template-dialog-price {
+    margin-top: 10px;
+  }
+
+  .template-dialog-cta {
+    margin-top: 10px;
   }
 }
 

@@ -1,4 +1,5 @@
 import type { Properties } from 'posthog-js';
+import { PRO_TEMPLATE_TEASERS } from '../pro-teaser';
 
 /** Fixed categories only: never pass labels, input values or arbitrary URLs to capture. */
 export const INTERACTION_EVENTS = [
@@ -30,11 +31,15 @@ const ACTIONS = [
   'theme',
   'search_open',
   'signup',
+  'pro_preview',
 ] as const;
 
 const OUTCOMES = ['requested', 'accepted', 'failed', 'succeeded', 'selected', 'opened'] as const;
 
 const CHOICES = ['react', 'react-native', 'light', 'dark'] as const;
+
+/** The Pro templates the home page's dialog can show, by their public slugs. */
+const TEMPLATES = PRO_TEMPLATE_TEASERS.map((teaser) => teaser.slug);
 
 type Source = (typeof SOURCES)[number];
 
@@ -49,6 +54,7 @@ export type SiteAction = {
   action: (typeof ACTIONS)[number];
   outcome: (typeof OUTCOMES)[number];
   choice?: (typeof CHOICES)[number];
+  template?: string;
 };
 
 function linkDestination(href: string, pagePath: PagePath) {
@@ -77,6 +83,7 @@ export function interactionProperties(properties: Properties, pagePath: PagePath
     action: ACTIONS,
     outcome: OUTCOMES,
     choice: CHOICES,
+    template: TEMPLATES,
   })) {
     const value = properties[key];
 

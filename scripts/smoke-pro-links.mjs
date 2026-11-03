@@ -23,6 +23,9 @@ const MAIN = main.origin;
 
 const PRO = 'https://pro.glassyui.com';
 
+// Pro's Stripe Payment Link, the same one as the Pro site's own pre-order button.
+const CHECKOUT = 'https://buy.stripe.com/3cI3co4IY9aU20qbBNcZa00?prefilled_promo_code=EARLYBIRD';
+
 // The home page's templates in their order: the free ones with the pages they lead to, then Pro's
 // first release and its planned templates, each leading to its own place on the Pro site.
 const FREE_TEMPLATES = [
@@ -512,9 +515,12 @@ try {
     const opened = await dialog.evaluate((node) => {
       const parts = [
         ...node.querySelectorAll(
-          '.template-dialog-eyebrow, .template-dialog-poster, .template-dialog-title, .template-dialog-description, .template-dialog-benefits, .template-dialog-price, .template-dialog-cta, .template-dialog-strip',
+          '.template-dialog-eyebrow, .template-dialog-poster, .template-dialog-title, .template-dialog-description, .template-dialog-benefits, .template-dialog-price, .template-dialog-cta, .template-dialog-tax, .template-dialog-strip',
         ),
       ].map((part) => ({ box: part.getBoundingClientRect(), name: part.className }));
+
+      const face = node.getBoundingClientRect();
+      const action = node.querySelector('.template-dialog-cta').getBoundingClientRect();
 
       const overlaps = parts.flatMap((a, index) =>
         parts
@@ -529,12 +535,26 @@ try {
           ),
       );
 
-      return { focused: document.activeElement === node, overlaps, scrollTop: node.scrollTop };
+      return {
+        actionInView: action.top >= face.top && action.bottom <= face.bottom,
+        focused: document.activeElement === node,
+        overlaps,
+        scrollTop: node.scrollTop,
+      };
     });
 
     assert.deepEqual(opened.overlaps, [], `${label}: on a short screen no part covers another`);
     assert.equal(opened.scrollTop, 0, `${label}: the dialog opens at its poster`);
     assert.equal(opened.focused, true, `${label}: the dialog itself takes focus first`);
+
+    if (width < 768) {
+      assert.equal(
+        opened.actionInView,
+        true,
+        `${label}: a phone opens the dialog with its action in view, ahead of the benefits`,
+      );
+    }
+
     assert.equal(
       await dialog.evaluate(
         (node) => document.getElementById(node.getAttribute('aria-describedby'))?.textContent,
@@ -545,16 +565,30 @@ try {
 
     const cta = dialog.getByRole('link', { name: 'Pre-order for $99', exact: true });
 
-    assert.equal(await cta.getAttribute('href'), PRO, `${label}: the dialog's action leads to Pro`);
+    assert.equal(
+      await cta.getAttribute('href'),
+      CHECKOUT,
+      `${label}: the dialog's action opens Pro's checkout`,
+    );
     assert.equal(
       await cta.getAttribute('data-analytics-source'),
       'template',
       `${label}: the dialog's action counts as a template link`,
     );
+    assert.notEqual(
+      await cta.getAttribute('data-analytics-checkout'),
+      null,
+      `${label}: the dialog's action counts as a checkout click`,
+    );
     assert.equal(
       await dialog.locator('.template-dialog-price').textContent(),
       '$99Early bird for the first 100, then $199',
       `${label}: the dialog states the regular price as the price after the early bird`,
+    );
+    assert.equal(
+      await dialog.locator('.template-dialog-tax').textContent(),
+      'Plus any tax',
+      `${label}: like the Pro site's button, the dialog's says tax comes on top`,
     );
     await page.keyboard.press('Tab');
     assert.equal(

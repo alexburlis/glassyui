@@ -260,9 +260,9 @@ third argument for a focused free-only check.
 
 ## Interaction coverage
 
-`interactions.ts` owns fixed source/action/outcome/choice categories and safe
-destinations. The existing permission lifecycle attaches one delegated link
-listener and removes it on withdrawal. Banner, template, announcement,
+`interactions.ts` owns fixed source/action/outcome/choice/template categories
+and safe destinations. The existing permission lifecycle attaches one delegated
+link listener and removes it on withdrawal. Banner, template, announcement,
 navigation, footer, sidebar and search placement are distinguishable. Primary
 and middle clicks emit one intent; context-menu navigation and browser UI are
 outside page instrumentation. Demo content is excluded. Install/source copy
@@ -277,6 +277,18 @@ Copy and signup results are bound to the SDK permission window where the action
 began. Granting consent during a pending action, or withdrawing and accepting
 again, does not revive that action for measurement. The requested copy/signup
 itself still works.
+
+## Pro template previews
+
+A card under Coming soon to Pro on the home page opens the Pro dialog and
+records `site_action` with `source: template`, `action: pro_preview`,
+`outcome: opened` and `template`, the template's public slug from
+`src/lib/pro-teaser.ts`; any other slug is dropped. Switching templates in the
+dialog's strip records `outcome: selected` with the new slug; choosing the
+template already shown records nothing. The dialog's button links straight to
+Pro's Stripe checkout and records `pro_checkout_click` with `source: template`.
+Checkout clicks divided by opens give the dialog's click-through rate; a
+checkout click is intent, never payment.
 
 ## Pro gallery banner impressions and click-through rate
 
