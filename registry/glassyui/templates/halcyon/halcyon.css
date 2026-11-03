@@ -497,6 +497,47 @@ html:has(.halcyon-page) {
   text-align: left;
 }
 
+/* Keep the face clear; the narrow lens carries the thickness at the rim. */
+.halcyon-waitlist {
+  --lg-glass-thickness: 1;
+  --lg-lens-bevel: 18;
+  --lg-lens-thickness: 64;
+  --lg-lens-depth: 1;
+  --lg-lens-ior: 1.5;
+  --lg-lens-blur: 0.75;
+  --lg-lens-dispersion: 0;
+}
+
+.halcyon-waitlist::before {
+  background-color: rgb(12 20 38 / 0.12);
+}
+
+.halcyon-waitlist-submit {
+  --lg-accent-foreground: #e7fbff;
+  --lg-prominent-tint: saturate(0.85) brightness(1.05);
+  --lg-lens-bevel: 10;
+  --lg-lens-thickness: 28;
+  --lg-lens-blur: 0.5;
+  --lg-lens-dispersion: 0;
+}
+
+.halcyon-waitlist-submit > .lg-button__layers > .lg-button__distortion {
+  background: rgb(6 28 38 / 0.55);
+}
+
+.halcyon-waitlist-submit > .lg-button__layers > .lg-button__light {
+  background: rgb(2 30 36 / 0.12);
+  box-shadow: none;
+}
+
+.halcyon-waitlist-submit > .lg-button__layers > .lg-button__tint {
+  box-shadow: inset 0 0 0 1px rgb(211 249 255 / 0.18);
+}
+
+.halcyon-waitlist-submit > .lg-button__layers > .lg-button__rim {
+  opacity: 0.35;
+}
+
 .halcyon-waitlist-clip {
   display: grid;
   padding: 18px var(--wl-pad) var(--wl-pad);
@@ -2406,4 +2447,17 @@ html:has(.halcyon-page) {
     height: 220px;
     margin-left: -110px;
   }
+}
+
+/* Native translate stays at rest immediately when motion or pointing preferences change. */
+@media (prefers-reduced-motion: reduce), (hover: none), (pointer: coarse) {
+  .halcyon-waitlist,
+  .halcyon-what-grid > .halcyon-tile:first-child {
+    translate: none !important;
+  }
+}
+
+:root[data-lg-reduce-motion='1'] .halcyon-waitlist,
+:root[data-lg-reduce-motion='1'] .halcyon-what-grid > .halcyon-tile:first-child {
+  translate: none !important;
 }
