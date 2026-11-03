@@ -22,7 +22,6 @@ import {
   GlassToastProvider,
   GlassToastViewport,
 } from '../../glass-toast';
-import { motionReduced } from '../../lib/liquid-motion';
 import { Countdown } from './countdown';
 import { FeatureTiles } from './feature-tiles';
 import { HeroArt, useHeroArt } from './hero-art';
@@ -103,115 +102,6 @@ function useOnScreen(ref: React.RefObject<HTMLElement | null>) {
   }, [ref]);
 
   return onScreen;
-}
-
-function useGlassMotion(rootRef: React.RefObject<HTMLDivElement | null>) {
-  useEffect(() => {
-    const panes = rootRef.current?.querySelectorAll<HTMLElement>(
-      '.halcyon-waitlist, .halcyon-what-grid > .halcyon-tile:first-child',
-    );
-
-    if (!panes) return;
-
-    const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-    const cleanups = Array.from(panes, (pane) => {
-      const initialTranslate = pane.style.translate;
-      const initialTransition = pane.style.transition;
-      let bounds: DOMRect | null = null;
-      let following = false;
-
-      const position = (value: string) => {
-        if (pane.style.translate !== value) pane.style.translate = value;
-      };
-
-      const invalidate = () => {
-        bounds = null;
-      };
-
-      const reset = () => {
-        bounds = null;
-        following = false;
-
-        if (pane.style.transition !== 'none') pane.style.transition = 'none';
-        position('0px 0px');
-      };
-
-      const leave = () => {
-        bounds = null;
-        following = false;
-        pane.style.transition = 'translate 260ms cubic-bezier(0.22, 1, 0.36, 1)';
-        position('0px 0px');
-      };
-
-      const move = (event: PointerEvent) => {
-        if (
-          event.pointerType !== 'mouse' ||
-          !finePointer.matches ||
-          motionReduced() ||
-          pane.contains(document.activeElement)
-        ) {
-          reset();
-
-          return;
-        }
-
-        if (!bounds) {
-          const box = pane.getBoundingClientRect();
-          const [tx = 0, ty = 0] = getComputedStyle(pane).translate.split(' ').map(parseFloat);
-
-          bounds = new DOMRect(box.left - (tx || 0), box.top - (ty || 0), box.width, box.height);
-        }
-
-        if (!following) {
-          pane.style.transition = 'translate 90ms cubic-bezier(0.22, 1, 0.36, 1)';
-          following = true;
-        }
-
-        const x = Math.max(-1, Math.min(1, ((event.clientX - bounds.left) / bounds.width) * 2 - 1));
-        const y = Math.max(-1, Math.min(1, ((event.clientY - bounds.top) / bounds.height) * 2 - 1));
-
-        position(`${(x * 3).toFixed(3)}px ${(y * 4).toFixed(3)}px`);
-      };
-
-      const resize = new ResizeObserver(invalidate);
-      const preference = new MutationObserver(reset);
-
-      resize.observe(pane);
-      preference.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ['data-lg-reduce-motion'],
-      });
-      pane.addEventListener('pointermove', move, { passive: true });
-      pane.addEventListener('pointerleave', leave);
-      pane.addEventListener('focusin', reset);
-      finePointer.addEventListener('change', reset);
-      reducedMotion.addEventListener('change', reset);
-      window.addEventListener('scroll', reset, true);
-      window.addEventListener('resize', reset);
-      window.addEventListener('blur', reset);
-      document.addEventListener('visibilitychange', reset);
-
-      return () => {
-        resize.disconnect();
-        preference.disconnect();
-        pane.removeEventListener('pointermove', move);
-        pane.removeEventListener('pointerleave', leave);
-        pane.removeEventListener('focusin', reset);
-        finePointer.removeEventListener('change', reset);
-        reducedMotion.removeEventListener('change', reset);
-        window.removeEventListener('scroll', reset, true);
-        window.removeEventListener('resize', reset);
-        window.removeEventListener('blur', reset);
-        document.removeEventListener('visibilitychange', reset);
-        pane.style.translate = initialTranslate;
-        pane.style.transition = initialTransition;
-      };
-    });
-
-    return () => cleanups.forEach((cleanup) => cleanup());
-  }, [rootRef]);
 }
 
 /** Rests the footer's horizon on the countdown, two thirds of the way down its panes. */
@@ -317,7 +207,6 @@ function PrivacyDoc() {
  * the form is a demo that shows success and sends nothing.
  */
 export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
-  const rootRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLElement>(null);
   const waitlistSlotRef = useRef<HTMLDivElement>(null);
   const waitlistRef = useRef<WaitlistHandle>(null);
@@ -325,7 +214,6 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
   const footerRef = useRef<HTMLElement>(null);
   const art = useHeroArt(heroRef, waitlistSlotRef);
 
-  useGlassMotion(rootRef);
   useFooterHorizon(footerRef);
   const waitlistOnScreen = useOnScreen(waitlistSlotRef);
   const footerActionOnScreen = useOnScreen(footerActionRef);
@@ -370,7 +258,7 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
 
   return (
     <GlassToastProvider duration={3800} label="Notification">
-      <div ref={rootRef} className="halcyon halcyon-page" data-lg-theme="dark">
+      <div className="halcyon halcyon-page" data-lg-theme="dark">
         <HalcyonMarkGradient />
         <a className="halcyon-skip" href="#halcyon-email">
           Skip to the waitlist

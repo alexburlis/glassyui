@@ -2105,6 +2105,16 @@ html:has(.halcyon-page) {
   }
 }
 
+@keyframes halcyon-glass-drift {
+  from {
+    translate: 0 0;
+  }
+
+  to {
+    translate: 0 -8px;
+  }
+}
+
 @keyframes halcyon-rise {
   from {
     transform: translateY(32px);
@@ -2176,6 +2186,13 @@ html:has(.halcyon-page) {
   }
 
   @supports (animation-timeline: view()) {
+    /* Only eight pixels of drift as the glass leaves; its entrance and form keep their transforms. */
+    :root:not([data-lg-reduce-motion='1']) .halcyon-waitlist {
+      animation: halcyon-glass-drift linear both;
+      animation-timeline: view();
+      animation-range: exit 0% exit 100%;
+    }
+
     :root:not([data-lg-reduce-motion='1']) .halcyon-reveal-text {
       animation: halcyon-focus-in linear forwards;
       animation-timeline: view();
@@ -2479,17 +2496,4 @@ html:has(.halcyon-page) {
     height: 220px;
     margin-left: -110px;
   }
-}
-
-/* Native translate stays at rest immediately when motion or pointing preferences change. */
-@media (prefers-reduced-motion: reduce), (hover: none), (pointer: coarse) {
-  .halcyon-waitlist,
-  .halcyon-what-grid > .halcyon-tile:first-child {
-    translate: none !important;
-  }
-}
-
-:root[data-lg-reduce-motion='1'] .halcyon-waitlist,
-:root[data-lg-reduce-motion='1'] .halcyon-what-grid > .halcyon-tile:first-child {
-  translate: none !important;
 }
