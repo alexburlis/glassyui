@@ -2107,11 +2107,11 @@ html:has(.halcyon-page) {
 
 @keyframes halcyon-glass-drift {
   from {
-    translate: 0 0;
+    translate: 0 56px;
   }
 
   to {
-    translate: 0 -8px;
+    translate: 0 -56px;
   }
 }
 
@@ -2186,11 +2186,11 @@ html:has(.halcyon-page) {
   }
 
   @supports (animation-timeline: view()) {
-    /* Only eight pixels of drift as the glass leaves; its entrance and form keep their transforms. */
+    /* The glass crosses the horizon while visible, independently of its entrance and form. */
     :root:not([data-lg-reduce-motion='1']) .halcyon-waitlist {
       animation: halcyon-glass-drift linear both;
-      animation-timeline: view();
-      animation-range: exit 0% exit 100%;
+      animation-timeline: view(block 0px);
+      animation-range: entry 0% exit 100%;
     }
 
     :root:not([data-lg-reduce-motion='1']) .halcyon-reveal-text {
