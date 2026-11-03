@@ -93,6 +93,9 @@ function usePaintedBackdrop(
 ) {
   const painterRef = useRef(painter);
   const paintRef = useRef<(() => void) | null>(null);
+  // The painter's clock outlives a change of pace, so a scene that slows down after an opening
+  // does not start it again.
+  const startRef = useRef<number | undefined>(undefined);
   const painted = painter !== undefined;
 
   useEffect(() => {
@@ -103,7 +106,6 @@ function usePaintedBackdrop(
 
     const interval = fps > 0 ? 1000 / fps : 0;
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    let start: number | undefined;
     let last = -Infinity;
     let previous = 0;
     let frame = 0;
@@ -133,14 +135,14 @@ function usePaintedBackdrop(
         layer.height = pixelHeight;
       }
 
-      start ??= now;
+      startRef.current ??= now;
       context.setTransform(density, 0, 0, density, 0, 0);
 
       const changed = painterRef.current(context, {
         width,
         height,
         density,
-        time: motionReduced() ? 0 : now - start,
+        time: motionReduced() ? 0 : now - startRef.current,
       });
 
       // A renderer that has not seen this canvas yet takes its picture as it is, so one made
