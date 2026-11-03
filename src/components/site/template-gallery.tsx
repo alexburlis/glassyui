@@ -48,7 +48,6 @@ export function TemplateGallery() {
       <div className="template-group">
         <header className="template-group-header">
           <h3 className="template-group-title">Free templates</h3>
-          <p className="template-group-lead">Ready now. Each installs with one command.</p>
         </header>
         <div className="template-grid">
           {FREE_CARDS.map((card, index) => (

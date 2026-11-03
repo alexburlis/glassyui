@@ -155,6 +155,8 @@ token in `src/styles/liquid.css`.
   gallery, and the tile beside Pro's first release in the home page's templates.
   Their copy is white, and the red deepens down each card so the copy keeps 5:1.
   The tile and the Pro dialog are the only places on the home page with a price.
+  Both give the regular price as the price after the early bird and never strike
+  it through: nobody has paid it yet.
 - Purple remains an opt-in badge API for consumers; site branding and default
   examples use no purple.
 - The dimmest text keeps 4.5:1 contrast on both the page and its tiles.

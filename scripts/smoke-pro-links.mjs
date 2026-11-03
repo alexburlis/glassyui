@@ -500,11 +500,41 @@ try {
       `${label}: a modified click on Northstar keeps its link to Pro`,
     );
 
+    // A short screen, like a small phone or a browser with its toolbars showing, makes the dialog
+    // taller than the window.
+    await page.setViewportSize({ width, height: 560 });
     await northstar.click();
 
     const dialog = page.getByRole('dialog');
 
     await page.getByRole('dialog', { name: 'Northstar' }).waitFor();
+
+    const opened = await dialog.evaluate((node) => {
+      const parts = [
+        ...node.querySelectorAll(
+          '.template-dialog-eyebrow, .template-dialog-poster, .template-dialog-title, .template-dialog-description, .template-dialog-benefits, .template-dialog-price, .template-dialog-cta, .template-dialog-strip',
+        ),
+      ].map((part) => ({ box: part.getBoundingClientRect(), name: part.className }));
+
+      const overlaps = parts.flatMap((a, index) =>
+        parts
+          .slice(index + 1)
+          .flatMap((b) =>
+            a.box.left < b.box.right - 1 &&
+            b.box.left < a.box.right - 1 &&
+            a.box.top < b.box.bottom - 1 &&
+            b.box.top < a.box.bottom - 1
+              ? [`${a.name} over ${b.name}`]
+              : [],
+          ),
+      );
+
+      return { focused: document.activeElement === node, overlaps, scrollTop: node.scrollTop };
+    });
+
+    assert.deepEqual(opened.overlaps, [], `${label}: on a short screen no part covers another`);
+    assert.equal(opened.scrollTop, 0, `${label}: the dialog opens at its poster`);
+    assert.equal(opened.focused, true, `${label}: the dialog itself takes focus first`);
     assert.equal(
       await dialog.evaluate(
         (node) => document.getElementById(node.getAttribute('aria-describedby'))?.textContent,
@@ -522,9 +552,15 @@ try {
       `${label}: the dialog's action counts as a template link`,
     );
     assert.equal(
+      await dialog.locator('.template-dialog-price').textContent(),
+      '$99Early bird for the first 100, then $199',
+      `${label}: the dialog states the regular price as the price after the early bird`,
+    );
+    await page.keyboard.press('Tab');
+    assert.equal(
       await cta.evaluate((node) => node === document.activeElement),
       true,
-      `${label}: the dialog's action takes focus first`,
+      `${label}: Tab reaches the dialog's action first`,
     );
     // A first visit still shows the analytics prompt, which sits over the rest of the page.
     assert.equal(

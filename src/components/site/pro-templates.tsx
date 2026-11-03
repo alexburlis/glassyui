@@ -76,7 +76,6 @@ export function ProTemplates() {
   // Separate from open, so the dialog keeps its template while it closes.
   const [shown, setShown] = useState(PRO_CARDS[0]);
   const opener = useRef<HTMLAnchorElement>(null);
-  const cta = useRef<HTMLAnchorElement>(null);
   const stripLabel = useId();
 
   const show = (event: MouseEvent<HTMLAnchorElement>, card: ProCard) => {
@@ -95,9 +94,6 @@ export function ProTemplates() {
     <div className="template-group">
       <header className="template-group-header">
         <h3 className="template-group-title">Coming soon to Pro</h3>
-        <p className="template-group-lead">
-          Pre-order once and get each template the day it ships.
-        </p>
       </header>
       <div className="template-grid" data-status="first-release">
         {firstRelease.map((card) => (
@@ -146,83 +142,81 @@ export function ProTemplates() {
             opener.current?.focus();
           }}
           onOpenAutoFocus={(event) => {
-            // Radix never gives a link the first focus, and the call to action is one.
+            // The dialog itself takes focus, so a short screen opens on the poster rather than
+            // scrolled down to the call to action, which is the first stop for Tab.
             event.preventDefault();
-            cta.current?.focus();
+
+            if (event.currentTarget instanceof HTMLElement) {
+              event.currentTarget.focus({ preventScroll: true });
+            }
           }}
         >
-          <p className="template-dialog-eyebrow">{shown.chip}</p>
-          <div className="template-dialog-poster">
-            <Image
-              alt={`${shown.name} design preview`}
-              height={800}
-              sizes="(min-width: 768px) 500px, 92vw"
-              src={shown.poster}
-              width={1280}
-            />
-          </div>
-          <div className="template-dialog-details">
-            <GlassDialogTitle className="template-dialog-title">{shown.name}</GlassDialogTitle>
-            <p className="template-dialog-kind">{shown.kind}</p>
-            <p className="template-dialog-timing">{shown.timing}</p>
-            <GlassDialogDescription className="template-dialog-description">
-              Pre-order Glassy UI Pro and get {shown.name} the day it ships.
-            </GlassDialogDescription>
-            <ul className="template-dialog-benefits">
-              <li>
-                <CheckGlyph />
-                One purchase covers every Pro template and update, including later ones.
-              </li>
-              <li>
-                <CheckGlyph />
-                {refund}
-              </li>
-            </ul>
-            <p className="template-dialog-price">
-              {PRO_OFFER.earlyBirdOpen ? (
-                <>
-                  <span className="template-dialog-amount">${PRO_OFFER.earlyBirdPrice}</span>
-                  <s className="template-dialog-regular">
-                    <span className="lg-visually-hidden">Regular price </span>$
-                    {PRO_OFFER.regularPrice}
-                  </s>
-                  <span className="template-dialog-terms">
-                    Early bird for the first {PRO_OFFER.earlyBirdCap}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="template-dialog-amount">${PRO_OFFER.regularPrice}</span>
-                  <span className="template-dialog-terms">Paid once</span>
-                </>
-              )}
-            </p>
-            <GlassButton asChild className="template-dialog-cta" size="lg" variant="prominent">
-              <a data-analytics-source="template" href={PRO_ORIGIN} ref={cta}>
-                Pre-order for ${price}
-                <span aria-hidden> ↗</span>
-              </a>
-            </GlassButton>
-          </div>
-          <div className="template-dialog-strip">
-            <p className="template-dialog-strip-label" id={stripLabel}>
-              Included with Pro
-            </p>
-            <div aria-labelledby={stripLabel} className="template-dialog-thumbs" role="group">
-              {PRO_CARDS.map((card) => (
-                <button
-                  aria-current={card === shown || undefined}
-                  aria-label={`Show ${card.name}`}
-                  className="template-dialog-thumb"
-                  key={card.slug}
-                  onClick={() => setShown(card)}
-                  type="button"
-                >
-                  <Image alt="" height={800} sizes="96px" src={card.poster} width={1280} />
-                </button>
-              ))}
+          <div className="template-dialog-body">
+            <p className="template-dialog-eyebrow">{shown.chip}</p>
+            <div className="template-dialog-poster">
+              <Image
+                alt={`${shown.name} design preview`}
+                height={800}
+                sizes="(min-width: 768px) 500px, 92vw"
+                src={shown.poster}
+                width={1280}
+              />
             </div>
-            <p className="template-dialog-note">Images are design previews.</p>
+            <div className="template-dialog-details">
+              <GlassDialogTitle className="template-dialog-title">{shown.name}</GlassDialogTitle>
+              <p className="template-dialog-kind">{shown.kind}</p>
+              <p className="template-dialog-timing">{shown.timing}</p>
+              <GlassDialogDescription className="template-dialog-description">
+                Pre-order Glassy UI Pro and get {shown.name} the day it ships.
+              </GlassDialogDescription>
+              <ul className="template-dialog-benefits">
+                <li>
+                  <CheckGlyph />A complete Next.js site built from Glassy UI.
+                </li>
+                <li>
+                  <CheckGlyph />
+                  One purchase covers every Pro template and update, including later ones.
+                </li>
+                <li>
+                  <CheckGlyph />
+                  {refund}
+                </li>
+              </ul>
+              <p className="template-dialog-price">
+                <span className="template-dialog-amount">${price}</span>
+                <span className="template-dialog-terms">
+                  {PRO_OFFER.earlyBirdOpen
+                    ? `Early bird for the first ${PRO_OFFER.earlyBirdCap}, then $${PRO_OFFER.regularPrice}`
+                    : 'Paid once'}
+                </span>
+              </p>
+              <GlassButton asChild className="template-dialog-cta" size="lg" variant="prominent">
+                <a data-analytics-source="template" href={PRO_ORIGIN}>
+                  Pre-order for ${price}
+                  <span aria-hidden> ↗</span>
+                </a>
+              </GlassButton>
+            </div>
+            <div className="template-dialog-strip">
+              <p className="template-dialog-strip-label" id={stripLabel}>
+                Included with Pro
+              </p>
+              <div aria-labelledby={stripLabel} className="template-dialog-thumbs" role="group">
+                {PRO_CARDS.map((card) => (
+                  <button
+                    aria-current={card === shown || undefined}
+                    aria-label={`Show ${card.name}`}
+                    className="template-dialog-thumb"
+                    key={card.slug}
+                    onClick={() => setShown(card)}
+                    type="button"
+                  >
+                    <Image alt="" height={800} sizes="96px" src={card.poster} width={1280} />
+                  </button>
+                ))}
+              </div>
+              <p className="template-dialog-note">Images are design previews.</p>
+            </div>
           </div>
         </GlassDialogContent>
       </GlassDialog>

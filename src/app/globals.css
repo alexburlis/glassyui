@@ -4246,14 +4246,6 @@ main :focus {
   letter-spacing: -0.015em;
 }
 
-.template-group-lead {
-  margin-top: 4px;
-  color: var(--site-text-2);
-  font-size: 15px;
-  line-height: 1.4;
-  text-wrap: pretty;
-}
-
 .template-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -4537,10 +4529,21 @@ a.template-card:hover .template-card-title {
 /* ----------------------------------------------------------- Pro dialog */
 
 .template-dialog {
+  max-width: 940px;
+}
+
+/* The scrolling face stays a block, so a short screen scrolls the grid instead of squeezing the
+   poster's row under the copy. */
+.template-dialog-body {
   display: grid;
   grid-template-areas: 'eyebrow' 'poster' 'details' 'strip';
   gap: 20px;
-  max-width: 940px;
+}
+
+/* Frost alone lets the gallery's copy read through behind the dialog's where no lens is drawn, so
+   the face carries the legible tint. */
+.template-dialog::before {
+  background-color: var(--site-legible-tint);
 }
 
 /* Over the analytics prompt, which would otherwise cover the call to action on a phone while the
@@ -4581,7 +4584,6 @@ a.template-card:hover .template-card-title {
 .template-dialog-kind,
 .template-dialog-timing,
 .template-dialog-check,
-.template-dialog-regular,
 .template-dialog-terms,
 .template-dialog-strip-label,
 .template-dialog-note {
@@ -4670,10 +4672,6 @@ a.template-card:hover .template-card-title {
   letter-spacing: -0.015em;
 }
 
-.template-dialog-regular {
-  font-size: 17px;
-}
-
 .template-dialog-terms {
   font-size: 14px;
 }
@@ -4753,7 +4751,7 @@ a.template-card:hover .template-card-title {
 /* The strip sits under the poster it switches, and the spare height of the taller column falls
    between them. */
 @media (min-width: 768px) {
-  .template-dialog {
+  .template-dialog-body {
     grid-template-areas:
       'poster eyebrow'
       'poster details'
