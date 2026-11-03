@@ -28,6 +28,22 @@ const planned = PRO_CARDS.filter((card) => card.status === 'planned');
 // them comes with Pro.
 const fan = planned.length >= 3 ? [planned[1], planned[0], planned[2]] : planned;
 
+/** The dialog's way through the collection: a chevron pointing back or on. */
+function StepGlyph({ direction }: { direction: 'previous' | 'next' }) {
+  return (
+    <svg aria-hidden className="template-dialog-step-glyph" viewBox="0 0 16 16">
+      <path
+        d={direction === 'previous' ? 'm10 3.5-4.5 4.5 4.5 4.5' : 'm6 3.5 4.5 4.5L6 12.5'}
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
 function CheckGlyph() {
   return (
     <svg aria-hidden className="template-dialog-check" viewBox="0 0 16 16">
@@ -79,8 +95,12 @@ export function ProTemplates({ backdropOffset }: { backdropOffset: number }) {
   const [open, setOpen] = useState(false);
   // Separate from open, so the dialog keeps its template while it closes.
   const [shown, setShown] = useState(PRO_CARDS[0]);
+  // The template just paged away from, which fades out under the one shown.
+  const [previous, setPrevious] = useState<ProCard | null>(null);
   const opener = useRef<HTMLAnchorElement>(null);
+  const swipe = useRef<{ x: number; y: number } | null>(null);
   const stripLabel = useId();
+  const position = PRO_CARDS.indexOf(shown);
 
   const show = (event: MouseEvent<HTMLAnchorElement>, card: ProCard) => {
     // A modified click keeps the link, so the Pro site still opens in a new tab or window.
@@ -90,6 +110,7 @@ export function ProTemplates({ backdropOffset }: { backdropOffset: number }) {
 
     event.preventDefault();
     opener.current = event.currentTarget;
+    setPrevious(null);
     setShown(card);
     setOpen(true);
     captureAction({
@@ -103,6 +124,7 @@ export function ProTemplates({ backdropOffset }: { backdropOffset: number }) {
   const pick = (card: ProCard) => {
     if (card === shown) return;
 
+    setPrevious(shown);
     setShown(card);
     captureAction({
       source: 'template',
@@ -112,10 +134,27 @@ export function ProTemplates({ backdropOffset }: { backdropOffset: number }) {
     });
   };
 
+  // The collection runs round: on from the last template comes back to the first.
+  const neighbour = (by: 1 | -1) =>
+    PRO_CARDS[(position + by + PRO_CARDS.length) % PRO_CARDS.length];
+
+  const step = (by: 1 | -1) => pick(neighbour(by));
+
+  // The frame holds the poster shown, the one fading out and the two a step away, already loaded
+  // so a step crossfades at once; a jump from the strip loads its poster as it fades in.
+  const framed = PRO_CARDS.filter(
+    (card) =>
+      card === shown || card === previous || card === neighbour(1) || card === neighbour(-1),
+  );
+
   return (
     <div className="template-group">
       <header className="template-group-header">
         <h3 className="template-group-title">Coming soon to Pro</h3>
+        <span className="template-group-count">
+          {PRO_CARDS.length}
+          <span className="sr-only"> templates</span>
+        </span>
       </header>
       <div className="template-row">
         <div className="template-grid" data-status="first-release">
@@ -177,6 +216,15 @@ export function ProTemplates({ backdropOffset }: { backdropOffset: number }) {
         <GlassDialogContent
           className="template-dialog"
           closeLabel="Close"
+          // The arrow keys page through the collection from anywhere in the dialog.
+          onKeyDown={(event) => {
+            if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+
+            if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+
+            event.preventDefault();
+            step(event.key === 'ArrowRight' ? 1 : -1);
+          }}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
             opener.current?.focus();
@@ -193,12 +241,77 @@ export function ProTemplates({ backdropOffset }: { backdropOffset: number }) {
         >
           <div className="template-dialog-body">
             <p className="template-dialog-eyebrow">{shown.chip}</p>
-            <TemplateWindow
-              alt={`${shown.name} design preview`}
-              className="template-dialog-poster"
-              sizes="(min-width: 768px) 500px, 92vw"
-              src={shown.poster}
-            />
+            <div className="template-dialog-poster">
+              <span aria-hidden className="template-window-bar">
+                <i />
+                <i />
+                <i />
+              </span>
+              {/* A swipe across the poster pages too. The buttons are for a pointer; the keyboard
+                  has the arrow keys and the strip. */}
+              <div
+                className="template-card-poster"
+                onPointerCancel={() => {
+                  swipe.current = null;
+                }}
+                onPointerDown={(event) => {
+                  if (event.pointerType === 'touch') {
+                    swipe.current = { x: event.clientX, y: event.clientY };
+                  }
+                }}
+                onPointerUp={(event) => {
+                  const start = swipe.current;
+
+                  swipe.current = null;
+
+                  if (!start) return;
+
+                  const across = event.clientX - start.x;
+
+                  if (
+                    Math.abs(across) > 40 &&
+                    Math.abs(across) > 1.5 * Math.abs(event.clientY - start.y)
+                  ) {
+                    step(across < 0 ? 1 : -1);
+                  }
+                }}
+              >
+                {framed.map((card) => (
+                  <Image
+                    alt={card === shown ? `${card.name} design preview` : ''}
+                    aria-hidden={card === shown ? undefined : true}
+                    data-shown={card === shown || undefined}
+                    height={800}
+                    key={card.slug}
+                    sizes="(min-width: 768px) 500px, 92vw"
+                    src={card.poster}
+                    width={1280}
+                  />
+                ))}
+                <GlassButton
+                  aria-label="Previous template"
+                  className="template-dialog-step"
+                  data-direction="previous"
+                  onClick={() => step(-1)}
+                  size="sm"
+                  tabIndex={-1}
+                  variant="primary"
+                >
+                  <StepGlyph direction="previous" />
+                </GlassButton>
+                <GlassButton
+                  aria-label="Next template"
+                  className="template-dialog-step"
+                  data-direction="next"
+                  onClick={() => step(1)}
+                  size="sm"
+                  tabIndex={-1}
+                  variant="primary"
+                >
+                  <StepGlyph direction="next" />
+                </GlassButton>
+              </div>
+            </div>
             <div className="template-dialog-details">
               <GlassDialogTitle className="template-dialog-title">{shown.name}</GlassDialogTitle>
               <p className="template-dialog-kind">{shown.kind}</p>
@@ -236,9 +349,14 @@ export function ProTemplates({ backdropOffset }: { backdropOffset: number }) {
               <p className="template-dialog-tax">Plus any tax</p>
             </div>
             <div className="template-dialog-strip">
-              <p className="template-dialog-strip-label" id={stripLabel}>
-                Included with Pro
-              </p>
+              <div className="template-dialog-strip-header">
+                <p className="template-dialog-strip-label" id={stripLabel}>
+                  Included with Pro
+                </p>
+                <p aria-live="polite" className="template-dialog-count">
+                  {position + 1} of {PRO_CARDS.length}
+                </p>
+              </div>
               <div aria-labelledby={stripLabel} className="template-dialog-thumbs" role="group">
                 {PRO_CARDS.map((card) => (
                   <button

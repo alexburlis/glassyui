@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ProTemplates } from '@/components/site/pro-templates';
 import { TemplateCardBody } from '@/components/site/template-card';
+import { TemplatePointer } from '@/components/site/template-pointer';
 import { FREE_CARDS, type FreeCard } from '@/lib/template-gallery';
 
 // From 640 to 1023 px the free cards sit two to a row, so the first of an odd number spans the
@@ -34,10 +35,11 @@ function FreeTemplateCard({ card, index, wide }: { card: FreeCard; index: number
 
 export function TemplateGallery() {
   return (
-    <div className="template-gallery">
+    <TemplatePointer className="template-gallery">
       <div className="template-group">
         <header className="template-group-header">
           <h3 className="template-group-title">Free templates</h3>
+          <span className="template-group-count">{FREE_CARDS.length}</span>
         </header>
         <div className="template-grid">
           {FREE_CARDS.map((card, index) => (
@@ -51,6 +53,6 @@ export function TemplateGallery() {
         </div>
       </div>
       <ProTemplates backdropOffset={FREE_CARDS.length} />
-    </div>
+    </TemplatePointer>
   );
 }

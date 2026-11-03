@@ -96,6 +96,7 @@ const REVEALS = [
   '.component-card',
   '.template-group-header',
   '.template-card',
+  '.template-window',
   '.template-pro-tile',
   '.bento-tile',
   '.home-step',

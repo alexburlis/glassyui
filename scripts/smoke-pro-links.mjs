@@ -674,7 +674,7 @@ try {
     );
     await page.waitForFunction(
       () => {
-        const poster = document.querySelector('.template-dialog-poster img');
+        const poster = document.querySelector('.template-dialog-poster img[data-shown]');
 
         return poster?.complete && poster.naturalWidth > 0 && poster.currentSrc.includes('tempo');
       },
@@ -682,6 +682,19 @@ try {
       { timeout: 15_000 },
     );
     await capture(page, `home-${width}-dialog`, { fullPage: false });
+
+    // The arrow keys page through the whole collection, round from the last to the first.
+    await page.keyboard.press('ArrowRight');
+    await page.getByRole('dialog', { name: PRO_PLANNED[0] }).waitFor();
+    assert.equal(
+      await dialog.locator('.template-dialog-count').textContent(),
+      `3 of ${PRO_FIRST_RELEASE.length + PRO_PLANNED.length}`,
+      `${label}: the dialog counts its place in the collection`,
+    );
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('ArrowLeft');
+    await page.getByRole('dialog', { name: PRO_PLANNED.at(-1) }).waitFor();
 
     await page.keyboard.press('Escape');
     await dialog.waitFor({ state: 'hidden' });

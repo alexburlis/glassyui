@@ -4237,7 +4237,26 @@ main :focus {
 }
 
 .template-group-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 20px;
+}
+
+/* How many templates the group holds: the size of the collection. */
+.template-group-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--site-fill-strong);
+  color: var(--site-text-2);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .template-group-title {
@@ -4282,12 +4301,23 @@ main :focus {
   content: '';
 }
 
-/* The window's margins and frame scale with the card, from a phone's shelf to a wide row. */
+/* How much of the pointer's light the glass catches, faded in and out as the pointer comes and
+   goes (template-pointer.tsx). */
+@property --pointer-light {
+  inherits: true;
+  initial-value: 0;
+  syntax: '<number>';
+}
+
+/* The window's margins and frame scale with the card, from a phone's shelf to a wide row. The
+   card, its stage, the Pro tile and its fan clip rather than hide their overflow: a hidden overflow
+   is a scroll container, which the windows' and forms' scroll-driven motion would follow instead
+   of the page. */
 .template-card {
   container-type: inline-size;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: clip;
   border-radius: 24px;
   background: var(--site-tile);
   color: var(--site-text);
@@ -4298,7 +4328,7 @@ main :focus {
 
   position: relative;
   isolation: isolate;
-  overflow: hidden;
+  overflow: clip;
   padding: var(--window-inset) var(--window-inset) 0;
   background: var(--site-stage);
 }
@@ -4346,6 +4376,30 @@ main :focus {
   inset: 0;
   border-radius: inherit;
   background: linear-gradient(140deg, rgb(255 255 255 / 0.4), transparent 32%);
+  content: '';
+  pointer-events: none;
+}
+
+/* Under a pointer the frame lights up where it points, behind the poster, so only the glass round
+   it shows the light; over the poster a fainter glare crosses the screen. */
+.template-window::before {
+  background:
+    radial-gradient(
+      circle at calc(var(--pointer-x, 0.5) * 100%) calc(var(--pointer-y, 0.5) * 100%),
+      rgb(255 255 255 / calc(0.7 * var(--pointer-light))),
+      transparent 46%
+    ),
+    linear-gradient(140deg, rgb(255 255 255 / 0.4), transparent 32%);
+}
+
+.template-window .template-card-poster::after {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at calc(var(--pointer-x, 0.5) * 100%) calc(var(--pointer-y, 0.5) * 100%),
+    rgb(255 255 255 / calc(0.2 * var(--pointer-light))),
+    transparent 58%
+  );
   content: '';
   pointer-events: none;
 }
@@ -4467,7 +4521,7 @@ a.template-card:hover .template-card-title {
   position: relative;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: clip;
   border-radius: 24px;
   background: radial-gradient(120% 70% at 12% 0%, rgb(255 205 175 / 0.6), transparent 62%), #ff8656;
   box-shadow:
@@ -4494,7 +4548,7 @@ a.template-card:hover .template-card-title {
   z-index: 1;
   flex: 1;
   min-height: clamp(150px, 46cqi, 190px);
-  overflow: hidden;
+  overflow: clip;
 }
 
 /* Beside the first release the cards set the row's height and the fan takes what the copy
@@ -4736,6 +4790,59 @@ a.template-card:hover .template-card-title {
   --window-radius: 16px;
 
   grid-area: poster;
+}
+
+/* The posters in the frame lie on each other and the shown one fades in over the rest. A sideways
+   swipe pages; an upright one still scrolls the dialog. */
+.template-dialog-poster .template-card-poster {
+  touch-action: pan-y;
+}
+
+.template-dialog-poster .template-card-poster img {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.template-dialog-poster .template-card-poster img[data-shown] {
+  opacity: 1;
+}
+
+/* Round glass steps at the poster's sides, bending the poster under them. */
+.template-dialog-step {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  translate: 0 -50%;
+}
+
+.template-dialog-step[data-direction='previous'] {
+  left: 10px;
+}
+
+.template-dialog-step[data-direction='next'] {
+  right: 10px;
+}
+
+.template-dialog-step-glyph {
+  width: 16px;
+  height: 16px;
+}
+
+.template-dialog-strip-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.template-dialog-count {
+  color: var(--lg-muted-foreground);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
 .template-dialog-details {
@@ -5187,13 +5294,48 @@ a.template-card:hover .template-card-title {
     left: 3px;
   }
 
+  /* A template under a mouse or pen turns a little toward the pointer, pressing back where it
+     points, as a pane held in the hand would, and its glass catches the light there
+     (template-pointer.tsx). The light fades out as the pointer leaves. */
+  :root:not([data-lg-reduce-motion='1']) .template-card {
+    transition: --pointer-light 320ms ease;
+  }
+
+  :root:not([data-lg-reduce-motion='1']) .template-card[data-pointer] {
+    --pointer-light: 1;
+  }
+
+  :root:not([data-lg-reduce-motion='1']) .template-card-stage {
+    perspective: 1100px;
+  }
+
+  :root:not([data-lg-reduce-motion='1']) .template-card[data-pointer] .template-window {
+    rotate: calc(0.5 - var(--pointer-y)) calc(var(--pointer-x) - 0.5) 0
+      calc(hypot(var(--pointer-x) - 0.5, var(--pointer-y) - 0.5) * 11deg);
+  }
+
+  /* Paging through the dialog crossfades the posters, the new one settling from slightly near. */
+  :root:not([data-lg-reduce-motion='1']) .template-dialog-poster .template-card-poster img {
+    scale: 1.03;
+    transition:
+      opacity 360ms var(--lg-ease-out),
+      scale 520ms var(--lg-ease-out);
+  }
+
+  :root:not([data-lg-reduce-motion='1'])
+    .template-dialog-poster
+    .template-card-poster
+    img[data-shown] {
+    scale: 1;
+  }
+
   /* Pointing at a template raises its window further out of the stage, and a press sets it
      back down. Pointing at the Pro tile opens its fan. */
   :root:not([data-lg-reduce-motion='1']) .template-window,
   :root:not([data-lg-reduce-motion='1']) .template-pro-fan-window {
     transition:
       translate 600ms var(--lg-ease-out),
-      rotate 600ms var(--lg-ease-out),
+      rotate 420ms var(--lg-ease-out),
       scale 600ms var(--lg-ease-out);
   }
 
@@ -5278,6 +5420,87 @@ a.template-card:hover .template-card-title {
       animation: site-lift var(--lg-ease-out) both;
       animation-timeline: view();
       animation-range: entry 0% entry 80%;
+    }
+  }
+}
+
+/* Scrolling through the templates moves them the way scrolling past real panes of glass would.
+   Each window rises out of its stage as its card arrives, and the form behind it drifts the other
+   way the whole time the card is on screen, so the glass is seen bending a moving backdrop. The
+   Pro tile deals its fan out of the copy, the middle window first. On a phone's shelf the window
+   rises as its card slides in and sinks as it slides out. Everything moves through transform, so
+   the hover's translate and the pointer's rotate add to it, and nothing fades or hides. */
+@keyframes template-window-rise {
+  from {
+    transform: translateY(var(--template-rise, 44px));
+  }
+}
+
+@keyframes template-window-focus {
+  0%,
+  100% {
+    transform: translateY(var(--template-rise, 44px));
+  }
+
+  38%,
+  62% {
+    transform: none;
+  }
+}
+
+@keyframes template-form-drift {
+  from {
+    transform: translateY(-14px);
+  }
+
+  to {
+    transform: translateY(14px);
+  }
+}
+
+@keyframes template-fan-deal {
+  from {
+    transform: translateY(75%);
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    /* A gentle curve, not the site's arrival curve: scroll drives it, and the window should be
+       seen rising while its card crosses the lower half of the screen. */
+    :root:not([data-lg-reduce-motion='1']) .template-window {
+      animation: template-window-rise ease-out both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 45%;
+    }
+
+    :root:not([data-lg-reduce-motion='1']) .template-card-stage > .card-backdrop {
+      animation: template-form-drift linear both;
+      animation-timeline: view();
+      animation-range: cover;
+    }
+
+    :root:not([data-lg-reduce-motion='1']) .template-pro-fan-window {
+      animation: template-fan-deal ease-out both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 36%;
+    }
+
+    :root:not([data-lg-reduce-motion='1']) .template-pro-fan-window:nth-child(1) {
+      animation-range: entry 30% cover 41%;
+    }
+
+    :root:not([data-lg-reduce-motion='1']) .template-pro-fan-window:nth-child(3) {
+      animation-range: entry 55% cover 45%;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) and (max-width: 639px) {
+    :root:not([data-lg-reduce-motion='1']) .template-grid .template-window {
+      animation-name: template-window-focus;
+      animation-timing-function: linear;
+      animation-timeline: view(inline);
+      animation-range: cover;
     }
   }
 }
