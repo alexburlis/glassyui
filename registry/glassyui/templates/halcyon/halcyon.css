@@ -222,6 +222,16 @@ html:has(.halcyon-page) {
   font-family: var(--hc-sans);
 }
 
+/* A shallow rim keeps large scrolling type from stretching across the whole capsule. */
+.halcyon-header > .lg-header-glass {
+  --lg-lens-bevel: 7;
+  --lg-lens-thickness: 12;
+  --lg-lens-dispersion: 0;
+  --lg-slab-blur: 12;
+  --lg-header-tint: rgb(14 20 36 / 0.64);
+  --lg-lens-saturation: 1.1;
+}
+
 .halcyon-brand {
   display: inline-flex;
   align-items: center;
