@@ -190,18 +190,15 @@ const detail = ribbon(DETAIL);
 
 const compact = ribbon(COMPACT);
 
-await fs.writeFile(`${BRAND}/glassyui-logo.svg`, svgDocument(detail));
-
-await fs.writeFile(`${BRAND}/glassyui-logo-white.svg`, svgDocument(compact, { color: '#fff' }));
-
-await fs.writeFile(`${BRAND}/glassyui-logo-compact.svg`, svgDocument(compact));
-
-await fs.writeFile(
-  `${BRAND}/glassyui-glyph.svg`,
-  svgDocument(compact, { color: 'currentColor', monochrome: true }),
-);
-
-await fs.writeFile(`${BRAND}/glassyui-app-icon.svg`, svgDocument(detail, { tile: true }));
-
-// An SVG favicon follows the browser appearance, independently of the site's saved theme.
-await fs.writeFile('src/app/icon.svg', svgDocument(compact, { adaptive: true }));
+await Promise.all([
+  fs.writeFile(`${BRAND}/glassyui-logo.svg`, svgDocument(detail)),
+  fs.writeFile(`${BRAND}/glassyui-logo-white.svg`, svgDocument(compact, { color: '#fff' })),
+  fs.writeFile(`${BRAND}/glassyui-logo-compact.svg`, svgDocument(compact)),
+  fs.writeFile(
+    `${BRAND}/glassyui-glyph.svg`,
+    svgDocument(compact, { color: 'currentColor', monochrome: true }),
+  ),
+  fs.writeFile(`${BRAND}/glassyui-app-icon.svg`, svgDocument(detail, { tile: true })),
+  // An SVG favicon follows the browser appearance, independently of the site's saved theme.
+  fs.writeFile('src/app/icon.svg', svgDocument(compact, { adaptive: true })),
+]);
