@@ -54,8 +54,8 @@ function Digit({ value, roll }: { value: string; roll: boolean }) {
 }
 
 /**
- * Days, hours, minutes and seconds until `target`, in the visitor's own time. The time is read
- * after the page loads, so a page built ahead of time never shows a stale count.
+ * Days, hours, minutes and seconds until `target`, in the visitor's own time, on one slab of glass.
+ * The time is read after the page loads, so a page built ahead of time never shows a stale count.
  */
 export function Countdown({ target, labelledBy }: { target: Date; labelledBy: string }) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -103,23 +103,20 @@ export function Countdown({ target, labelledBy }: { target: Date; labelledBy: st
         : `${parts[0]} days, ${parts[1]} hours and ${parts[2]} minutes until invites begin.`;
 
   return (
-    <div
+    <GlassPanel
       ref={rootRef}
       aria-describedby="halcyon-countdown-summary"
       aria-labelledby={labelledBy}
-      className="halcyon-countdown"
+      className="halcyon-pane halcyon-countdown"
+      lens
       role="timer"
+      variant="card"
     >
       {UNITS.map((unit, index) => {
         const digits = parts === null ? '––' : String(parts[index]).padStart(2, '0');
 
         return (
-          <GlassPanel
-            key={unit}
-            className="halcyon-pane halcyon-countdown-unit"
-            lens
-            variant="card"
-          >
+          <div key={unit} className="halcyon-countdown-unit">
             <span aria-hidden className="halcyon-countdown-value">
               {[...digits].map((digit, place) => (
                 <Digit key={place} roll={roll} value={digit} />
@@ -128,13 +125,13 @@ export function Countdown({ target, labelledBy }: { target: Date; labelledBy: st
             <span aria-hidden className="halcyon-countdown-label">
               {unit}
             </span>
-          </GlassPanel>
+          </div>
         );
       })}
       {/* Announced once a minute at most: the summary leaves the seconds out. */}
       <p className="halcyon-sr-only" id="halcyon-countdown-summary">
         {summary}
       </p>
-    </div>
+    </GlassPanel>
   );
 }

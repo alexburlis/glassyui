@@ -333,6 +333,7 @@ const expectedTemplateFiles = [
   'countdown.tsx',
   'stat-counter.tsx',
   'hero-art.tsx',
+  'footer-art.tsx',
   'icons.tsx',
   'use-count-to.ts',
   'halcyon.css',

@@ -25,6 +25,7 @@ import {
 } from '../../glass-toast';
 import { Countdown } from './countdown';
 import { FeatureTiles } from './feature-tiles';
+import { FooterArt, footerBackdrop, useFooterArt } from './footer-art';
 import { HeroArt, heroBackdrop, useHeroArt } from './hero-art';
 import {
   ArrowIcon,
@@ -105,39 +106,6 @@ function useOnScreen(ref: React.RefObject<HTMLElement | null>) {
   return onScreen;
 }
 
-/** Rests the footer's horizon on the countdown, two thirds of the way down its panes. */
-function useFooterHorizon(footerRef: React.RefObject<HTMLElement | null>) {
-  useEffect(() => {
-    const footer = footerRef.current;
-    const countdown = footer?.querySelector<HTMLElement>('.halcyon-countdown');
-    const unit = countdown?.firstElementChild;
-
-    if (!footer || !countdown || !(unit instanceof HTMLElement)) return;
-
-    let frame = 0;
-
-    const layout = () => {
-      footer.style.setProperty(
-        '--halcyon-footer-horizon',
-        `${Math.round(countdown.offsetTop + unit.offsetHeight * 0.64)}px`,
-      );
-    };
-
-    const observer = new ResizeObserver(() => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(layout);
-    });
-
-    observer.observe(footer);
-    layout();
-
-    return () => {
-      cancelAnimationFrame(frame);
-      observer.disconnect();
-    };
-  }, [footerRef]);
-}
-
 function Brand({ small }: { small?: boolean }) {
   return (
     <>
@@ -212,10 +180,9 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
   const waitlistSlotRef = useRef<HTMLDivElement>(null);
   const waitlistRef = useRef<WaitlistHandle>(null);
   const footerActionRef = useRef<HTMLButtonElement>(null);
-  const footerRef = useRef<HTMLElement>(null);
+  const footerSceneRef = useRef<HTMLDivElement>(null);
   const art = useHeroArt(heroRef, waitlistSlotRef);
-
-  useFooterHorizon(footerRef);
+  const footerArt = useFooterArt(footerSceneRef);
   const waitlistOnScreen = useOnScreen(waitlistSlotRef);
   const footerActionOnScreen = useOnScreen(footerActionRef);
   const [joined, setJoined] = useState(false);
@@ -352,26 +319,9 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
           <section aria-labelledby="halcyon-note-title" className="halcyon-note" id="note">
             <div aria-hidden className="halcyon-note-art" />
             <div className="halcyon-wrap halcyon-note-grid">
-              <div className="halcyon-note-side">
-                <h2 className="halcyon-eyebrow" id="halcyon-note-title">
-                  A note from the founders
-                </h2>
-                <dl className="halcyon-stats">
-                  <StatCounter
-                    count={212}
-                    from={120}
-                    label="People in the private beta since June"
-                    spoken="212"
-                  />
-                  <StatCounter
-                    count={230}
-                    from={110}
-                    hoursAndMinutes
-                    label="Median time each person got back a week"
-                    spoken="3 hours 50 minutes"
-                  />
-                </dl>
-              </div>
+              <h2 className="halcyon-eyebrow halcyon-note-title" id="halcyon-note-title">
+                A note from the founders
+              </h2>
               <figure className="halcyon-note-body">
                 <blockquote className="halcyon-note-quote halcyon-reveal-text">
                   <p>
@@ -400,6 +350,21 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
                   </GlassButton>
                 </figcaption>
               </figure>
+              <dl className="halcyon-stats">
+                <StatCounter
+                  count={212}
+                  from={120}
+                  label="People in the private beta since June"
+                  spoken="212"
+                />
+                <StatCounter
+                  count={230}
+                  from={110}
+                  hoursAndMinutes
+                  label="Median time each person got back a week"
+                  spoken="3 hours 50 minutes"
+                />
+              </dl>
             </div>
           </section>
 
@@ -437,77 +402,83 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
           </section>
         </main>
 
-        <footer
-          ref={footerRef}
-          aria-labelledby="halcyon-launch-title"
-          className="halcyon-footer"
-          id="launch"
-        >
-          <div aria-hidden className="halcyon-footer-art">
-            <div className="halcyon-footer-sky" />
-            <div className="halcyon-footer-sea" />
-            <div className="halcyon-footer-horizon" />
-          </div>
-          <div className="halcyon-wrap halcyon-footer-inner">
-            <h2 className="halcyon-footer-title" id="halcyon-launch-title">
-              Invites <em>begin</em> in
-            </h2>
-            <Countdown labelledBy="halcyon-launch-title" target={LAUNCH} />
-            <p className="halcyon-footer-date">
-              <span>12 January 2027 at 9:00, your time.</span>{' '}
-              <span>First come, first invited.</span>
-            </p>
-            <GlassButton
-              ref={footerActionRef}
-              className="halcyon-button-xl halcyon-footer-action"
-              variant="prominent"
-              onClick={goToField}
-            >
-              {joined ? 'See my place' : 'Save my place'}
-            </GlassButton>
-            <div className="halcyon-footer-base">
-              <a className="halcyon-brand" href="#top">
-                <Brand small />
-              </a>
-              <nav aria-label="Footer">
-                <ul className="halcyon-footer-links">
-                  <li>
-                    <button
-                      aria-expanded={sheetOpen && doc === 'note'}
-                      aria-haspopup="dialog"
-                      className="halcyon-footer-link"
-                      type="button"
-                      onClick={(event) => openDoc('note', event.currentTarget)}
-                    >
-                      The note
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      aria-expanded={sheetOpen && doc === 'privacy'}
-                      aria-haspopup="dialog"
-                      className="halcyon-footer-link"
-                      type="button"
-                      onClick={(event) => openDoc('privacy', event.currentTarget)}
-                    >
-                      Privacy
-                    </button>
-                  </li>
-                  <li>
-                    <a className="halcyon-footer-link" href="#faq">
-                      Questions
-                    </a>
-                  </li>
-                  <li>
-                    <a className="halcyon-footer-link" href="mailto:hello@halcyon.example">
-                      hello@halcyon.example
-                    </a>
-                  </li>
-                </ul>
-              </nav>
-              <p className="halcyon-footer-legal">© 2026 Halcyon Labs, Lisbon</p>
+        <footer aria-labelledby="halcyon-launch-title" className="halcyon-footer" id="launch">
+          <GlassScene
+            ref={footerSceneRef}
+            backdrop={footerBackdrop(footerArt)}
+            className="halcyon-footer-scene"
+            optics={{
+              bevel: 22,
+              thickness: 36,
+              ior: 1.5,
+              dispersion: 0.12,
+              frost: 1.5,
+              specular: 1,
+              merge: 0,
+            }}
+          >
+            <FooterArt />
+            <div className="halcyon-wrap halcyon-footer-inner">
+              <h2 className="halcyon-footer-title" id="halcyon-launch-title">
+                Invites <em>begin</em> in
+              </h2>
+              <Countdown labelledBy="halcyon-launch-title" target={LAUNCH} />
+              <p className="halcyon-footer-date">
+                <span>12 January 2027 at 9:00, your time.</span>{' '}
+                <span>First come, first invited.</span>
+              </p>
+              <GlassButton
+                ref={footerActionRef}
+                className="halcyon-button-xl halcyon-footer-action"
+                variant="prominent"
+                onClick={goToField}
+              >
+                {joined ? 'See my place' : 'Save my place'}
+              </GlassButton>
+              <div className="halcyon-footer-base">
+                <a className="halcyon-brand" href="#top">
+                  <Brand small />
+                </a>
+                <nav aria-label="Footer">
+                  <ul className="halcyon-footer-links">
+                    <li>
+                      <button
+                        aria-expanded={sheetOpen && doc === 'note'}
+                        aria-haspopup="dialog"
+                        className="halcyon-footer-link"
+                        type="button"
+                        onClick={(event) => openDoc('note', event.currentTarget)}
+                      >
+                        The note
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        aria-expanded={sheetOpen && doc === 'privacy'}
+                        aria-haspopup="dialog"
+                        className="halcyon-footer-link"
+                        type="button"
+                        onClick={(event) => openDoc('privacy', event.currentTarget)}
+                      >
+                        Privacy
+                      </button>
+                    </li>
+                    <li>
+                      <a className="halcyon-footer-link" href="#faq">
+                        Questions
+                      </a>
+                    </li>
+                    <li>
+                      <a className="halcyon-footer-link" href="mailto:hello@halcyon.example">
+                        hello@halcyon.example
+                      </a>
+                    </li>
+                  </ul>
+                </nav>
+                <p className="halcyon-footer-legal">© 2026 Halcyon Labs, Lisbon</p>
+              </div>
             </div>
-          </div>
+          </GlassScene>
         </footer>
 
         <GlassSheet open={sheetOpen} onOpenChange={setSheetOpen}>

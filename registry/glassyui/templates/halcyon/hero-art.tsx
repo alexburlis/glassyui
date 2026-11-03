@@ -106,6 +106,21 @@ function drawStars(width: number, height: number) {
   return stars;
 }
 
+/** The element's top within an ancestor, without the transforms that move it while scrolling. */
+export function topWithin(element: HTMLElement, ancestor: HTMLElement) {
+  let top = element.offsetTop;
+
+  for (
+    let parent = element.offsetParent;
+    parent instanceof HTMLElement && parent !== ancestor;
+    parent = parent.offsetParent
+  ) {
+    top += parent.offsetTop;
+  }
+
+  return top;
+}
+
 /**
  * Lays the aurora and the horizon behind the waitlist card and draws the stars and rays at the
  * hero's real size, so nothing stretches. The hero carries --band-y and --horizon, and
@@ -128,16 +143,7 @@ export function useHeroArt(
     const layout = () => {
       const height = hero.offsetHeight;
       const width = hero.offsetWidth;
-      let top = card.offsetTop;
-
-      for (
-        let parent = card.offsetParent;
-        parent instanceof HTMLElement && parent !== hero;
-        parent = parent.offsetParent
-      ) {
-        top += parent.offsetTop;
-      }
-
+      const top = topWithin(card, hero);
       const cardHeight = card.offsetHeight;
       // On phones the card fills the width: the aurora's arms end level with its top edge, so
       // only the rays rise above it.
@@ -146,7 +152,15 @@ export function useHeroArt(
       const band = parseFloat(style.getPropertyValue('--band-h'));
       const accent = style.getPropertyValue('--hc-accent').trim();
       const bandY = narrow ? top - 16 + band * 0.25 : top + cardHeight / 2;
-      const horizon = Math.round(Math.min(height - 40, top + cardHeight * (narrow ? 0.6 : 0.72)));
+      // At rest the horizon runs behind the middle of the email field, clear of every edge, and
+      // the rims bend it on both sides. Scrolling lifts the glass, so the line sinks through it.
+      const field = card.querySelector<HTMLElement>('.halcyon-waitlist-input');
+
+      const fieldMiddle = field
+        ? topWithin(field, hero) + field.offsetHeight / 2
+        : top + cardHeight * 0.6;
+
+      const horizon = Math.round(Math.min(height - 40, fieldMiddle));
 
       hero.style.setProperty('--band-y', `${Math.round(bandY)}px`);
       hero.style.setProperty('--horizon', `${horizon}px`);

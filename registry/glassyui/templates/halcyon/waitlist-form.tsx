@@ -293,7 +293,6 @@ export function WaitlistForm({ onJoin, onJoinedChange, onNotice, ref }: Waitlist
               <label className="halcyon-waitlist-label" htmlFor="halcyon-email">
                 Your work email
               </label>
-              <span className="halcyon-waitlist-meta">Invites go out in order</span>
             </div>
             <div className="halcyon-waitlist-row halcyon-waitlist-entry" data-row="1">
               <GlassInput

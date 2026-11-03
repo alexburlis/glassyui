@@ -4025,6 +4025,11 @@
           "target": "components/glassyui/templates/halcyon/hero-art.tsx"
         },
         {
+          "path": "registry/glassyui/templates/halcyon/footer-art.tsx",
+          "type": "registry:component",
+          "target": "components/glassyui/templates/halcyon/footer-art.tsx"
+        },
+        {
           "path": "registry/glassyui/templates/halcyon/icons.tsx",
           "type": "registry:component",
           "target": "components/glassyui/templates/halcyon/icons.tsx"
