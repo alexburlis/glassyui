@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { GlassAvatar } from '../../glass-avatar';
 import { GlassButton } from '../../glass-button';
 import { GlassPanel } from '../../glass-panel';
+import { GlassScene } from '../../glass-scene';
 import { GlassSegmentedControl, GlassSegmentedControlItem } from '../../glass-segmented-control';
 import { GlassSwitch } from '../../glass-switch';
 import { motionReduced } from '../../lib/liquid-motion';
@@ -407,29 +408,93 @@ function ProtectsTile() {
   );
 }
 
+/** The section's dawn, rasterized once per layout for all three glass lenses. */
+function featureBackdrop(
+  width: number,
+  height: number,
+  line: number,
+  accent: string,
+  soft: string,
+) {
+  const attribute = (value: string) =>
+    value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
+
+  const aqua = attribute(accent);
+  const pale = attribute(soft);
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+    <defs>
+      <linearGradient id="night" x2="0" y2="1"><stop stop-color="#0f1628"/><stop offset=".36" stop-color="#0e1424"/></linearGradient>
+      <radialGradient id="aqua" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${width * 0.14} ${height * 0.56}) scale(${width * 0.36} ${height * 0.3})"><stop stop-color="${aqua}" stop-opacity=".17"/><stop offset=".72" stop-color="${aqua}" stop-opacity="0"/></radialGradient>
+      <radialGradient id="rose" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${width * 0.88} ${height * 0.7}) scale(${width * 0.32} ${height * 0.28})"><stop stop-color="#ffb38a" stop-opacity=".14"/><stop offset=".72" stop-color="#ffb38a" stop-opacity="0"/></radialGradient>
+      <pattern id="lines" width="${width}" height="9" x="0" y="${height * 0.22}" patternUnits="userSpaceOnUse"><rect width="${width}" height="1" fill="#bef0f5" fill-opacity=".09"/></pattern>
+      <radialGradient id="fade" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${width * 0.5} ${height * 0.6048}) scale(${width * 0.72} ${height * 0.4588})"><stop offset=".28" stop-color="white"/><stop offset=".76" stop-color="white" stop-opacity="0"/></radialGradient>
+      <mask id="grid-fade"><rect width="${width}" height="${height}" fill="url(#fade)"/></mask>
+      <radialGradient id="dawn-rose" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${width * 0.5} ${line}) scale(${width * 0.38} 101.2)"><stop stop-color="#ffb38a" stop-opacity=".17"/><stop offset=".72" stop-color="#ffb38a" stop-opacity="0"/></radialGradient>
+      <radialGradient id="dawn-aqua" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${width * 0.5} ${line}) scale(${width * 0.64} 66)"><stop stop-color="${aqua}" stop-opacity=".17"/><stop offset=".76" stop-color="${aqua}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="horizon"><stop offset=".01" stop-color="${pale}" stop-opacity="0"/><stop offset=".18" stop-color="${pale}" stop-opacity=".6"/><stop offset=".5" stop-color="#fff2ea"/><stop offset=".82" stop-color="${pale}" stop-opacity=".6"/><stop offset=".99" stop-color="${pale}" stop-opacity="0"/></linearGradient>
+      <filter id="glow" x="-10%" y="-1000%" width="120%" height="2100%"><feGaussianBlur stdDeviation="11"/></filter>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#night)"/>
+    <rect width="100%" height="100%" fill="url(#aqua)"/>
+    <rect width="100%" height="100%" fill="url(#rose)"/>
+    <rect y="${height * 0.22}" width="${width}" height="${height * 0.74}" fill="url(#lines)" mask="url(#grid-fade)"/>
+    <rect y="${line - 110}" width="${width}" height="220" fill="url(#dawn-rose)"/>
+    <rect y="${line - 110}" width="${width}" height="220" fill="url(#dawn-aqua)"/>
+    <rect y="${line - 3}" width="${width}" height="7" fill="${aqua}" fill-opacity=".3" filter="url(#glow)"/>
+    <rect y="${line}" width="${width}" height="1" fill="url(#horizon)"/>
+  </svg>`;
+
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
 /**
  * A dawn line runs behind the tiles where the first tile's screen meets its copy, so every lens
  * rim has a horizon to bend.
  */
 export function FeatureTiles() {
   const sectionRef = useRef<HTMLElement>(null);
+  const sceneRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+
+  const [backdrop, setBackdrop] = useState(() =>
+    featureBackdrop(1200, 1000, 580, '#3ad1e0', '#a6eaf1'),
+  );
 
   useEffect(() => {
     const section = sectionRef.current;
+    const scene = sceneRef.current;
     const grid = gridRef.current;
     const tile = grid?.firstElementChild;
     const screen = tile?.querySelector<HTMLElement>('.halcyon-tile-screen');
 
-    if (!section || !grid || !(tile instanceof HTMLElement) || !screen) return;
+    if (!section || !scene || !grid || !(tile instanceof HTMLElement) || !screen) return;
 
     let frame = 0;
 
     // Offsets ignore the tiles' rise transform, so the line stays put while they move.
     const layout = () => {
-      const line = grid.offsetTop + tile.offsetTop + screen.offsetTop + screen.offsetHeight + 12;
+      let line = screen.offsetTop + screen.offsetHeight + 12;
+
+      for (
+        let parent = screen.offsetParent;
+        parent instanceof HTMLElement && parent !== scene;
+        parent = parent.offsetParent
+      ) {
+        line += parent.offsetTop;
+      }
 
       section.style.setProperty('--halcyon-what-line', `${line}px`);
+      const style = getComputedStyle(section);
+      setBackdrop(
+        featureBackdrop(
+          section.clientWidth,
+          section.clientHeight,
+          line,
+          style.getPropertyValue('--hc-accent').trim(),
+          style.getPropertyValue('--hc-accent-soft').trim(),
+        ),
+      );
     };
 
     const observer = new ResizeObserver(() => {
@@ -453,26 +518,41 @@ export function FeatureTiles() {
       className="halcyon-what"
       id="what"
     >
-      <div aria-hidden className="halcyon-what-art">
-        <div className="halcyon-what-horizon" />
-      </div>
-      <div className="halcyon-wrap">
-        <header className="halcyon-section-head">
-          <p className="halcyon-eyebrow">In your calendar from January</p>
-          <h2 className="halcyon-section-title halcyon-reveal-text" id="halcyon-what-title">
-            Three jobs, done <em>quietly</em>.
-          </h2>
-          <p className="halcyon-section-lede">
-            Halcyon works inside the calendar you already use. It takes care of the logistics and
-            leaves the decisions to you.
-          </p>
-        </header>
-        <div ref={gridRef} className="halcyon-what-grid">
-          <BooksTile />
-          <MovesTile />
-          <ProtectsTile />
+      <GlassScene
+        ref={sceneRef}
+        backdrop={backdrop}
+        className="halcyon-what-scene"
+        optics={{
+          bevel: 30,
+          thickness: 42,
+          ior: 1.5,
+          dispersion: 0.16,
+          frost: 6,
+          specular: 1,
+          merge: 0,
+        }}
+      >
+        <div aria-hidden className="halcyon-what-art">
+          <div className="halcyon-what-horizon" />
         </div>
-      </div>
+        <div className="halcyon-wrap">
+          <header className="halcyon-section-head">
+            <p className="halcyon-eyebrow">In your calendar from January</p>
+            <h2 className="halcyon-section-title halcyon-reveal-text" id="halcyon-what-title">
+              Three jobs, done <em>quietly</em>.
+            </h2>
+            <p className="halcyon-section-lede">
+              Halcyon works inside the calendar you already use. It takes care of the logistics and
+              leaves the decisions to you.
+            </p>
+          </header>
+          <div ref={gridRef} className="halcyon-what-grid">
+            <BooksTile />
+            <MovesTile />
+            <ProtectsTile />
+          </div>
+        </div>
+      </GlassScene>
     </section>
   );
 }

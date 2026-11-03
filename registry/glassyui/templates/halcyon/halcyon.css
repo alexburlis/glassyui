@@ -914,8 +914,30 @@ html:has(.halcyon-page) {
 .halcyon-what {
   position: relative;
   isolation: isolate;
-  padding: clamp(80px, 8vw, 120px) 0 clamp(64px, 6vw, 96px);
   overflow: clip;
+}
+
+.halcyon-what-scene {
+  padding: clamp(80px, 8vw, 120px) 0 clamp(64px, 6vw, 96px);
+}
+
+/* One image-backed field draws the three outer lenses; the CSS dawn remains for first paint. */
+.halcyon-what-scene[data-lg-scene-renderer='webgl'] > .halcyon-what-art {
+  display: none;
+}
+
+.halcyon-what-scene .halcyon-tile {
+  --lg-scene-tint: rgb(20 28 52 / 0.42);
+  --lg-scene-frost: 1px;
+  --lg-scene-ink: var(--hc-ink-2);
+}
+
+/* Controls sit on an already frosted slab, without filtering the same backdrop again. */
+.halcyon-tile-screen .lg-button__distortion,
+.halcyon-books-length::before,
+.halcyon-books-length > .lg-segmented-indicator {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .halcyon-what-art {

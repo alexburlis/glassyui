@@ -3955,6 +3955,16 @@
           "target": "components/glassyui/glass-progress.tsx"
         },
         {
+          "path": "registry/glassyui/glass-scene.tsx",
+          "type": "registry:ui",
+          "target": "components/glassyui/glass-scene.tsx"
+        },
+        {
+          "path": "registry/glassyui/lib/scene-renderer.ts",
+          "type": "registry:lib",
+          "target": "components/glassyui/lib/scene-renderer.ts"
+        },
+        {
           "path": "registry/glassyui/glass-scroll-area.tsx",
           "type": "registry:ui",
           "target": "components/glassyui/glass-scroll-area.tsx"
