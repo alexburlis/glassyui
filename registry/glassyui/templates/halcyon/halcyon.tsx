@@ -25,8 +25,8 @@ import {
 } from '../../glass-toast';
 import { Countdown } from './countdown';
 import { FeatureTiles } from './feature-tiles';
-import { FooterArt, footerBackdrop, useFooterArt } from './footer-art';
-import { HeroArt, heroBackdrop, useHeroArt } from './hero-art';
+import { useFooterArt, useFooterPainter } from './footer-art';
+import { useHeroArt, useHeroPainter } from './hero-art';
 import {
   ArrowIcon,
   CheckIcon,
@@ -182,7 +182,17 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
   const footerActionRef = useRef<HTMLButtonElement>(null);
   const footerSceneRef = useRef<HTMLDivElement>(null);
   const art = useHeroArt(heroRef, waitlistSlotRef);
+  const heroPainter = useHeroPainter(art);
   const footerArt = useFooterArt(footerSceneRef);
+  const footerPainter = useFooterPainter(footerArt);
+  // The aurora rises in at full pace, then only its slow sway moves, which needs few frames.
+  const [dawnDone, setDawnDone] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDawnDone(true), 2400);
+
+    return () => window.clearTimeout(timer);
+  }, []);
   const waitlistOnScreen = useOnScreen(waitlistSlotRef);
   const footerActionOnScreen = useOnScreen(footerActionRef);
   const [joined, setJoined] = useState(false);
@@ -272,7 +282,8 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
             id="top"
           >
             <GlassScene
-              backdrop={heroBackdrop(art)}
+              backdrop={heroPainter}
+              backdropFps={dawnDone ? 12 : 60}
               className="halcyon-hero-scene"
               optics={{
                 bevel: 18,
@@ -284,7 +295,6 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
                 merge: 0,
               }}
             >
-              <HeroArt art={art} />
               <div className="halcyon-wrap halcyon-hero-inner">
                 <GlassBadge className="halcyon-hero-chip" dot>
                   Private beta · Invites from 12 January
@@ -405,7 +415,8 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
         <footer aria-labelledby="halcyon-launch-title" className="halcyon-footer" id="launch">
           <GlassScene
             ref={footerSceneRef}
-            backdrop={footerBackdrop(footerArt)}
+            backdrop={footerPainter}
+            backdropFps={30}
             className="halcyon-footer-scene"
             optics={{
               bevel: 22,
@@ -417,7 +428,6 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
               merge: 0,
             }}
           >
-            <FooterArt />
             <div className="halcyon-wrap halcyon-footer-inner">
               <h2 className="halcyon-footer-title" id="halcyon-launch-title">
                 Invites <em>begin</em> in

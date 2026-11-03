@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState, type RefObject } from 'react';
+import { useEffect, useMemo, useState, type RefObject } from 'react';
+import type { GlassSceneBackdropPainter } from '../../glass-scene';
+import { motionReduced } from '../../lib/liquid-motion';
 
 type Ray = { height: number; opacity: number; width: number; x: number; y: number };
 
@@ -123,8 +125,8 @@ export function topWithin(element: HTMLElement, ancestor: HTMLElement) {
 
 /**
  * Lays the aurora and the horizon behind the waitlist card and draws the stars and rays at the
- * hero's real size, so nothing stretches. The hero carries --band-y and --horizon, and
- * data-tight when the card leaves too little room for the scroll hint.
+ * hero's real size, so nothing stretches. The hero carries data-tight when the card leaves too
+ * little room for the scroll hint.
  */
 export function useHeroArt(
   heroRef: RefObject<HTMLElement | null>,
@@ -162,8 +164,6 @@ export function useHeroArt(
 
       const horizon = Math.round(Math.min(height - 40, fieldMiddle));
 
-      hero.style.setProperty('--band-y', `${Math.round(bandY)}px`);
-      hero.style.setProperty('--horizon', `${horizon}px`);
       hero.toggleAttribute('data-tight', height - (top + cardHeight) < 104);
       setArt((drawn) =>
         drawn &&
@@ -199,34 +199,86 @@ export function useHeroArt(
     void document.fonts?.ready.then(schedule);
     layout();
 
-    // The rays sway only while the hero is on screen.
-    const away = new IntersectionObserver(([entry]) =>
-      hero.toggleAttribute('data-away', !entry.isIntersecting),
-    );
-
-    away.observe(hero);
-
     return () => {
       cancelAnimationFrame(frame);
       resize.disconnect();
-      away.disconnect();
     };
   }, [cardRef, heroRef]);
 
   return art;
 }
 
-/** The image shown by the hero and sampled by its glass share this measured dawn. */
-export function heroBackdrop(art: Art | null) {
-  if (!art) return undefined;
+export const svgAttribute = (value: string) =>
+  value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
 
-  const { width, height, horizon, band, bandY, rays, stars } = art;
+export const svgLayer = (width: number, height: number, defs: string, body: string) =>
+  `data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><defs>${defs}</defs>${body}</svg>`,
+  )}`;
 
-  const accent = art.accent
-    .replaceAll('&', '&amp;')
-    .replaceAll('"', '&quot;')
-    .replaceAll('<', '&lt;');
+/** Decodes each named SVG layer into an image. */
+export async function decodeLayers<Name extends string>(urls: Record<Name, string>) {
+  const entries = await Promise.all(
+    Object.entries<string>(urls).map(async ([name, url]) => {
+      const image = new Image();
 
+      image.src = url;
+      await image.decode();
+
+      return [name, image] as const;
+    }),
+  );
+
+  // SAFETY: the entries are the layers passed in, each decoded under its own name.
+  return Object.fromEntries(entries) as Record<Name, HTMLImageElement>;
+}
+
+/** Rasterises each layer once per density, at its own size, so a frame only places bitmaps. */
+export function rasterCache<Name extends string>(images: Record<Name, HTMLImageElement>) {
+  const rasters = new Map<string, HTMLCanvasElement>();
+
+  return (name: Name, density: number) => {
+    const key = `${name}@${density}`;
+    const image = images[name];
+    let canvas = rasters.get(key);
+
+    if (!canvas) {
+      canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * density));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * density));
+      canvas.getContext('2d')?.drawImage(image, 0, 0, canvas.width, canvas.height);
+      rasters.set(key, canvas);
+    }
+
+    return canvas;
+  };
+}
+
+/** The night's navy, painted once per size, until a dawn's layers have decoded. */
+export function paintNight(): GlassSceneBackdropPainter {
+  let painted = '';
+
+  return (context, { width, height, density }) => {
+    const picture = `${width}x${height}@${density}`;
+
+    if (picture === painted) return false;
+
+    painted = picture;
+    context.fillStyle = '#0e1424';
+    context.fillRect(0, 0, width, height);
+  };
+}
+
+// The horizon's line and glow, in a strip this far above and below it.
+const HORIZON_STRIP = 40;
+
+/**
+ * The measured dawn in five layers, so the aurora can rise into place and its rays sway between
+ * the sky and the sea: the same picture the page shows and the glass refracts.
+ */
+function heroLayers(art: Art) {
+  const { width, height, horizon, band, rays, stars } = art;
+  const accent = svgAttribute(art.accent);
   const sea = height - horizon;
   const curve = 'M0 150C380 250 560 338 720 338S1100 260 1440 170';
 
@@ -244,185 +296,128 @@ export function heroBackdrop(art: Art | null) {
     )
     .join('');
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-    <defs>
-      <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#080d1a"/><stop offset=".32" stop-color="#0c1222"/><stop offset=".6" stop-color="#111a33"/><stop offset=".82" stop-color="#1c2242"/><stop offset=".94" stop-color="#2c2a4a"/><stop offset="1" stop-color="#3a3150"/></linearGradient>
-      <radialGradient id="sky-peach" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${width / 2} ${horizon}) scale(${width * 0.52} ${horizon * 0.58})"><stop stop-color="#ffb38a" stop-opacity=".36"/><stop offset=".44" stop-color="#ffb38a" stop-opacity=".12"/><stop offset=".74" stop-color="#ffb38a" stop-opacity="0"/></radialGradient>
-      <radialGradient id="sky-light" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${width / 2} ${horizon}) scale(${width * 0.28} ${horizon * 0.26})"><stop stop-color="#ffdecc" stop-opacity=".3"/><stop offset=".72" stop-color="#ffdecc" stop-opacity="0"/></radialGradient>
-      <linearGradient id="sea" x2="0" y2="1"><stop stop-color="#1f2342"/><stop offset=".34" stop-color="#151c36"/><stop offset="1" stop-color="#0f1628"/></linearGradient>
-      <radialGradient id="sea-peach" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${width / 2} ${horizon}) scale(${width * 0.34} ${sea * 0.44})"><stop stop-color="#ffb38a" stop-opacity=".26"/><stop offset=".72" stop-color="#ffb38a" stop-opacity="0"/></radialGradient>
-      <radialGradient id="sea-aqua" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${width / 2} ${horizon}) scale(${width * 0.7} ${sea * 0.6})"><stop stop-color="${accent}" stop-opacity=".1"/><stop offset=".74" stop-color="${accent}" stop-opacity="0"/></radialGradient>
-      <radialGradient id="sea-fade" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${width / 2} ${horizon}) scale(${width * 0.56} ${sea})"><stop offset=".1" stop-color="white"/><stop offset=".78" stop-color="white" stop-opacity="0"/></radialGradient>
-      <pattern id="sea-lines" width="${width}" height="7" y="${horizon}" patternUnits="userSpaceOnUse"><rect width="${width}" height="1" fill="#ffe2d2" fill-opacity=".08"/></pattern>
-      <mask id="sea-mask" maskUnits="userSpaceOnUse"><rect width="${width}" height="${height}" fill="url(#sea-fade)"/></mask>
-      <linearGradient id="band-fade" x2="0" y2="1"><stop stop-color="white" stop-opacity="0"/><stop offset="${width <= 560 ? '.12' : '.3'}" stop-color="white"/><stop offset=".82" stop-color="white"/><stop offset="1" stop-color="white" stop-opacity="0"/></linearGradient>
-      <mask id="band-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="${width}" height="${band}"><rect width="${width}" height="${band}" fill="url(#band-fade)"/></mask>
-      <linearGradient id="aqua"><stop stop-color="#3ad1e0" stop-opacity="0"/><stop offset=".22" stop-color="#3ad1e0" stop-opacity=".75"/><stop offset=".5" stop-color="#86e9f1"/><stop offset=".78" stop-color="#3ad1e0" stop-opacity=".75"/><stop offset="1" stop-color="#3ad1e0" stop-opacity="0"/></linearGradient>
-      <linearGradient id="peach"><stop offset=".1" stop-color="#ffb38a" stop-opacity="0"/><stop offset=".38" stop-color="#ffb38a" stop-opacity=".9"/><stop offset=".62" stop-color="#ffc9a8" stop-opacity=".9"/><stop offset=".9" stop-color="#ffb38a" stop-opacity="0"/></linearGradient>
-      <linearGradient id="curve-line"><stop offset=".04" stop-color="#e6fdff" stop-opacity="0"/><stop offset=".3" stop-color="#e6fdff" stop-opacity=".5"/><stop offset=".5" stop-color="#f4feff" stop-opacity=".85"/><stop offset=".7" stop-color="#e6fdff" stop-opacity=".5"/><stop offset=".96" stop-color="#e6fdff" stop-opacity="0"/></linearGradient>
-      <linearGradient id="ray" x1="0" x2="0" y1="1" y2="0"><stop stop-color="#d4fafc" stop-opacity=".95"/><stop offset=".14" stop-color="#3ad1e0" stop-opacity=".8"/><stop offset=".55" stop-color="#3ad1e0" stop-opacity=".2"/><stop offset="1" stop-color="#3ad1e0" stop-opacity="0"/></linearGradient>
-      ${[48, 22, 6].map((blur) => `<filter id="b${blur}" filterUnits="userSpaceOnUse" x="-240" y="-360" width="1920" height="1320"><feGaussianBlur stdDeviation="${blur}"/></filter>`).join('')}
-      <filter id="soft"><feGaussianBlur stdDeviation=".7"/></filter>
-      <linearGradient id="horizon"><stop stop-color="#ffccb4" stop-opacity="0"/><stop offset=".22" stop-color="#ffcdb4" stop-opacity=".5"/><stop offset=".5" stop-color="#fff2ea" stop-opacity=".95"/><stop offset=".78" stop-color="#ffcdb4" stop-opacity=".5"/><stop offset="1" stop-color="#ffccb4" stop-opacity="0"/></linearGradient>
-      <filter id="horizon-glow" x="-10%" y="-1000%" width="120%" height="2100%"><feGaussianBlur stdDeviation="11"/></filter>
-    </defs>
-    <rect width="${width}" height="${horizon}" fill="url(#sky)"/>
-    <rect width="${width}" height="${horizon}" fill="url(#sky-light)"/>
-    <rect width="${width}" height="${horizon}" fill="url(#sky-peach)"/>
-    ${starMarkup}
-    <g transform="translate(0 ${bandY - band / 2})"><g mask="url(#band-mask)">
-      <svg width="${width}" height="${band}" viewBox="0 0 1440 600" preserveAspectRatio="none">
-        <path d="${curve}" fill="none" stroke="url(#aqua)" stroke-width="230" opacity=".3" transform="translate(0 -100)" filter="url(#b48)"/>
-        <path d="${curve}" fill="none" stroke="url(#peach)" stroke-width="80" opacity=".5" transform="translate(0 34)" filter="url(#b22)"/>
-        <path d="${curve}" fill="none" stroke="url(#aqua)" stroke-width="16" opacity=".8" filter="url(#b6)"/>
-        <path d="${curve}" fill="none" stroke="url(#curve-line)" stroke-width="1.2" vector-effect="non-scaling-stroke"/>
-      </svg>
-      <svg width="${width}" height="${band}" viewBox="0 0 ${width} 600" preserveAspectRatio="none"><g fill="url(#ray)" filter="url(#soft)">${rayMarkup}</g></svg>
-    </g></g>
-    <rect y="${horizon}" width="${width}" height="${sea}" fill="url(#sea)"/>
-    <rect y="${horizon}" width="${width}" height="${sea}" fill="url(#sea-aqua)"/>
-    <rect y="${horizon}" width="${width}" height="${sea}" fill="url(#sea-peach)"/>
-    <rect y="${horizon}" width="${width}" height="${sea}" fill="url(#sea-lines)" mask="url(#sea-mask)"/>
-    <rect y="${horizon - 3}" width="${width}" height="7" fill="#ffb38a" fill-opacity=".26" filter="url(#horizon-glow)"/>
-    <rect y="${horizon}" width="${width}" height="1" fill="url(#horizon)"/>
-  </svg>`;
+  // The aurora's band fades in from its top and out at its bottom, wherever it is drawn.
+  const bandMask = `<linearGradient id="band-fade" x2="0" y2="1"><stop stop-color="white" stop-opacity="0"/><stop offset="${width <= 560 ? '.12' : '.3'}" stop-color="white"/><stop offset=".82" stop-color="white"/><stop offset="1" stop-color="white" stop-opacity="0"/></linearGradient><mask id="band-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="${width}" height="${band}"><rect width="${width}" height="${band}" fill="url(#band-fade)"/></mask>`;
 
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+  const inBand = (content: string) => `<g mask="url(#band-mask)">${content}</g>`;
+
+  return {
+    sky: svgLayer(
+      width,
+      horizon,
+      `<linearGradient id="sky" x2="0" y2="1"><stop stop-color="#080d1a"/><stop offset=".32" stop-color="#0c1222"/><stop offset=".6" stop-color="#111a33"/><stop offset=".82" stop-color="#1c2242"/><stop offset=".94" stop-color="#2c2a4a"/><stop offset="1" stop-color="#3a3150"/></linearGradient><radialGradient id="sky-peach" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${width / 2} ${horizon}) scale(${width * 0.52} ${horizon * 0.58})"><stop stop-color="#ffb38a" stop-opacity=".36"/><stop offset=".44" stop-color="#ffb38a" stop-opacity=".12"/><stop offset=".74" stop-color="#ffb38a" stop-opacity="0"/></radialGradient><radialGradient id="sky-light" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${width / 2} ${horizon}) scale(${width * 0.28} ${horizon * 0.26})"><stop stop-color="#ffdecc" stop-opacity=".3"/><stop offset=".72" stop-color="#ffdecc" stop-opacity="0"/></radialGradient>`,
+      `<rect width="${width}" height="${horizon}" fill="url(#sky)"/><rect width="${width}" height="${horizon}" fill="url(#sky-light)"/><rect width="${width}" height="${horizon}" fill="url(#sky-peach)"/>${starMarkup}`,
+    ),
+    glow: svgLayer(
+      width,
+      band,
+      `${bandMask}<linearGradient id="aqua"><stop stop-color="#3ad1e0" stop-opacity="0"/><stop offset=".22" stop-color="#3ad1e0" stop-opacity=".75"/><stop offset=".5" stop-color="#86e9f1"/><stop offset=".78" stop-color="#3ad1e0" stop-opacity=".75"/><stop offset="1" stop-color="#3ad1e0" stop-opacity="0"/></linearGradient><linearGradient id="peach"><stop offset=".1" stop-color="#ffb38a" stop-opacity="0"/><stop offset=".38" stop-color="#ffb38a" stop-opacity=".9"/><stop offset=".62" stop-color="#ffc9a8" stop-opacity=".9"/><stop offset=".9" stop-color="#ffb38a" stop-opacity="0"/></linearGradient><linearGradient id="curve-line"><stop offset=".04" stop-color="#e6fdff" stop-opacity="0"/><stop offset=".3" stop-color="#e6fdff" stop-opacity=".5"/><stop offset=".5" stop-color="#f4feff" stop-opacity=".85"/><stop offset=".7" stop-color="#e6fdff" stop-opacity=".5"/><stop offset=".96" stop-color="#e6fdff" stop-opacity="0"/></linearGradient>${[48, 22, 6].map((blur) => `<filter id="b${blur}" filterUnits="userSpaceOnUse" x="-240" y="-360" width="1920" height="1320"><feGaussianBlur stdDeviation="${blur}"/></filter>`).join('')}`,
+      inBand(
+        `<svg width="${width}" height="${band}" viewBox="0 0 1440 600" preserveAspectRatio="none"><path d="${curve}" fill="none" stroke="url(#aqua)" stroke-width="230" opacity=".3" transform="translate(0 -100)" filter="url(#b48)"/><path d="${curve}" fill="none" stroke="url(#peach)" stroke-width="80" opacity=".5" transform="translate(0 34)" filter="url(#b22)"/><path d="${curve}" fill="none" stroke="url(#aqua)" stroke-width="16" opacity=".8" filter="url(#b6)"/><path d="${curve}" fill="none" stroke="url(#curve-line)" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg>`,
+      ),
+    ),
+    rays: svgLayer(
+      width,
+      band,
+      `${bandMask}<linearGradient id="ray" x1="0" x2="0" y1="1" y2="0"><stop stop-color="#d4fafc" stop-opacity=".95"/><stop offset=".14" stop-color="#3ad1e0" stop-opacity=".8"/><stop offset=".55" stop-color="#3ad1e0" stop-opacity=".2"/><stop offset="1" stop-color="#3ad1e0" stop-opacity="0"/></linearGradient><filter id="soft"><feGaussianBlur stdDeviation=".7"/></filter>`,
+      inBand(
+        `<svg width="${width}" height="${band}" viewBox="0 0 ${width} 600" preserveAspectRatio="none"><g fill="url(#ray)" filter="url(#soft)">${rayMarkup}</g></svg>`,
+      ),
+    ),
+    sea: svgLayer(
+      width,
+      sea,
+      `<linearGradient id="sea" x2="0" y2="1"><stop stop-color="#1f2342"/><stop offset=".34" stop-color="#151c36"/><stop offset="1" stop-color="#0f1628"/></linearGradient><radialGradient id="sea-peach" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${width / 2} 0) scale(${width * 0.34} ${sea * 0.44})"><stop stop-color="#ffb38a" stop-opacity=".26"/><stop offset=".72" stop-color="#ffb38a" stop-opacity="0"/></radialGradient><radialGradient id="sea-aqua" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${width / 2} 0) scale(${width * 0.7} ${sea * 0.6})"><stop stop-color="${accent}" stop-opacity=".1"/><stop offset=".74" stop-color="${accent}" stop-opacity="0"/></radialGradient><radialGradient id="sea-fade" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${width / 2} 0) scale(${width * 0.56} ${sea})"><stop offset=".1" stop-color="white"/><stop offset=".78" stop-color="white" stop-opacity="0"/></radialGradient><pattern id="sea-lines" width="${width}" height="7" y="0" patternUnits="userSpaceOnUse"><rect width="${width}" height="1" fill="#ffe2d2" fill-opacity=".08"/></pattern><mask id="sea-mask" maskUnits="userSpaceOnUse"><rect width="${width}" height="${sea}" fill="url(#sea-fade)"/></mask>`,
+      `<rect width="${width}" height="${sea}" fill="url(#sea)"/><rect width="${width}" height="${sea}" fill="url(#sea-aqua)"/><rect width="${width}" height="${sea}" fill="url(#sea-peach)"/><rect width="${width}" height="${sea}" fill="url(#sea-lines)" mask="url(#sea-mask)"/>`,
+    ),
+    horizon: svgLayer(
+      width,
+      HORIZON_STRIP * 2,
+      `<linearGradient id="horizon"><stop stop-color="#ffccb4" stop-opacity="0"/><stop offset=".22" stop-color="#ffcdb4" stop-opacity=".5"/><stop offset=".5" stop-color="#fff2ea" stop-opacity=".95"/><stop offset=".78" stop-color="#ffcdb4" stop-opacity=".5"/><stop offset="1" stop-color="#ffccb4" stop-opacity="0"/></linearGradient><filter id="horizon-glow" x="-10%" y="-1000%" width="120%" height="2100%"><feGaussianBlur stdDeviation="11"/></filter>`,
+      `<rect y="${HORIZON_STRIP - 3}" width="${width}" height="7" fill="#ffb38a" fill-opacity=".26" filter="url(#horizon-glow)"/><rect y="${HORIZON_STRIP}" width="${width}" height="1" fill="url(#horizon)"/>`,
+    ),
+  };
 }
 
-export function HeroArt({ art }: { art: Art | null }) {
-  return (
-    <div aria-hidden className="halcyon-hero-art">
-      <div className="halcyon-hero-sky" />
-      <svg
-        className="halcyon-hero-stars"
-        preserveAspectRatio="xMinYMin slice"
-        viewBox={art ? `0 0 ${art.width} ${art.horizon}` : undefined}
-      >
-        {art?.stars.map((star, index) => (
-          <g key={index}>
-            {star.big ? (
-              <circle
-                cx={star.x.toFixed(1)}
-                cy={star.y.toFixed(1)}
-                fill="#cfefff"
-                opacity={(star.opacity * 0.2).toFixed(2)}
-                r="3.6"
-              />
-            ) : null}
-            <circle
-              cx={star.x.toFixed(1)}
-              cy={star.y.toFixed(1)}
-              fill="#eaf4ff"
-              opacity={star.opacity.toFixed(2)}
-              r={star.radius.toFixed(2)}
-            />
-          </g>
-        ))}
-      </svg>
-      <div className="halcyon-aurora">
-        <svg className="halcyon-aurora-glow" preserveAspectRatio="none" viewBox="0 0 1440 600">
-          <defs>
-            <linearGradient id="halcyon-au-aqua" x1="0" x2="1" y1="0" y2="0">
-              <stop offset="0" stopColor="#3ad1e0" stopOpacity="0" />
-              <stop offset=".22" stopColor="#3ad1e0" stopOpacity=".75" />
-              <stop offset=".5" stopColor="#86e9f1" />
-              <stop offset=".78" stopColor="#3ad1e0" stopOpacity=".75" />
-              <stop offset="1" stopColor="#3ad1e0" stopOpacity="0" />
-            </linearGradient>
-            <linearGradient id="halcyon-au-peach" x1="0" x2="1" y1="0" y2="0">
-              <stop offset=".1" stopColor="#ffb38a" stopOpacity="0" />
-              <stop offset=".38" stopColor="#ffb38a" stopOpacity=".9" />
-              <stop offset=".62" stopColor="#ffc9a8" stopOpacity=".9" />
-              <stop offset=".9" stopColor="#ffb38a" stopOpacity="0" />
-            </linearGradient>
-            <linearGradient id="halcyon-au-line" x1="0" x2="1" y1="0" y2="0">
-              <stop offset=".04" stopColor="#e6fdff" stopOpacity="0" />
-              <stop offset=".3" stopColor="#e6fdff" stopOpacity=".5" />
-              <stop offset=".5" stopColor="#f4feff" stopOpacity=".85" />
-              <stop offset=".7" stopColor="#e6fdff" stopOpacity=".5" />
-              <stop offset=".96" stopColor="#e6fdff" stopOpacity="0" />
-            </linearGradient>
-            {[48, 22, 6].map((blur) => (
-              <filter
-                key={blur}
-                filterUnits="userSpaceOnUse"
-                height="1320"
-                id={`halcyon-au-b${blur}`}
-                width="1920"
-                x="-240"
-                y="-360"
-              >
-                <feGaussianBlur stdDeviation={blur} />
-              </filter>
-            ))}
-          </defs>
-          <path
-            d="M0 150C380 250 560 338 720 338S1100 260 1440 170"
-            fill="none"
-            filter="url(#halcyon-au-b48)"
-            opacity=".3"
-            stroke="url(#halcyon-au-aqua)"
-            strokeWidth="230"
-            transform="translate(0 -100)"
-          />
-          <path
-            d="M0 150C380 250 560 338 720 338S1100 260 1440 170"
-            fill="none"
-            filter="url(#halcyon-au-b22)"
-            opacity=".5"
-            stroke="url(#halcyon-au-peach)"
-            strokeWidth="80"
-            transform="translate(0 34)"
-          />
-          <path
-            d="M0 150C380 250 560 338 720 338S1100 260 1440 170"
-            fill="none"
-            filter="url(#halcyon-au-b6)"
-            opacity=".8"
-            stroke="url(#halcyon-au-aqua)"
-            strokeWidth="16"
-          />
-          <path
-            d="M0 150C380 250 560 338 720 338S1100 260 1440 170"
-            fill="none"
-            stroke="url(#halcyon-au-line)"
-            strokeWidth="1.2"
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
-        <svg
-          className="halcyon-aurora-rays"
-          preserveAspectRatio="none"
-          viewBox={`0 0 ${art?.width ?? 1440} 600`}
-        >
-          <defs>
-            <linearGradient id="halcyon-au-ray" x1="0" x2="0" y1="1" y2="0">
-              <stop offset="0" stopColor="#d4fafc" stopOpacity=".95" />
-              <stop offset=".14" stopColor="#3ad1e0" stopOpacity=".8" />
-              <stop offset=".55" stopColor="#3ad1e0" stopOpacity=".2" />
-              <stop offset="1" stopColor="#3ad1e0" stopOpacity="0" />
-            </linearGradient>
-            <filter id="halcyon-au-soft">
-              <feGaussianBlur stdDeviation="0.7" />
-            </filter>
-          </defs>
-          <g fill="url(#halcyon-au-ray)" filter="url(#halcyon-au-soft)">
-            {art?.rays.map((ray, index) => (
-              <rect
-                key={index}
-                height={ray.height.toFixed(1)}
-                opacity={ray.opacity.toFixed(2)}
-                width={ray.width.toFixed(2)}
-                x={ray.x.toFixed(1)}
-                y={ray.y.toFixed(1)}
-              />
-            ))}
-          </g>
-        </svg>
-      </div>
-      <div className="halcyon-hero-sea" />
-      <div className="halcyon-hero-horizon" />
-    </div>
-  );
+type Layers = Record<keyof ReturnType<typeof heroLayers>, HTMLImageElement>;
+
+// The aurora rises into place over the first moments, then its rays sway, slowly, for good.
+const DAWN_MS = 1800;
+
+const SWAY_MS = 15_000;
+
+const easeOut = (t: number) => 1 - (1 - t) ** 3;
+
+/**
+ * Paints the dawn for the hero's GlassScene. Each layer is drawn once into a canvas at the
+ * backdrop's density; a frame then only places them. Returns false while nothing moves.
+ */
+export function useHeroPainter(art: Art | null): GlassSceneBackdropPainter {
+  const [layers, setLayers] = useState<{ art: Art; images: Layers } | null>(null);
+
+  useEffect(() => {
+    if (!art) return;
+
+    let cancelled = false;
+
+    void decodeLayers(heroLayers(art)).then((images) => {
+      if (!cancelled) setLayers({ art, images });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [art]);
+
+  return useMemo(() => {
+    if (!layers) return paintNight();
+
+    const { art: drawnArt, images } = layers;
+    const raster = rasterCache(images);
+    let painted = '';
+
+    return (context, { width, height, density, time }) => {
+      const still = motionReduced();
+      const rise = still ? 0 : 48 * (1 - easeOut(Math.min(time / DAWN_MS, 1)));
+      const span = still ? 1 : 0.1 + 0.9 * easeOut(Math.min(Math.max((time - 120) / 1600, 0), 1));
+      const phase = (Math.max(time - DAWN_MS, 0) / SWAY_MS) % 2;
+      const sway = still ? 0.5 : 0.5 - 0.5 * Math.cos(Math.PI * (phase < 1 ? phase : 2 - phase));
+      const picture = `${width}x${height}@${density} ${rise.toFixed(2)} ${span.toFixed(3)} ${sway.toFixed(4)}`;
+
+      if (picture === painted) return false;
+
+      painted = picture;
+
+      const { band, bandY, horizon } = drawnArt;
+      const bandTop = bandY - band / 2;
+      // The rays breathe about a point a little below the band's middle, as before.
+      const centre = width / 2;
+      const origin = bandTop + band * 0.56;
+
+      const draw = (name: keyof Layers, top: number) => {
+        const image = images[name];
+
+        context.drawImage(raster(name, density), 0, top, image.naturalWidth, image.naturalHeight);
+      };
+
+      context.clearRect(0, 0, width, height);
+      // The art was measured at the hero's size; a resize repaints it before it is measured again.
+      context.scale(width / drawnArt.width, height / drawnArt.height);
+      draw('sky', 0);
+      draw('glow', bandTop + rise);
+      context.save();
+      context.translate(centre, origin + rise + 5 - 10 * sway);
+      context.scale(1, 0.94 + 0.12 * sway);
+      context.translate(-centre, -origin);
+      draw('rays', bandTop);
+      context.restore();
+      draw('sea', horizon);
+      context.save();
+      context.translate(centre, 0);
+      context.scale(span, 1);
+      context.translate(-centre, 0);
+      draw('horizon', horizon - HORIZON_STRIP);
+      context.restore();
+    };
+  }, [layers]);
 }

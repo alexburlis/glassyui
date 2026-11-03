@@ -67,7 +67,7 @@ function BooksTile() {
           books the one they pick.
         </p>
       </div>
-      <div className="halcyon-tile-screen">
+      <div className="halcyon-tile-screen" data-lg-scene-well="">
         <div className="halcyon-mini-head halcyon-books-who">
           <GlassAvatar aria-hidden className="halcyon-books-avatar" fallback="MO" size="sm" />
           <p>
@@ -225,7 +225,7 @@ function MovesTile() {
           leaves your focus time alone.
         </p>
       </div>
-      <div className="halcyon-tile-screen">
+      <div className="halcyon-tile-screen" data-lg-scene-well="">
         <div className="halcyon-mini-head">
           <p className="halcyon-mini-title">Launch week</p>
           <GlassButton
@@ -362,6 +362,7 @@ function ProtectsTile() {
       </div>
       <div
         className="halcyon-tile-screen halcyon-week"
+        data-lg-scene-well=""
         data-am={rules.am ? '' : undefined}
         data-fri={rules.fri ? '' : undefined}
         data-pm={rules.pm ? '' : undefined}

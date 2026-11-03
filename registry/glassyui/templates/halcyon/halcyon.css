@@ -306,121 +306,10 @@ html:has(.halcyon-page) {
   padding: clamp(84px, 13svh, 112px) 0 clamp(96px, 14svh, 124px);
 }
 
-/* The image beneath the glass is the image the rays trace. Keep the CSS art for fallback. */
-.halcyon-hero-scene[data-lg-scene-renderer='webgl'] > .halcyon-hero-art {
-  visibility: hidden;
-}
-
-.halcyon-hero-scene[data-lg-scene-renderer='webgl'] .halcyon-aurora-rays {
-  animation: none !important;
-  will-change: auto;
-}
-
 .halcyon-hero-scene .halcyon-waitlist {
   --lg-scene-tint: rgb(12 20 38 / 0.12);
   --lg-scene-frost: 1px;
   --lg-scene-ink: var(--hc-ink-2);
-}
-
-.halcyon-hero-art {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-}
-
-.halcyon-hero-sky {
-  position: absolute;
-  inset: 0 0 auto;
-  height: var(--horizon, 80%);
-  background:
-    radial-gradient(
-      52% 58% at 50% 100%,
-      rgb(255 179 138 / 0.36),
-      rgb(255 179 138 / 0.12) 44%,
-      transparent 74%
-    ),
-    radial-gradient(28% 26% at 50% 100%, rgb(255 222 204 / 0.3), transparent 72%),
-    linear-gradient(
-      180deg,
-      #080d1a 0%,
-      #0c1222 32%,
-      #111a33 60%,
-      #1c2242 82%,
-      #2c2a4a 94%,
-      #3a3150 100%
-    );
-}
-
-.halcyon-hero-stars {
-  position: absolute;
-  inset: 0 0 auto;
-  display: block;
-  width: 100%;
-  height: var(--horizon, 80%);
-}
-
-.halcyon-aurora {
-  position: absolute;
-  left: 0;
-  width: 100%;
-  top: calc(var(--band-y, 62%) - var(--band-h) / 2);
-  height: var(--band-h);
-  -webkit-mask: linear-gradient(180deg, transparent, #000 30%, #000 82%, transparent);
-  mask: linear-gradient(180deg, transparent, #000 30%, #000 82%, transparent);
-}
-
-.halcyon-aurora svg {
-  position: absolute;
-  inset: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
-.halcyon-aurora-rays {
-  transform-origin: 50% 56%;
-  will-change: transform;
-}
-
-.halcyon-hero-sea {
-  position: absolute;
-  inset: var(--horizon, 80%) 0 0;
-  background:
-    radial-gradient(34% 44% at 50% 0%, rgb(255 179 138 / 0.26), transparent 72%),
-    radial-gradient(
-      70% 60% at 50% 0%,
-      color-mix(in srgb, var(--hc-accent) 10%, transparent),
-      transparent 74%
-    ),
-    linear-gradient(180deg, #1f2342 0%, #151c36 34%, #0f1628 100%);
-}
-
-.halcyon-hero-sea::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(180deg, rgb(255 226 210 / 0.08) 0 1px, transparent 1px 7px);
-  -webkit-mask: radial-gradient(56% 100% at 50% 0%, #000 10%, transparent 78%);
-  mask: radial-gradient(56% 100% at 50% 0%, #000 10%, transparent 78%);
-}
-
-.halcyon-hero-horizon {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: var(--horizon, 80%);
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgb(255 205 180 / 0.5) 22%,
-    rgb(255 242 234 / 0.95) 50%,
-    rgb(255 205 180 / 0.5) 78%,
-    transparent
-  );
-  box-shadow: 0 0 22px 3px rgb(255 179 138 / 0.26);
 }
 
 .halcyon-hero-inner {
@@ -1025,7 +914,10 @@ html:has(.halcyon-page) {
   padding: 12px 12px 28px;
 }
 
+/* Each tile's screen is set into its glass: a well whose rim bends the dawn around it. */
 .halcyon-tile-screen {
+  --lg-scene-well-depth: 14px;
+  --lg-scene-well-bevel: 10px;
   grid-row: 1;
   display: flex;
   flex-direction: column;
@@ -1702,17 +1594,11 @@ html:has(.halcyon-page) {
   isolation: isolate;
   overflow: clip;
   text-align: center;
-  view-timeline: --halcyon-footer block;
 }
 
 .halcyon-footer-scene {
   --halcyon-sun: 420px;
   padding: clamp(80px, 8vw, 128px) 0 28px;
-}
-
-/* The countdown's glass refracts the image of this sunrise, so the CSS one steps aside. */
-.halcyon-footer-scene[data-lg-scene-renderer='webgl'] > .halcyon-footer-art {
-  visibility: hidden;
 }
 
 /* The countdown's labels share the figures' white, so the slab may let the sun through twice as
@@ -1721,84 +1607,6 @@ html:has(.halcyon-page) {
   --lg-scene-tint: rgb(20 28 52 / 0.16);
   --lg-scene-frost: 1px;
   --lg-scene-ink: var(--hc-ink);
-}
-
-.halcyon-footer-art {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-}
-
-.halcyon-footer-sky {
-  position: absolute;
-  inset: 0 0 auto;
-  height: var(--halcyon-footer-horizon, 52%);
-  background:
-    radial-gradient(
-      44% 64% at 50% 100%,
-      rgb(255 179 138 / 0.34),
-      rgb(255 179 138 / 0.1) 46%,
-      transparent 76%
-    ),
-    radial-gradient(
-      70% 60% at 50% 100%,
-      color-mix(in srgb, var(--hc-accent) 12%, transparent),
-      transparent 74%
-    ),
-    linear-gradient(180deg, #0e1424 0%, #131a33 56%, #2a2a49 100%);
-}
-
-.halcyon-footer-sky::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: calc(var(--halcyon-sun) / -2);
-  width: var(--halcyon-sun);
-  height: var(--halcyon-sun);
-  margin-left: calc(var(--halcyon-sun) / -2);
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgb(255 220 200 / 0.92) 0%,
-    rgb(255 196 163 / 0.62) 26%,
-    rgb(255 179 138 / 0.26) 44%,
-    rgb(255 179 138 / 0.08) 58%,
-    rgb(255 179 138 / 0) 70%
-  );
-}
-
-.halcyon-footer-horizon {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: var(--halcyon-footer-horizon, 52%);
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgb(255 205 180 / 0.55) 24%,
-    rgb(255 242 234 / 0.95) 50%,
-    rgb(255 205 180 / 0.55) 76%,
-    transparent
-  );
-  box-shadow: 0 0 20px 2px rgb(255 179 138 / 0.28);
-}
-
-.halcyon-footer-sea {
-  position: absolute;
-  inset: var(--halcyon-footer-horizon, 52%) 0 0;
-  background:
-    radial-gradient(30% 34% at 50% 0%, rgb(255 179 138 / 0.24), transparent 72%),
-    linear-gradient(180deg, #1e2342 0%, #10172b 44%, #0b1120 100%);
-}
-
-.halcyon-footer-sea::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(180deg, rgb(255 226 210 / 0.08) 0 1px, transparent 1px 7px);
-  -webkit-mask: radial-gradient(44% 60% at 50% 0%, #000 10%, transparent 80%);
-  mask: radial-gradient(44% 60% at 50% 0%, #000 10%, transparent 80%);
 }
 
 .halcyon-footer-inner {
@@ -2093,34 +1901,6 @@ html:has(.halcyon-page) {
   }
 }
 
-@keyframes halcyon-dawn {
-  from {
-    transform: translateY(48px);
-  }
-}
-
-@keyframes halcyon-breathe {
-  from {
-    transform: translateY(5px) scaleY(0.94);
-  }
-
-  to {
-    transform: translateY(-5px) scaleY(1.06);
-  }
-}
-
-@keyframes halcyon-horizon-in {
-  from {
-    transform: scaleX(0.1);
-  }
-}
-
-@keyframes halcyon-sun-rise {
-  from {
-    transform: translateY(34%);
-  }
-}
-
 @keyframes halcyon-pop {
   from {
     transform: scale(0.3);
@@ -2161,12 +1941,6 @@ html:has(.halcyon-page) {
   }
 }
 
-@keyframes halcyon-footer-settle {
-  from {
-    translate: 0 -48px;
-  }
-}
-
 @media (prefers-reduced-motion: no-preference) {
   :root:not([data-lg-reduce-motion='1']) .halcyon-hero-chip {
     animation: halcyon-up 900ms var(--lg-ease-out) both;
@@ -2186,24 +1960,6 @@ html:has(.halcyon-page) {
 
   :root:not([data-lg-reduce-motion='1']) .halcyon-waitlist-slot {
     animation: halcyon-card 1100ms var(--lg-ease-out) 380ms both;
-  }
-
-  :root:not([data-lg-reduce-motion='1']) .halcyon-aurora {
-    animation: halcyon-dawn 1800ms var(--lg-ease-out) both;
-  }
-
-  :root:not([data-lg-reduce-motion='1']) .halcyon-hero-horizon {
-    animation: halcyon-horizon-in 1600ms var(--lg-ease-out) 120ms both;
-  }
-
-  /* The page's one quiet loop: the rays sway over fifteen seconds while the hero is on
-     screen. */
-  :root:not([data-lg-reduce-motion='1']) .halcyon-aurora-rays {
-    animation: halcyon-breathe 15s ease-in-out 1.8s infinite alternate both;
-  }
-
-  .halcyon-hero[data-away] .halcyon-aurora-rays {
-    animation-play-state: paused;
   }
 
   :root:not([data-lg-reduce-motion='1']) .halcyon-hero-more {
@@ -2249,22 +2005,6 @@ html:has(.halcyon-page) {
       animation: halcyon-rise linear both;
       animation-timeline: view();
       animation-range: entry 0% entry 80%;
-    }
-
-    /* The footer sun climbs behind the countdown glass as the page reaches it. */
-    :root:not([data-lg-reduce-motion='1']) .halcyon-footer-sky::after {
-      animation: halcyon-sun-rise linear both;
-      animation-timeline: --halcyon-footer;
-      animation-range: entry 0% entry 75%;
-    }
-
-    /* The footer settles a little slower than the page scrolls, so the sun rises through the
-       countdown's slab and its rims bend the horizon on the way. It moves only, so the glass
-       keeps its backdrop. */
-    :root:not([data-lg-reduce-motion='1']) .halcyon-footer-inner {
-      animation: halcyon-footer-settle linear both;
-      animation-timeline: view();
-      animation-range: entry 0% cover 35%;
     }
   }
 }
@@ -2394,11 +2134,6 @@ html:has(.halcyon-page) {
 
   .halcyon-hero-scene {
     padding: 92px 0 84px;
-  }
-
-  .halcyon-aurora {
-    -webkit-mask: linear-gradient(180deg, transparent, #000 12%, #000 82%, transparent);
-    mask: linear-gradient(180deg, transparent, #000 12%, #000 82%, transparent);
   }
 
   .halcyon-hero-chip {
