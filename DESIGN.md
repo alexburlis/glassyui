@@ -195,20 +195,24 @@ token in `src/styles/liquid.css`.
   every template. Increased contrast and forced colours keep an outline.
   Controls without a caret, such as buttons and the select trigger, keep the
   neutral ring for keyboard focus.
-- Template cards show a poster of the whole page, with a small glass chip at its
-  top left: Free or Free · Soon, and for Pro, Coming with the first release's
-  month, or Coming soon. The free templates come first. Pro's follow under
-  Coming soon to Pro: the first release beside the Pro tile, then the planned
-  templates, four to a row. A free card links to its page, except a template
-  that is not out yet. A Pro card opens one dialog that sells the pre-order: the
-  poster, a strip that switches between the Pro templates, when it ships, the
-  price, the refund promise and one call to action, which opens Pro's checkout
-  itself, with Plus any tax under it as on the Pro site. On a phone the price
-  and the button come before the benefits, and a short phone crops the poster
-  lower, so the dialog opens with the button in view. While open it sits above
-  the analytics prompt. Without script, or with a modifier key, the card links
-  to the Pro site. Pro posters are design previews, and the gallery and the
-  dialog say so.
+- Template cards stand on stages, as the component cards do: one sculpted form
+  on the wallpaper's canvas, with the template rising in a glass browser window
+  out of the stage's lower edge, so most of the page shows and the rest runs on
+  past it. The free templates come first. Pro's follow under Coming soon to Pro:
+  the first release, each marked with its month, beside the Pro tile, out of
+  which three planned templates fan in glass windows; then the planned templates
+  under one label, Planned, no date yet, four to a row. On a phone each row is a
+  shelf to swipe through, running out to the screen's edges, so posters stay
+  large and the next card shows. A free card links to its page, except a
+  template that is not out yet, marked Coming soon. A Pro card opens one dialog
+  that sells the pre-order: the poster in the same window, a strip that switches
+  between the Pro templates, when it ships, the price, the refund promise and
+  one call to action, which opens Pro's checkout itself, with Plus any tax under
+  it as on the Pro site. On a phone the price and the button come before the
+  benefits, and a short phone crops the poster lower, so the dialog opens with
+  the button in view. While open it sits above the analytics prompt. Without
+  script, or with a modifier key, the card links to the Pro site. Pro posters
+  are design previews, and the gallery and the dialog say so.
 - The dock is a quiet glass shelf with space around its icons. Full app artwork
   fills an item; navigation glyphs stay small inside the same generous target.
   Hover and keyboard focus never resize the dock or its neighbours. Nothing is
@@ -273,15 +277,17 @@ progress, spinners, skeletons and the Pro card's art.
   their trigger and drift the last few pixels away from it. Dialogs rise
   slightly as they appear.
 - **Answers, not decoration.** Buttons set down under a press, a template's
-  poster lifts under a pointer, a link's arrow leans the way it goes, copying
-  confirms with a small pop, and the theme switch changes the whole page at
-  once, including its first use. A Light and Dark control changes the theme
-  immediately while its bubble moves on the live page.
+  window rises out of its stage under a pointer and sets down under a press, a
+  link's arrow leans the way it goes, copying confirms with a small pop, and the
+  theme switch changes the whole page at once, including its first use. A Light
+  and Dark control changes the theme immediately while its bubble moves on the
+  live page.
 - **One quiet loop.** The Pro card beside the components gallery shows a Pro
   site in a glass window over a pale turning ribbon. The ribbon sways a few
   pixels over 16 seconds and the window floats over 7, so the card feels alive
   without calling for attention. Pointing at the card raises the window. The Pro
-  tile in the home page's templates shares its colours and holds still.
+  tile in the home page's templates shares its colours and holds still; pointing
+  at it opens its fan of templates.
 - **Glass keeps its backdrop.** Never fade, filter, mask or clip anything glass
   looks through: the glass would lose the page it bends until the animation
   ended. The keynote keeps the desktop and phone mounted throughout the turn.

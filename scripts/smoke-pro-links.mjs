@@ -276,12 +276,15 @@ try {
   }
 
   // The home page's templates: the free ones first, then Pro's under their own heading, with the
-  // first release beside the Pro tile and the planned ones four to a row on a wide screen and two
-  // below. A Pro card opens one dialog that sells Pro and switches between the Pro templates, and
-  // nothing scrolls sideways.
+  // first release beside the Pro tile and the planned ones under one label, four to a row on a wide
+  // screen and two below. A phone shows each row as a shelf to swipe through instead. Every
+  // template rises in a window out of its stage, showing most of its poster. A Pro card opens one
+  // dialog that sells Pro and switches between the Pro templates, and the page never scrolls
+  // sideways.
   for (const width of [320, 360, 390, 768, 1280]) {
     const label = `home templates ${width}px`;
     const wide = width >= 1024;
+    const phone = width < 640;
     const { context, failures, page } = await openPage({ width });
 
     await page.goto(`${MAIN}/#templates`, { waitUntil: 'networkidle' });
@@ -310,28 +313,37 @@ try {
 
       return {
         cards: [...node.querySelectorAll('.template-card')].map((card) => {
-          const chip = card.querySelector('.template-chip');
-          const chipBox = chip.getBoundingClientRect();
+          const stage = card.querySelector('.template-card-stage').getBoundingClientRect();
           const poster = card.querySelector('.template-card-poster').getBoundingClientRect();
 
           return {
             ...box(card),
-            chip: chip.textContent,
-            chipInside: chipBox.right <= poster.right && chipBox.bottom <= poster.bottom,
+            arrives: card.querySelector('.template-tag')?.textContent ?? null,
             ignored: card.hasAttribute('data-analytics-ignore'),
             href: card.getAttribute('href'),
             name: card.querySelector('h4')?.textContent,
             popup: card.getAttribute('aria-haspopup'),
+            posterInside: poster.left >= stage.left && poster.right <= stage.right,
+            posterShown: (Math.min(stage.bottom, poster.bottom) - poster.top) / poster.height,
             tag: card.tagName,
             template: card.getAttribute('data-template'),
           };
         }),
-        grids: [...node.querySelectorAll('.template-grid')].map(box),
+        grids: [...node.querySelectorAll('.template-grid')].map((grid) => ({
+          ...box(grid),
+          shelf: getComputedStyle(grid).overflowX === 'auto',
+          swipes: grid.scrollWidth > grid.clientWidth,
+        })),
         headings: [...node.querySelectorAll('h3')].map((heading) => ({
           ...box(heading),
           name: heading.textContent,
         })),
+        planned: {
+          ...box(node.querySelector('.template-subgroup')),
+          text: node.querySelector('.template-subgroup').textContent,
+        },
         priceElsewhere: /\$\d/.test(main.textContent),
+        row: box(node.querySelector('.template-row')),
         tile: {
           ...box(tile),
           href: tile.getAttribute('href'),
@@ -356,13 +368,14 @@ try {
 
       assert.equal(card.tag, 'A', `${label}: ${name} is one link`);
       assert.equal(card.href, href, `${label}: ${name} leads to ${href}`);
-      assert.equal(card.chip, 'Free', `${label}: ${name} is marked free`);
+      assert.equal(card.arrives, null, `${label}: ${name} is out, so it says no arrival`);
     }
 
     for (const name of [...PRO_FIRST_RELEASE, ...PRO_PLANNED]) {
       const card = cards.get(name);
       const slug = name.toLowerCase();
-      const chip = PRO_FIRST_RELEASE.includes(name) ? 'Coming November' : 'Coming soon';
+      // The planned templates share the label above them instead.
+      const arrives = PRO_FIRST_RELEASE.includes(name) ? 'Coming November' : null;
 
       assert.equal(card.tag, 'A', `${label}: ${name} is one link`);
       assert.equal(card.href, `${PRO}/#${slug}`, `${label}: without script ${name} leads to Pro`);
@@ -373,11 +386,15 @@ try {
         true,
         `${label}: opening ${name}'s dialog is not a Pro link click`,
       );
-      assert.equal(card.chip, chip, `${label}: ${name} is marked ${chip}`);
+      assert.equal(card.arrives, arrives, `${label}: ${name} says when it arrives`);
     }
 
     for (const card of layout.cards) {
-      assert.equal(card.chipInside, true, `${label}: ${card.name}'s chip fits on its poster`);
+      assert.equal(card.posterInside, true, `${label}: ${card.name}'s window fits its stage`);
+      assert.ok(
+        card.posterShown >= 0.8 && card.posterShown < 1,
+        `${label}: ${card.name}'s poster runs on past its stage, but most of it shows (${card.posterShown})`,
+      );
     }
 
     const [freeHeading, proHeading] = layout.headings;
@@ -402,12 +419,16 @@ try {
       return [...new Set(tops)].map((top) => tops.filter((value) => value === top).length);
     };
 
-    const [freeGrid, firstReleaseGrid] = layout.grids;
+    const [freeGrid] = layout.grids;
 
-    assert.deepEqual(cardsPerRow(freeNames), wide ? [3] : [1, 2], `${label}: free columns`);
+    assert.deepEqual(
+      cardsPerRow(freeNames),
+      wide || phone ? [3] : [1, 2],
+      `${label}: free columns`,
+    );
     assert.ok(
-      wide || cards.get(freeNames[0]).width === freeGrid.width,
-      `${label}: below 1024px the first free template spans its row, so none sits alone`,
+      wide || phone || cards.get(freeNames[0]).width === freeGrid.width,
+      `${label}: from 640 to 1023px the first free template spans its row, so none sits alone`,
     );
     assert.deepEqual(
       cardsPerRow(PRO_FIRST_RELEASE),
@@ -416,8 +437,19 @@ try {
     );
     assert.deepEqual(
       cardsPerRow(PRO_PLANNED),
-      wide ? [4, 4] : [2, 2, 2, 2],
+      wide ? [4, 4] : phone ? [8] : [2, 2, 2, 2],
       `${label}: planned columns`,
+    );
+    assert.deepEqual(
+      layout.grids.map((grid) => grid.shelf && grid.swipes),
+      layout.grids.map(() => phone),
+      `${label}: ${phone ? 'every row is a shelf that swipes' : 'no row scrolls on its own'}`,
+    );
+    assert.equal(layout.planned.text, 'Planned, no date yet', `${label}: planned label`);
+    assert.ok(
+      layout.planned.top >= layout.row.bottom &&
+        layout.planned.bottom <= cards.get(PRO_PLANNED[0]).top,
+      `${label}: the label stands between the first release and the planned templates`,
     );
 
     const { tile } = layout;
@@ -433,7 +465,7 @@ try {
     assert.ok(
       wide
         ? tile.top === lastPro.top && tile.bottom === lastPro.bottom && tile.left > lastPro.right
-        : tile.top >= lastPro.bottom && tile.width === firstReleaseGrid.width,
+        : tile.top >= lastPro.bottom && tile.width === layout.row.width,
       `${label}: the Pro tile stands ${wide ? 'beside the first release, as tall as its cards' : 'full width under the first release'} (${JSON.stringify({ lastPro, tile })})`,
     );
 
@@ -456,7 +488,7 @@ try {
     );
     assert.match(
       await section.locator('.template-gallery-note').textContent(),
-      /^Pro images are design previews\. Planned templates have no date yet\.$/,
+      /^Pro images are design previews\.$/,
     );
 
     // Every poster loads, including those the page holds back until they are near.

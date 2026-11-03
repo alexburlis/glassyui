@@ -4222,61 +4222,162 @@ main :focus {
 
 /* ------------------------------------------------------------ templates */
 
+/* Every template stands on a stage, as the component cards do: one sculpted form on the
+   wallpaper's canvas (card-backdrop.tsx), with the template rising in a glass window out of the
+   stage's lower edge, as the Pro card's window rises out of its art. */
 .template-gallery {
   --template-gap: 20px;
-  --template-row-gap: 40px;
 
   max-width: 1200px;
   margin: 0 auto;
 }
 
 .template-group + .template-group {
-  margin-top: 72px;
+  margin-top: 88px;
 }
 
 .template-group-header {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .template-group-title {
   font-family: var(--site-font-display);
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 600;
   line-height: 1.2;
   letter-spacing: -0.015em;
 }
 
-.template-grid {
+.template-grid,
+.template-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--template-row-gap) var(--template-gap);
+  gap: var(--template-gap);
+}
+
+/* The first release's cards share their row with the Pro tile. */
+.template-row > .template-grid {
+  display: contents;
 }
 
 .template-grid[data-status='planned'] {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.template-grid + .template-grid {
-  margin-top: var(--template-row-gap);
+/* One label for all the planned templates, with a rule running out to the edge. */
+.template-subgroup {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 48px 0 20px;
+  color: var(--site-text-2);
+  font-size: 15px;
+  font-weight: 600;
 }
 
+.template-subgroup::after {
+  flex: 1;
+  height: 1px;
+  background: var(--site-hairline);
+  content: '';
+}
+
+/* The window's margins and frame scale with the card, from a phone's shelf to a wide row. */
 .template-card {
-  display: grid;
-  align-content: start;
-  gap: 14px;
-  border-radius: 18px;
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 24px;
+  background: var(--site-tile);
   color: var(--site-text);
+}
+
+.template-card-stage {
+  --window-inset: clamp(18px, 7.5cqi, 30px);
+
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: var(--window-inset) var(--window-inset) 0;
+  background: var(--site-stage);
+}
+
+/* A browser window of glass: a bar and a narrow frame round the poster, through which the form
+   behind shows, lit along its top edge and at its top-left corner. Its foot runs on below the
+   stage, so the page carries on past the edge. */
+.template-window,
+.template-dialog-poster,
+.template-pro-fan-window {
+  --window-bar: clamp(16px, 5.6cqi, 24px);
+  --window-frame: clamp(3px, 1.4cqi, 6px);
+  --window-radius: clamp(10px, 3.8cqi, 16px);
+
+  position: relative;
+  display: block;
+  padding: 0 var(--window-frame) var(--window-frame);
+  border-radius: var(--window-radius);
+  background: linear-gradient(rgb(255 255 255 / 0.2), rgb(255 255 255 / 0.08));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.3),
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.18),
+    0 0 0 0.5px rgb(0 0 0 / 0.5),
+    0 24px 48px -20px rgb(0 0 0 / 0.75);
+  backdrop-filter: blur(14px) saturate(1.7);
+}
+
+:root[data-lg-theme='light'] :is(.template-window, .template-dialog-poster) {
+  background: linear-gradient(rgb(255 255 255 / 0.68), rgb(255 255 255 / 0.42));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.95),
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.75),
+    0 0 0 0.5px rgb(0 0 0 / 0.1),
+    0 24px 48px -22px rgb(0 0 0 / 0.4);
+}
+
+.template-window {
+  margin-bottom: calc(-1 * clamp(14px, 7cqi, 30px));
+}
+
+.template-window::before,
+.template-dialog-poster::before,
+.template-pro-fan-window::before {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(140deg, rgb(255 255 255 / 0.4), transparent 32%);
+  content: '';
+  pointer-events: none;
+}
+
+.template-window-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--window-bar) / 4.5);
+  height: var(--window-bar);
+  padding: 0 calc(var(--window-bar) / 2.6);
+}
+
+.template-window-bar > i {
+  width: calc(var(--window-bar) / 3.6);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.34);
+}
+
+:root[data-lg-theme='light'] .template-window-bar > i {
+  background: rgb(0 0 0 / 0.14);
 }
 
 .template-card-poster {
   position: relative;
+  display: block;
   aspect-ratio: 16 / 10;
   overflow: hidden;
-  border-radius: 16px;
+  border-radius: max(4px, calc(var(--window-radius) - var(--window-frame)));
   background: var(--site-tile);
-  box-shadow:
-    0 0 0 1px var(--site-hairline),
-    var(--site-shadow);
+  box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.16);
 }
 
 .template-card-poster img {
@@ -4287,58 +4388,24 @@ main :focus {
   object-position: top;
 }
 
-/* The glass is dense enough that the label keeps 4.5:1 over the darkest or lightest poster. */
-.template-chip {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  display: inline-flex;
-  align-items: center;
-  height: 24px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: rgb(28 28 30 / 0.8);
-  box-shadow:
-    inset 0 0 0 0.5px rgb(255 255 255 / 0.24),
-    0 1px 3px rgb(0 0 0 / 0.2);
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-  backdrop-filter: blur(12px) saturate(1.6);
-}
-
-.template-chip[data-tier='free'] {
-  color: #7cebc0;
-}
-
-.template-chip[data-tier='pro'] {
-  color: #ffb08c;
-}
-
-:root[data-lg-theme='light'] .template-chip {
-  background: rgb(255 255 255 / 0.86);
-  box-shadow:
-    inset 0 0 0 0.5px rgb(255 255 255 / 0.7),
-    0 1px 3px rgb(0 0 0 / 0.15);
-}
-
-:root[data-lg-theme='light'] .template-chip[data-tier='free'] {
-  color: #08603f;
-}
-
-:root[data-lg-theme='light'] .template-chip[data-tier='pro'] {
-  color: #b02d14;
-}
-
-/* Glass that cannot be drawn becomes a plain tile. */
-:root[data-lg-reduce-transparency='1'] .template-chip {
+/* Glass that cannot be drawn becomes a plain frame. */
+:root[data-lg-reduce-transparency='1'] :is(.template-window, .template-dialog-poster) {
   background: var(--site-tile);
   backdrop-filter: none;
 }
 
 .template-card-meta {
   display: grid;
-  gap: 2px;
+  align-content: start;
+  gap: 4px;
+  padding: 18px 22px 22px;
+}
+
+.template-card-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
 }
 
 .template-card-title {
@@ -4359,30 +4426,50 @@ a.template-card:hover .template-card-title {
   line-height: 1.43;
 }
 
-.template-card-action {
-  margin-top: 4px;
-  font-size: 14px;
+/* When a template arrives, tinted for its tier; the label keeps 4.5:1 on the tint. */
+.template-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 12px;
   font-weight: 600;
-  text-wrap: balance;
+  white-space: nowrap;
 }
 
-.template-card[data-status='soon'] .template-card-action {
-  color: var(--site-text-2);
-  font-weight: 400;
+.template-tag[data-tier='free'] {
+  background: rgb(124 235 192 / 0.14);
+  color: #7cebc0;
 }
 
-/* The Pro card's colours, in both themes. Beside the first release it is as tall as their cards. */
+.template-tag[data-tier='pro'] {
+  background: rgb(255 134 86 / 0.16);
+  color: #ffb08c;
+}
+
+:root[data-lg-theme='light'] .template-tag[data-tier='free'] {
+  background: #e3f5ed;
+  color: #08603f;
+}
+
+:root[data-lg-theme='light'] .template-tag[data-tier='pro'] {
+  background: #ffeee7;
+  color: #b02d14;
+}
+
+/* The Pro card's colours, in both themes. Beside the first release it is as tall as their cards,
+   and three of the planned templates fan out of it in glass windows. */
 .template-pro-tile {
-  --tile-padding: 24px;
+  --tile-padding: clamp(20px, 6.2cqi, 24px);
 
+  container-type: inline-size;
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   overflow: hidden;
-  padding: var(--tile-padding);
-  border-radius: 16px;
-  background: #ff8656;
+  border-radius: 24px;
+  background: radial-gradient(120% 70% at 12% 0%, rgb(255 205 175 / 0.6), transparent 62%), #ff8656;
   box-shadow:
     0 0 0 1px rgb(150 30 10 / 0.25),
     0 24px 48px -26px rgb(190 50 20 / 0.65);
@@ -4393,10 +4480,76 @@ a.template-card:hover .template-card-title {
 .template-pro-tile::after {
   position: absolute;
   inset: 0;
+  z-index: 2;
   border-radius: inherit;
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.28);
   content: '';
   pointer-events: none;
+}
+
+/* The windows rise from behind the copy, which clips them at its top edge, where they darken a
+   little as they pass into it. */
+.template-pro-fan {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: clamp(150px, 46cqi, 190px);
+  overflow: hidden;
+}
+
+/* Beside the first release the cards set the row's height and the fan takes what the copy
+   leaves. */
+@media (min-width: 1024px) {
+  .template-pro-fan {
+    min-height: 120px;
+  }
+}
+
+.template-pro-fan::after {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 2;
+  height: 28px;
+  background: linear-gradient(to top, rgb(120 20 0 / 0.3), transparent);
+  content: '';
+}
+
+.template-pro-fan-window {
+  --window-bar: 14px;
+  --window-frame: 3px;
+  --window-radius: 11px;
+
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  width: min(58cqi, 260px);
+  background: linear-gradient(rgb(255 255 255 / 0.42), rgb(255 255 255 / 0.2));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.6),
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.5),
+    0 0 0 0.5px rgb(110 20 0 / 0.25),
+    0 18px 36px -16px rgb(100 15 0 / 0.55);
+  translate: -50% 0;
+  transform-origin: 50% 100%;
+}
+
+.template-pro-fan-window .template-window-bar > i {
+  background: rgb(255 255 255 / 0.6);
+}
+
+/* The outer two lean away from the middle one, a step lower. */
+.template-pro-fan-window:nth-child(1) {
+  translate: -90% 12px;
+  rotate: -8deg;
+}
+
+.template-pro-fan-window:nth-child(2) {
+  z-index: 1;
+}
+
+.template-pro-fan-window:nth-child(3) {
+  translate: -10% 12px;
+  rotate: 8deg;
 }
 
 /* The red is measured from the copy, not from the tile's edges, because the copy's height changes
@@ -4408,9 +4561,9 @@ a.template-card:hover .template-card-title {
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
-  margin: -8px calc(-1 * var(--tile-padding)) calc(-1 * var(--tile-padding));
-  padding: 8px var(--tile-padding) var(--tile-padding);
+  padding: 16px var(--tile-padding) var(--tile-padding);
   background: linear-gradient(to top, #b02d14, #cc391b);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.16);
 }
 
 .template-pro-tile-copy::before {
@@ -4419,13 +4572,14 @@ a.template-card:hover .template-card-title {
   bottom: 100%;
   left: 0;
   height: 210px;
-  background: linear-gradient(to top, #cc391b, #f0502b 100px, #ff8656);
+  background: linear-gradient(to top, #cc391b, #f0502b 100px, rgb(255 134 86 / 0));
   content: '';
 }
 
+/* The copy steps down a little on a narrow tile, so it stays as short as the cards beside it. */
 .template-pro-tile-title {
   font-family: var(--site-font-display);
-  font-size: 24px;
+  font-size: clamp(21px, 6.2cqi, 24px);
   font-weight: 600;
   line-height: 1.1;
   letter-spacing: -0.015em;
@@ -4433,7 +4587,7 @@ a.template-card:hover .template-card-title {
 
 .template-pro-tile-text {
   max-width: 34em;
-  font-size: 15px;
+  font-size: clamp(14px, 3.9cqi, 15px);
   line-height: 1.4;
 }
 
@@ -4452,18 +4606,14 @@ a.template-card:hover .template-card-title {
 }
 
 .template-gallery-note {
-  margin-top: 32px;
+  margin-top: 28px;
   color: var(--site-text-2);
   font-size: 14px;
 }
 
 @media (max-width: 1023px) {
-  .template-gallery {
-    --template-gap: 16px;
-    --template-row-gap: 32px;
-  }
-
   .template-grid,
+  .template-row,
   .template-grid[data-status='planned'] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -4472,57 +4622,83 @@ a.template-card:hover .template-card-title {
   .template-pro-tile {
     grid-column: 1 / -1;
   }
+
+  /* A card across the whole row keeps its window to a readable width, centred on the stage. */
+  .template-card[data-wide] .template-window {
+    width: min(100%, 560px);
+    margin-inline: auto;
+  }
 }
 
+/* A phone shows each row as a shelf to swipe through, running out to the screen's edges, so the
+   posters stay large enough to read and the next card shows at the edge. */
 @media (max-width: 639px) {
   .template-gallery {
     --template-gap: 12px;
-    --template-row-gap: 28px;
   }
 
   .template-group + .template-group {
-    margin-top: 56px;
+    margin-top: 64px;
   }
 
   .template-group-header {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }
 
   .template-group-title {
-    font-size: 20px;
+    font-size: 21px;
   }
 
-  .template-card {
-    gap: 10px;
+  .template-row {
+    display: block;
   }
 
-  .template-card-poster {
-    border-radius: 12px;
+  /* The padding keeps focus rings and shadows inside the scrolling shelf, which clips them. */
+  .template-grid,
+  .template-row > .template-grid,
+  .template-grid[data-status='planned'] {
+    display: flex;
+    margin: -8px -24px;
+    padding: 8px 24px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: 24px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
   }
 
-  .template-chip {
-    top: 6px;
-    left: 6px;
-    height: 20px;
-    padding: 0 7px;
-    font-size: 11px;
+  .template-grid > * {
+    flex: 0 0 80%;
+    scroll-snap-align: start;
   }
 
-  .template-card-title {
-    font-size: 16px;
+  .template-grid[data-status='planned'] > * {
+    flex-basis: 64%;
   }
 
-  .template-card-text,
-  .template-card-action {
-    font-size: 13px;
+  .template-grid::-webkit-scrollbar {
+    display: none;
   }
 
   .template-pro-tile {
-    --tile-padding: 20px;
+    margin-top: 20px;
   }
 
-  .template-pro-tile-title {
-    font-size: 21px;
+  .template-subgroup {
+    margin-top: 40px;
+    font-size: 14px;
+  }
+
+  .template-card-meta {
+    padding: 14px 18px 18px;
+  }
+
+  .template-card-title {
+    font-size: 17px;
+  }
+
+  .template-card-text {
+    font-size: 13px;
   }
 }
 
@@ -4553,21 +4729,13 @@ a.template-card:hover .template-card-title {
   z-index: 10001;
 }
 
+/* The poster in the same glass window as on its card. */
 .template-dialog-poster {
-  grid-area: poster;
-  aspect-ratio: 16 / 10;
-  overflow: hidden;
-  border-radius: 14px;
-  background: var(--site-tile);
-  box-shadow: 0 0 0 1px var(--site-hairline);
-}
+  --window-bar: 22px;
+  --window-frame: 5px;
+  --window-radius: 16px;
 
-.template-dialog-poster img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: top;
+  grid-area: poster;
 }
 
 .template-dialog-details {
@@ -4769,7 +4937,7 @@ a.template-card:hover .template-card-title {
     gap: 12px;
   }
 
-  .template-dialog-poster {
+  .template-dialog-poster .template-card-poster {
     aspect-ratio: 2 / 1;
   }
 
@@ -5003,7 +5171,6 @@ a.template-card:hover .template-card-title {
   :root:not([data-lg-reduce-motion='1']) .home-section-link > span[aria-hidden],
   :root:not([data-lg-reduce-motion='1']) .home-announce > span[aria-hidden]:last-child,
   :root:not([data-lg-reduce-motion='1']) .pro-card-action > span[aria-hidden],
-  :root:not([data-lg-reduce-motion='1']) .template-card-action > span[aria-hidden],
   :root:not([data-lg-reduce-motion='1']) .template-pro-tile-action > span[aria-hidden] {
     position: relative;
     left: 0;
@@ -5014,22 +5181,49 @@ a.template-card:hover .template-card-title {
   :root:not([data-lg-reduce-motion='1']) .home-announce:hover > span[aria-hidden]:last-child,
   :root:not([data-lg-reduce-motion='1']) .pro-card:hover .pro-card-action > span[aria-hidden],
   :root:not([data-lg-reduce-motion='1'])
-    a.template-card:hover
-    .template-card-action
-    > span[aria-hidden],
-  :root:not([data-lg-reduce-motion='1'])
     .template-pro-tile:hover
     .template-pro-tile-action
     > span[aria-hidden] {
     left: 3px;
   }
 
-  :root:not([data-lg-reduce-motion='1']) .template-card-poster {
-    transition: translate 500ms var(--lg-ease-out);
+  /* Pointing at a template raises its window further out of the stage, and a press sets it
+     back down. Pointing at the Pro tile opens its fan. */
+  :root:not([data-lg-reduce-motion='1']) .template-window,
+  :root:not([data-lg-reduce-motion='1']) .template-pro-fan-window {
+    transition:
+      translate 600ms var(--lg-ease-out),
+      rotate 600ms var(--lg-ease-out),
+      scale 600ms var(--lg-ease-out);
   }
 
-  :root:not([data-lg-reduce-motion='1']) a.template-card:hover .template-card-poster {
-    translate: 0 -4px;
+  :root:not([data-lg-reduce-motion='1']) a.template-card:hover .template-window {
+    translate: 0 -8px;
+  }
+
+  :root:not([data-lg-reduce-motion='1']) a.template-card:active .template-window {
+    translate: 0 -2px;
+    transition-duration: 160ms;
+  }
+
+  :root:not([data-lg-reduce-motion='1'])
+    .template-pro-tile:hover
+    .template-pro-fan-window:nth-child(1) {
+    translate: -98% 6px;
+    rotate: -12deg;
+  }
+
+  :root:not([data-lg-reduce-motion='1'])
+    .template-pro-tile:hover
+    .template-pro-fan-window:nth-child(2) {
+    translate: -50% -10px;
+  }
+
+  :root:not([data-lg-reduce-motion='1'])
+    .template-pro-tile:hover
+    .template-pro-fan-window:nth-child(3) {
+    translate: -2% 6px;
+    rotate: 12deg;
   }
 
   /* The Pro card's art never stops, but only just moves: the ribbon sways over 16 seconds and

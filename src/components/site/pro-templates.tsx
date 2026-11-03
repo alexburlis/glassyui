@@ -10,7 +10,7 @@ import {
   GlassDialogDescription,
   GlassDialogTitle,
 } from '@/components/liquid';
-import { TemplateCardBody } from '@/components/site/template-card';
+import { TemplateCardBody, TemplateWindow } from '@/components/site/template-card';
 import { captureAction } from '@/lib/analytics/browser';
 import { PRO_OFFER } from '@/lib/pro-teaser';
 import { PRO_CHECKOUT_URL, PRO_ORIGIN } from '@/lib/site-links';
@@ -23,6 +23,10 @@ const refund = `Full refund up to ${PRO_OFFER.refundDays} days after your first 
 const firstRelease = PRO_CARDS.filter((card) => card.status === 'first-release');
 
 const planned = PRO_CARDS.filter((card) => card.status === 'planned');
+
+// The Pro tile fans out three of the planned templates, the first in the middle: every one of
+// them comes with Pro.
+const fan = planned.length >= 3 ? [planned[1], planned[0], planned[2]] : planned;
 
 function CheckGlyph() {
   return (
@@ -40,10 +44,12 @@ function CheckGlyph() {
 }
 
 function ProTemplateCard({
+  backdrop,
   card,
   onOpen,
   sizes,
 }: {
+  backdrop: number;
   card: ProCard;
   onOpen: (event: MouseEvent<HTMLAnchorElement>, card: ProCard) => void;
   sizes: string;
@@ -58,21 +64,18 @@ function ProTemplateCard({
       onClick={(event) => onOpen(event, card)}
     >
       <TemplateCardBody
-        action={
-          <>
-            Get it first with Pro<span aria-hidden> ›</span>
-          </>
-        }
+        backdrop={backdrop}
         card={card}
-        chip={card.chip}
         sizes={sizes}
+        // The planned templates share one label above them rather than one each.
+        tag={card.status === 'first-release' ? card.chip : undefined}
         tier="pro"
       />
     </a>
   );
 }
 
-export function ProTemplates() {
+export function ProTemplates({ backdropOffset }: { backdropOffset: number }) {
   const [open, setOpen] = useState(false);
   // Separate from open, so the dialog keeps its template while it closes.
   const [shown, setShown] = useState(PRO_CARDS[0]);
@@ -114,16 +117,30 @@ export function ProTemplates() {
       <header className="template-group-header">
         <h3 className="template-group-title">Coming soon to Pro</h3>
       </header>
-      <div className="template-grid" data-status="first-release">
-        {firstRelease.map((card) => (
-          <ProTemplateCard
-            card={card}
-            key={card.slug}
-            onOpen={show}
-            sizes="(min-width: 1024px) 390px, 50vw"
-          />
-        ))}
+      <div className="template-row">
+        <div className="template-grid" data-status="first-release">
+          {firstRelease.map((card, index) => (
+            <ProTemplateCard
+              backdrop={backdropOffset + index}
+              card={card}
+              key={card.slug}
+              onOpen={show}
+              sizes="(min-width: 1024px) 340px, (min-width: 640px) 45vw, 80vw"
+            />
+          ))}
+        </div>
         <a className="template-pro-tile" data-analytics-source="template" href={PRO_ORIGIN}>
+          <div aria-hidden className="template-pro-fan">
+            {fan.map((card) => (
+              <TemplateWindow
+                alt=""
+                className="template-pro-fan-window"
+                key={card.slug}
+                sizes="200px"
+                src={card.poster}
+              />
+            ))}
+          </div>
           <span className="template-pro-tile-copy">
             <span className="template-pro-tile-title">Every Pro template, one price</span>
             <span className="template-pro-tile-text">
@@ -139,19 +156,23 @@ export function ProTemplates() {
           </span>
         </a>
       </div>
-      <div className="template-grid" data-status="planned">
-        {planned.map((card) => (
-          <ProTemplateCard
-            card={card}
-            key={card.slug}
-            onOpen={show}
-            sizes="(min-width: 1024px) 290px, 50vw"
-          />
-        ))}
-      </div>
-      <p className="template-gallery-note">
-        Pro images are design previews. Planned templates have no date yet.
-      </p>
+      {planned.length > 0 ? (
+        <>
+          <p className="template-subgroup">{planned[0].timing}</p>
+          <div className="template-grid" data-status="planned">
+            {planned.map((card, index) => (
+              <ProTemplateCard
+                backdrop={backdropOffset + firstRelease.length + index}
+                card={card}
+                key={card.slug}
+                onOpen={show}
+                sizes="(min-width: 1024px) 250px, (min-width: 640px) 45vw, 64vw"
+              />
+            ))}
+          </div>
+        </>
+      ) : null}
+      <p className="template-gallery-note">Pro images are design previews.</p>
       <GlassDialog onOpenChange={setOpen} open={open}>
         <GlassDialogContent
           className="template-dialog"
@@ -172,15 +193,12 @@ export function ProTemplates() {
         >
           <div className="template-dialog-body">
             <p className="template-dialog-eyebrow">{shown.chip}</p>
-            <div className="template-dialog-poster">
-              <Image
-                alt={`${shown.name} design preview`}
-                height={800}
-                sizes="(min-width: 768px) 500px, 92vw"
-                src={shown.poster}
-                width={1280}
-              />
-            </div>
+            <TemplateWindow
+              alt={`${shown.name} design preview`}
+              className="template-dialog-poster"
+              sizes="(min-width: 768px) 500px, 92vw"
+              src={shown.poster}
+            />
             <div className="template-dialog-details">
               <GlassDialogTitle className="template-dialog-title">{shown.name}</GlassDialogTitle>
               <p className="template-dialog-kind">{shown.kind}</p>
