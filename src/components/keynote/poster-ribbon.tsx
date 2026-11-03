@@ -1,4 +1,5 @@
 import { FPS, OPENER, STAGE_COLORS } from './frames';
+import { useFromServer } from './from-server';
 import { RIBBON_BAND, RIBBON_FOLD, VERMILION } from './ribbon';
 
 // The worker that brings the mark into focus on the poster's canvas, as if through thick glass:
@@ -153,11 +154,13 @@ worker.postMessage({
  * last frame is the whole mark, the frame the player takes over with.
  */
 export function PosterRibbon() {
+  const fromServer = useFromServer();
+
   return (
     <>
       {/* The script below sizes the canvas before the page hydrates; React keeps that size. */}
       <canvas aria-hidden className="keynote-poster-ribbon" suppressHydrationWarning />
-      <script dangerouslySetInnerHTML={{ __html: POSTER }} />
+      {fromServer ? <script dangerouslySetInnerHTML={{ __html: POSTER }} /> : null}
     </>
   );
 }

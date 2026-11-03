@@ -5,6 +5,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import type { CSSProperties, ReactNode } from 'react';
 import { usePreferences } from '@/components/liquid';
 import { OPENER, stageBackground } from './frames';
+import { useFromServer } from './from-server';
 import { PosterRibbon } from './poster-ribbon';
 import { motionReduced } from './scrubber';
 import '@/styles/keynote.css';
@@ -70,9 +71,23 @@ const SKIP = `(function(){
 /** Asks the opener to play again from its first frame. */
 const REPLAY_EVENT = 'glassy:replay-intro';
 
-/** Put this before the header, so neither it nor the hero paints before the stage does. */
+/**
+ * Put this before the header, so neither it nor the hero paints before the stage does. After a
+ * navigation within the site the opener sets the keynote up instead.
+ */
 export function KeynoteBootstrap() {
-  return <script dangerouslySetInnerHTML={{ __html: BOOTSTRAP }} />;
+  return useFromServer() ? <script dangerouslySetInnerHTML={{ __html: BOOTSTRAP }} /> : null;
+}
+
+/**
+ * The element the address names: :target after a page load, or the element with the hash's id
+ * after a navigation within the site, which leaves :target unset.
+ */
+function addressed() {
+  return (
+    document.querySelector(':target') ??
+    (location.hash ? document.getElementById(location.hash.slice(1)) : null)
+  );
 }
 
 /**
@@ -126,6 +141,7 @@ export function KeynoteOpener({ children }: { children: ReactNode }) {
   // composition's own first frame on a replay, which has no poster to take over from.
   const [from, setFrom] = useState<number>(OPENER.rest);
   const { preferences } = usePreferences();
+  const fromServer = useFromServer();
   // Whether the opener was running when this effect last cleaned up.
   const interrupted = useRef(false);
 
@@ -145,7 +161,7 @@ export function KeynoteOpener({ children }: { children: ReactNode }) {
       const allowed = !motionReduced();
       const turn = document.querySelector('.turn');
       const before = turn?.getBoundingClientRect();
-      const anchor = firstRead ? document.querySelector(':target') : null;
+      const anchor = firstRead ? addressed() : null;
 
       firstRead = false;
 
@@ -445,7 +461,7 @@ export function KeynoteOpener({ children }: { children: ReactNode }) {
         <span className="keynote-skip-touch">Tap again to skip</span>
         <span aria-hidden> ›</span>
       </button>
-      <script dangerouslySetInnerHTML={{ __html: SKIP }} />
+      {fromServer ? <script dangerouslySetInnerHTML={{ __html: SKIP }} /> : null}
       <div className="keynote">{children}</div>
     </>
   );
