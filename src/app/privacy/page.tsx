@@ -18,7 +18,7 @@ export default function PrivacyPage() {
       <SiteNav />
       <LegalDocument
         description="How glassyui.com and pro.glassyui.com handle visits, purchases, email updates and support messages."
-        effectiveDate="October 20, 2026"
+        effectiveDate="November 3, 2026"
         label="Privacy"
         title="Privacy policy"
       >
@@ -79,31 +79,32 @@ export default function PrivacyPage() {
         <LegalSection title="Optional analytics and your choice">
           <p>
             We use PostHog, Inc. to understand how visitors use public pages, navigation, search,
-            install-copy controls, appearance and platform choices, signup forms and Glassy UI Pro
-            links. When a valid project configuration and trusted country information identify a
-            United States visit, this minimal analytics runs by default unless you have refused. The
-            notice lets you turn analytics off immediately. Everywhere else, including the EU/EEA,
-            United Kingdom, Switzerland and unknown locations, analytics starts only after you
-            choose Accept analytics. Analytics is optional; the free library, purchases and
-            appearance settings remain available when you refuse.
+            install-copy controls, appearance and platform choices, signup forms, Glassy UI Pro
+            template previews and Pro links. When a valid project configuration and trusted country
+            information identify a United States visit, this minimal analytics runs by default
+            unless you have refused. The notice lets you turn analytics off immediately. Everywhere
+            else, including the EU/EEA, United Kingdom, Switzerland and unknown locations, analytics
+            starts only after you choose Accept analytics. Analytics is optional; the free library,
+            purchases and appearance settings remain available when you refuse.
           </p>
           <p>
             We send page views (<code>$pageview</code>), page exits (<code>$pageleave</code>),
             loading and interaction measurements (<code>$web_vitals</code>), and explicit Pro
             checkout-button clicks (<code>pro_checkout_click</code>), promotion and navigation
             clicks, visible Pro banner impressions, and control actions. Interaction events contain
-            fixed control categories, placement, destination categories and outcomes. Signup
-            outcomes mean a request was accepted or failed, not a confirmed subscription. Search
-            text, copied content and email addresses are excluded. An event contains a known public
-            route or route category, the Glassy UI site, event time, processing basis, scroll depth,
-            time on a page, browser and device categories, screen dimensions, a broad referral
-            category and fixed source labels such as X, GitHub or Google. Known campaign tags and
-            the landing-page category connect permitted visits to later control actions. Raw
-            campaign strings and full referrers are excluded. Random PostHog browser and session
-            identifiers use a first-party cookie shared between the two sites, with an expiry of 30
-            minutes after refresh. Page-view identifiers and technical session state support
-            navigation measurement. We do not link these identifiers to an account or purchase. A
-            visit to a thank-you page is a page view, not proof of payment.
+            fixed control categories, placement, destination categories, outcomes and, for a Pro
+            template preview, the template&apos;s public name. Signup outcomes mean a request was
+            accepted or failed, not a confirmed subscription. Search text, copied content and email
+            addresses are excluded. An event contains a known public route or route category, the
+            Glassy UI site, event time, processing basis, scroll depth, time on a page, browser and
+            device categories, screen dimensions, a broad referral category and fixed source labels
+            such as X, GitHub or Google. Known campaign tags and the landing-page category connect
+            permitted visits to later control actions. Raw campaign strings and full referrers are
+            excluded. Random PostHog browser and session identifiers use a first-party cookie shared
+            between the two sites, with an expiry of 30 minutes after refresh. Page-view identifiers
+            and technical session state support navigation measurement. We do not link these
+            identifiers to an account or purchase. A visit to a thank-you page is a page view, not
+            proof of payment.
           </p>
           <p>
             Event properties exclude query strings, fragments, full referring URLs, email addresses,

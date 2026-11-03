@@ -152,7 +152,7 @@ export default function Home() {
               Start from a whole page.
             </h2>
             <p className="home-section-lead">
-              Free ones install in one command. The rest come with Pro.
+              Free ones install in one command. Pre&#8209;order Pro to get new ones first.
             </p>
           </header>
           <TemplateGallery />

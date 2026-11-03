@@ -67,7 +67,8 @@ for (const [engine, browserType] of [
           }, String(condensed));
 
         const pageWidth = await page.evaluate(() => document.documentElement.clientWidth);
-        const capsuleWidth = Math.min(920, width - (width <= 700 ? 20 : 32));
+        // From 1024px the site widens the capsule to keep the theme switch inside its rim.
+        const capsuleWidth = Math.min(width >= 1024 ? 960 : 920, width - (width <= 700 ? 20 : 32));
 
         const openWidth =
           width <= 700 ? pageWidth : Math.max(capsuleWidth, Math.min(1200, pageWidth - 48));

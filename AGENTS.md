@@ -109,7 +109,9 @@
   from `src/fonts`, beside their SIL Open Font License files, and preloads
   none, so a preview fetches only its own. The home page's gallery
   (`src/lib/template-gallery.ts`, `src/components/site/template-gallery.tsx`)
-  mixes them with the Pro templates; every poster is in `public/templates`.
+  shows them first, then the Pro templates
+  (`src/components/site/pro-templates.tsx`), whose cards open one Pro dialog;
+  every poster is in `public/templates`.
 
 ## Build, test, and development commands
 
@@ -246,14 +248,17 @@
 - Use `src/components/liquid/provider.tsx` and `src/lib/liquid/preferences.ts`
   for persisted toggles instead of reimplementing storage logic.
 - Glassy UI Pro is a separate private application repository. This site owns
-  only external Pro links and public teaser copies: the offer and template
-  names in `src/lib/pro-teaser.ts`, the Pro slugs in `GALLERY_ORDER` in
-  `src/lib/template-gallery.ts`, and the Pro posters in `public/templates`,
-  byte-identical to the Pro catalogue's. Gallery cards link to
-  `<Pro origin>/#<slug>`, so the Pro catalogue must carry those ids. Keep the
-  prices, names, slugs and posters in sync with the private offer.
-  `src/lib/site-links.ts` owns the public Pro origin. `/pro` addresses redirect
-  there on every host; never add Pro routes or paid source to this repository.
+  only external Pro links and public teaser copies: the offer and the template
+  names and slugs in `src/lib/pro-teaser.ts`, and the Pro posters in
+  `public/templates`, byte-identical to the Pro catalogue's. A Pro card opens
+  the home page's Pro dialog, and without script or with a modifier key links
+  to `<Pro origin>/#<slug>`, so the Pro catalogue must carry those ids. Keep the
+  prices, refund window, release month, names, slugs and posters in sync with
+  the private offer.
+  `src/lib/site-links.ts` owns the public Pro origin and the Pro dialog's
+  checkout link, which must stay the private app's `PRO_CHECKOUT_URL`. `/pro`
+  addresses redirect there on every host; never add Pro routes or paid source to
+  this repository.
 - The development-only `/share-studio` route draws each page's link-preview card
   at 1200 × 630 from the live components (`src/components/share`);
   `node scripts/capture-share-cards.mjs <loopback-url> [card ...]` photographs
@@ -264,7 +269,8 @@
   says how to make each card again. A new web component or guide fails the
   build until its card is captured: run the script with `--missing`.
 - `node scripts/smoke-pro-links.mjs <base-url> <artifact-directory>` checks
-  external Pro redirects, the public gallery teaser and legal/footer links.
+  external Pro redirects, the public gallery teaser, the Pro dialog and its
+  checkout link, and legal/footer links.
   The separate private app owns preorder, checkout, terms and Pro smoke checks.
 - `pnpm check:analytics-consent <free-base-url> <artifact-directory>` checks
   free-site consent. Add a separate loopback Pro base URL as the third argument

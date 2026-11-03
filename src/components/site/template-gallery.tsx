@@ -1,94 +1,61 @@
-import Image from 'next/image';
 import Link from 'next/link';
-import { PRO_OFFER, PRO_TEMPLATE_TEASERS } from '@/lib/pro-teaser';
-import { PRO_ORIGIN } from '@/lib/site-links';
-import { GALLERY, type GalleryEntry } from '@/lib/template-gallery';
+import { ProTemplates } from '@/components/site/pro-templates';
+import { TemplateCardBody } from '@/components/site/template-card';
+import { FREE_CARDS, type FreeCard } from '@/lib/template-gallery';
 
-const firstRelease = new Intl.ListFormat('en', { type: 'conjunction' }).format(
-  PRO_TEMPLATE_TEASERS.filter((template) => template.status === 'first-release').map(
-    (template) => template.name,
-  ),
-);
+// Below 1024 px the free cards sit two to a row, so the first of an odd number spans the row
+// rather than leave the last one alone.
+const firstSpans = FREE_CARDS.length % 2 === 1;
 
-function TemplateCardBody({ entry }: { entry: GalleryEntry }) {
-  return (
-    <>
-      <div className="template-card-poster">
-        <Image
-          alt={entry.tier === 'pro' ? `${entry.name} design preview` : `${entry.name} template`}
-          height={800}
-          sizes="(min-width: 1024px) 390px, 50vw"
-          src={entry.poster}
-          width={1280}
-        />
-        <span className="template-chip" data-tier={entry.tier}>
-          {entry.chip}
-        </span>
-      </div>
-      <div className="template-card-meta">
-        <h3 className="template-card-title">{entry.name}</h3>
-        <span className="template-card-text">{entry.kind}</span>
-        <span className="template-card-action">
-          {entry.action}
-          {entry.status === 'soon' ? null : (
-            <span aria-hidden>{entry.tier === 'pro' ? ' ↗' : ' ›'}</span>
-          )}
-        </span>
-      </div>
-    </>
-  );
-}
+function FreeTemplateCard({ card, wide }: { card: FreeCard; wide: boolean }) {
+  const sizes = `(min-width: 1024px) 390px, ${wide ? '100vw' : '50vw'}`;
 
-function TemplateCard({ entry }: { entry: GalleryEntry }) {
-  if (entry.status === 'soon') {
+  if (card.status === 'soon') {
     return (
-      <div className="template-card" data-status="soon">
-        <TemplateCardBody entry={entry} />
+      <div className="template-card" data-status="soon" data-wide={wide || undefined}>
+        <TemplateCardBody
+          action="Coming soon"
+          card={card}
+          chip="Free · Soon"
+          sizes={sizes}
+          tier="free"
+        />
       </div>
     );
   }
 
   // A template's page is a whole site, so it loads when chosen rather than whenever it scrolls by.
-  if (entry.tier === 'free') {
-    return (
-      <Link className="template-card" href={entry.href} prefetch={false}>
-        <TemplateCardBody entry={entry} />
-      </Link>
-    );
-  }
-
   return (
-    <a className="template-card" data-analytics-source="template" href={entry.href}>
-      <TemplateCardBody entry={entry} />
-    </a>
+    <Link className="template-card" data-wide={wide || undefined} href={card.href} prefetch={false}>
+      <TemplateCardBody
+        action={
+          <>
+            Use free template<span aria-hidden> ›</span>
+          </>
+        }
+        card={card}
+        chip="Free"
+        sizes={sizes}
+        tier="free"
+      />
+    </Link>
   );
 }
 
 export function TemplateGallery() {
   return (
-    <>
-      <div className="template-gallery">
-        {GALLERY.map((entry) => (
-          <TemplateCard entry={entry} key={entry.slug} />
-        ))}
-        <a className="template-pro-tile" data-analytics-source="template" href={PRO_ORIGIN}>
-          <span className="template-pro-tile-copy">
-            <span className="template-pro-tile-title">Every Pro template, one price</span>
-            <span className="template-pro-tile-text">
-              {PRO_OFFER.earlyBirdOpen
-                ? `$${PRO_OFFER.earlyBirdPrice} for the first ${PRO_OFFER.earlyBirdCap}, then $${PRO_OFFER.regularPrice}.`
-                : `$${PRO_OFFER.regularPrice}, paid once.`}{' '}
-              {firstRelease} arrive first, estimated {PRO_OFFER.firstReleaseEstimate}.
-            </span>
-            <span className="template-pro-tile-action">
-              Pre-order Pro<span aria-hidden> ↗</span>
-            </span>
-          </span>
-        </a>
+    <div className="template-gallery">
+      <div className="template-group">
+        <header className="template-group-header">
+          <h3 className="template-group-title">Free templates</h3>
+        </header>
+        <div className="template-grid">
+          {FREE_CARDS.map((card, index) => (
+            <FreeTemplateCard card={card} key={card.slug} wide={firstSpans && index === 0} />
+          ))}
+        </div>
       </div>
-      <p className="template-gallery-note">
-        Pro images are design previews. Planned templates have no date yet.
-      </p>
-    </>
+      <ProTemplates />
+    </div>
   );
 }

@@ -32,7 +32,7 @@ import { chromium, firefox, webkit } from 'playwright';
 // 10. A lazy demo moves the page: ordinary wheel scrolling jumps when the command palette
 //     mounts below the viewport. Its results must still scroll during keyboard navigation.
 // 11. The header keeps one shape: at the top of the page it is not the open bar (wider than the
-//     capsule, its glass hidden), scrolled it does not settle into the 920px glass capsule, or
+//     capsule, its glass hidden), scrolled it does not settle into the 960px glass capsule, or
 //     back at the top it does not open again; or it leaves inline styles behind at rest.
 // 12. The header jumps where it should morph: with motion allowed, no frame falls between the
 //     open bar and the capsule.
@@ -94,6 +94,7 @@ const HERO = [
 const REVEALS = [
   '.home-section-header',
   '.component-card',
+  '.template-group-header',
   '.template-card',
   '.template-pro-tile',
   '.bento-tile',
@@ -705,7 +706,8 @@ async function checkFloatingOrigin(browser, name) {
 // The open bar and the capsule at the default 1280px viewport.
 const HEADER_OPEN_WIDTH = 1200;
 
-const HEADER_CAPSULE_WIDTH = 920;
+// Wide enough for the search pill and the theme switch (`--lg-header-capsule-width` in globals.css).
+const HEADER_CAPSULE_WIDTH = 960;
 
 async function checkHeader(browser, name) {
   const result = {};
