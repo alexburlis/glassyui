@@ -72,6 +72,11 @@ type SceneRendererOptions = {
 
 const MAX_PANES = 24;
 
+// Pockets lowered into a pane's glass around the elements that ask for one.
+const MAX_WELLS = 8;
+
+const WELL = '[data-lg-scene-well]';
+
 // The loop keeps drawing this long after the last sign of change, so a
 // transition that starts a frame late still gets every frame.
 const TAIL_MS = 400;
@@ -124,6 +129,10 @@ const BACKDROP = 'data-lg-scene-backdrop';
 const SCALE = 'data-lg-scene-scale';
 
 const ACTIVE = 'data-lg-scene';
+
+// What the renderer writes itself, so writing it never wakes the renderer. A well's attribute
+// shares the prefix and is the page's own.
+const OWN_ATTRIBUTES = new Set([ACTIVE, RENDERER, STATE, BACKDROP, SCALE]);
 
 const warned = new Set<string>();
 
@@ -234,6 +243,7 @@ precision highp float;
 precision highp int;
 
 #define MAX_PANES ${MAX_PANES}
+#define MAX_WELLS ${MAX_WELLS}
 
 const float SHADOW_REACH = ${SHADOW_REACH.toFixed(1)};
 const float AIR_GAP = ${SLAB_AIR_GAP.toFixed(1)};
@@ -258,6 +268,9 @@ uniform vec4 u_radii[MAX_PANES]; // corner radius, merge radius, frost radius, s
 uniform vec4 u_tint[MAX_PANES];  // premultiplied
 uniform vec4 u_extra[MAX_PANES]; // flow, press, bevel width, alpha
 uniform vec2 u_face[MAX_PANES];  // luminance cap and floor for legible ink
+uniform vec4 u_well[MAX_WELLS];      // centre x, centre y, half width, half height
+uniform vec4 u_wellProfile[MAX_WELLS]; // corner radius, depth, rim width, unused
+uniform int u_wells;
 uniform vec4 u_optics; // ior, thickness, dispersion, specular
 uniform vec4 u_look;   // shadow, highlight, flow amplitude, pixel ratio
 uniform float u_time;
@@ -443,6 +456,33 @@ void main() {
   vec2 n2 = gradLength > 1e-4 ? g / gradLength : vec2(0.0, -1.0);
   vec2 tilt = slope * n2;
 
+  // Wells lower the surface into rounded pockets around the elements that ask for them. Each
+  // rim lies just outside its element and tilts the surface into the pocket, so the backdrop
+  // bends there as at a groove cut into the block. Overlapping rims add up smoothly.
+  float dip = 0.0;
+  vec2 dipTilt = vec2(0.0);
+
+  for (int j = 0; j < MAX_WELLS; j++) {
+    if (j >= u_wells) break;
+
+    vec4 profile = u_wellProfile[j];
+    vec3 wd = roundedBox(p - u_well[j].xy, u_well[j].zw, profile.x);
+    float x = clamp((profile.z - wd.x) / profile.z, 0.0, 1.0);
+
+    dip += profile.y * x * x * (3.0 - 2.0 * x);
+    dipTilt -= profile.y * 6.0 * x * (1.0 - x) / profile.z * wd.yz;
+  }
+
+  if (dip > 0.0) {
+    z = max(z - dip, 0.12 * T);
+    rise = z / max(T, 1e-4);
+    tilt += dipTilt;
+
+    float lean = length(tilt);
+
+    if (lean > ${SLAB_MAX_SLOPE.toFixed(1)}) tilt *= ${SLAB_MAX_SLOPE.toFixed(1)} / lean;
+  }
+
   if (flow * amp > 0.0) tilt += flow * amp * 0.18 * ripple(p, t);
 
   vec3 N = normalize(vec3(tilt, 1.0));
@@ -555,6 +595,9 @@ const UNIFORMS = [
   'u_tint',
   'u_extra',
   'u_face',
+  'u_well',
+  'u_wellProfile',
+  'u_wells',
   'u_optics',
   'u_look',
   'u_time',
@@ -601,9 +644,27 @@ const BACKING = 402;
 
 const FACE = 404;
 
-const FRAME_LENGTH = 452;
+const WELL_RECT = 452;
+
+const WELL_PROFILE = 484;
+
+const WELLS = 516;
+
+const FRAME_LENGTH = 517;
 
 type Rgba = [number, number, number, number];
+
+/** A pocket in a pane's glass around one of its elements, in the same space as the pane. */
+type Well = {
+  element: HTMLElement;
+  cx: number;
+  cy: number;
+  hx: number;
+  hy: number;
+  radius: number;
+  depth: number;
+  bevel: number;
+};
 
 type Pane = {
   element: HTMLElement;
@@ -626,6 +687,7 @@ type Pane = {
   press: Spring;
   /** Still fading out after its element was hidden or removed. */
   ghost: boolean;
+  wells: Well[];
 };
 
 const TRANSPARENT: Rgba = [0, 0, 0, 0];
@@ -844,6 +906,7 @@ export function createSceneRenderer({
   // unless the scene pins it to the viewport and scrolling carries the box.
   const backdropBox = { left: 0, top: 0, width: 0, height: 0 };
   const records = new Map<HTMLElement, Pane>();
+  const observedWells = new Set<HTMLElement>();
   let drawn: Pane[] = [];
   const frame = new Float32Array(FRAME_LENGTH);
   const previous = new Float32Array(FRAME_LENGTH);
@@ -1001,6 +1064,62 @@ export function createSceneRenderer({
     return token.endsWith('%') ? (value / 100) * Math.min(width, height) : value;
   };
 
+  // An unset length falls back to its registered default, which engines without @property lack.
+  const lengthOr = (style: CSSStyleDeclaration, name: string, fallback: number) =>
+    style.getPropertyValue(name).trim() ? readLength(style, name) : fallback;
+
+  // Wells inside glass nested in the pane belong to that glass, which keeps its CSS material.
+  const measureWells = (pane: Pane, local: boolean) => {
+    const wells: Well[] = [];
+
+    for (const element of pane.element.querySelectorAll<HTMLElement>(WELL)) {
+      let nested = false;
+
+      for (
+        let node = element.parentElement;
+        node && node !== pane.element;
+        node = node.parentElement
+      ) {
+        if (registry.elements.has(node)) nested = true;
+      }
+
+      if (nested || element.getClientRects().length === 0) continue;
+
+      const style = getComputedStyle(element);
+
+      if (style.visibility !== 'visible') continue;
+
+      const rect = local ? localRect(element, root) : element.getBoundingClientRect();
+      const scale = element.offsetWidth ? rect.width / element.offsetWidth : 1;
+      const hx = rect.width / 2;
+      const hy = rect.height / 2;
+
+      if (hx <= 0 || hy <= 0) continue;
+
+      if (!observedWells.has(element)) {
+        observedWells.add(element);
+        resizeObserver.observe(element);
+      }
+
+      wells.push({
+        element,
+        cx: rect.left + hx - box.left,
+        cy: rect.top + hy - box.top,
+        hx,
+        hy,
+        radius: Math.min(
+          radiusOf(style, element.offsetWidth, element.offsetHeight) * scale,
+          hx,
+          hy,
+        ),
+        depth: lengthOr(style, '--lg-scene-well-depth', 10),
+        bevel: Math.max(lengthOr(style, '--lg-scene-well-bevel', 8), 1),
+      });
+    }
+
+    return wells;
+  };
+
   const measure = (pane: Pane, style: CSSStyleDeclaration) => {
     const { element } = pane;
     const local = root.getAttribute('data-lg-backdrop-space') !== 'viewport';
@@ -1023,12 +1142,19 @@ export function createSceneRenderer({
     [pane.cap, pane.lift] = faceRange(parseColour(style.getPropertyValue('--lg-scene-ink')));
     pane.press.target = clamp01(readNumber(style, '--lg-press'));
     pane.opacity = opacityOf(element, style);
+    pane.wells = measureWells(pane, local);
+  };
+
+  const forgetWell = (element: HTMLElement) => {
+    observedWells.delete(element);
+    resizeObserver.unobserve(element);
   };
 
   const release = (pane: Pane) => {
     pane.element.removeAttribute(ACTIVE);
     records.delete(pane.element);
     resizeObserver.unobserve(pane.element);
+    pane.wells.forEach((well) => forgetWell(well.element));
   };
 
   // Hands every element back to its CSS glass.
@@ -1340,6 +1466,7 @@ export function createSceneRenderer({
       presence: createSpring(0.35, 0.3, snapPresence ? 1 : 0),
       press: createSpring(0.2, 0.3, 0),
       ghost: false,
+      wells: [],
     };
   };
 
@@ -1399,6 +1526,14 @@ export function createSceneRenderer({
       pane.presence.target = 0;
     }
 
+    const wellsNow = new Set(
+      [...records.values()].flatMap((pane) => pane.wells.map((well) => well.element)),
+    );
+
+    for (const element of observedWells) {
+      if (!wellsNow.has(element)) forgetWell(element);
+    }
+
     let moving = false;
 
     for (const pane of records.values()) {
@@ -1454,6 +1589,38 @@ export function createSceneRenderer({
       );
       frame.set([pane.cap, pane.lift], FACE + index * 2);
     });
+
+    let wells = 0;
+
+    for (const pane of drawn) {
+      const presence = clamp01(pane.presence.value);
+      const scale = 0.6 + 0.4 * presence;
+
+      for (const well of pane.wells) {
+        if (wells >= MAX_WELLS) {
+          warnOnce('wells', `a scene draws at most ${MAX_WELLS} wells, so the rest stay flat.`);
+
+          break;
+        }
+
+        frame.set(
+          [
+            pane.cx + (well.cx - pane.cx) * scale,
+            pane.cy + (well.cy - pane.cy) * scale,
+            well.hx * scale,
+            well.hy * scale,
+          ],
+          WELL_RECT + wells * 4,
+        );
+        frame.set(
+          [well.radius * scale, well.depth * presence * pane.opacity, well.bevel * scale, 0],
+          WELL_PROFILE + wells * 4,
+        );
+        wells += 1;
+      }
+    }
+
+    frame[WELLS] = wells;
 
     frame.set([optics.ior, optics.thickness, optics.dispersion, optics.specular], OPTICS);
 
@@ -1701,6 +1868,14 @@ export function createSceneRenderer({
 
       if (changed(FACE, MAX_PANES * 2)) gl.uniform2fv(uniforms.u_face, frame, FACE, MAX_PANES * 2);
 
+      if (changed(WELL_RECT, MAX_WELLS * 4))
+        gl.uniform4fv(uniforms.u_well, frame, WELL_RECT, MAX_WELLS * 4);
+
+      if (changed(WELL_PROFILE, MAX_WELLS * 4))
+        gl.uniform4fv(uniforms.u_wellProfile, frame, WELL_PROFILE, MAX_WELLS * 4);
+
+      if (changed(WELLS)) gl.uniform1i(uniforms.u_wells, frame[WELLS]);
+
       if (changed(OPTICS, 4)) gl.uniform4fv(uniforms.u_optics, frame, OPTICS, 4);
 
       if (changed(LOOK, 4)) gl.uniform4fv(uniforms.u_look, frame, LOOK, 4);
@@ -1770,6 +1945,19 @@ export function createSceneRenderer({
           return true;
 
         if (node === root) break;
+      }
+
+      for (const well of pane.wells) {
+        for (
+          let node: Element | null = well.element;
+          node && node !== pane.element && !checked.has(node);
+          node = node.parentElement
+        ) {
+          checked.add(node);
+
+          if (node.getAnimations().some((animation) => animation.playState === 'running'))
+            return true;
+        }
       }
     }
 
@@ -2070,7 +2258,18 @@ export function createSceneRenderer({
   // The canvas draws a pane from its own style and box, so what the pane holds can only resize
   // it, which the ResizeObserver reports. A live counter on glass therefore leaves the canvas
   // asleep, while the pane's own attributes, animations and transitions still wake it.
+  // A well moves the glass itself, so what adds, removes or moves one is never just contents.
+  const holdsWell = (node: Node) =>
+    node instanceof Element && (node.matches(WELL) || node.querySelector(WELL) !== null);
+
+  const movesWell = (mutation: MutationRecord) =>
+    mutation.type === 'childList'
+      ? [...mutation.addedNodes, ...mutation.removedNodes].some(holdsWell)
+      : mutation.type === 'attributes' &&
+        (mutation.attributeName === 'data-lg-scene-well' || holdsWell(mutation.target));
+
   const changesPaneContents = (mutation: MutationRecord) =>
+    !movesWell(mutation) &&
     withinPane(
       // A childList target holds the nodes it gained or lost. Text lies inside its parent, and
       // an attribute belongs to its own element.
@@ -2080,7 +2279,10 @@ export function createSceneRenderer({
     );
 
   const onMotion = (event: Event) => {
-    if (!(event.target instanceof Element && withinPane(event.target.parentElement))) onChange();
+    const { target } = event;
+
+    if (!(target instanceof Element) || holdsWell(target) || !withinPane(target.parentElement))
+      onChange();
   };
 
   // Mutations the renderer causes itself never wake it.
@@ -2090,7 +2292,7 @@ export function createSceneRenderer({
         mutation.target !== canvas &&
         mutation.target !== probe &&
         mutation.target !== backdrop &&
-        !(mutation.type === 'attributes' && mutation.attributeName?.startsWith(ACTIVE)) &&
+        !(mutation.type === 'attributes' && OWN_ATTRIBUTES.has(mutation.attributeName ?? '')) &&
         !changesPaneContents(mutation),
     );
 

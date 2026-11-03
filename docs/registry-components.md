@@ -525,7 +525,10 @@ piece keeps its CSS glass. The backdrop can also be a painter function: the
 scene paints it on a canvas, which the CSS glass shows too, and `backdropFps`
 repaints moving art while the scene is on screen and motion is allowed. A
 painter that returns `false` keeps its last picture, and the glass does not
-redraw.
+redraw. An element inside a pane with `data-lg-scene-well` becomes a well: a
+pocket lowered into the glass around it, whose rim bends the backdrop like a
+groove. `--lg-scene-well-depth` (10px) and `--lg-scene-well-bevel` (8px) set its
+depth and rim width; a scene draws up to eight.
 
 ### `glass-logo-reveal`
 

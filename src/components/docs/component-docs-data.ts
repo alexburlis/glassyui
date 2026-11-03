@@ -3500,6 +3500,26 @@ export default function Page() {
           },
         ],
       },
+      {
+        name: 'data-lg-scene-well',
+        description:
+          'Lowers a rounded pocket into the glass around any element inside a pane, so the rim bends the backdrop like a groove cut into the block. The element keeps its own look; a scene draws up to eight.',
+        extends: 'An attribute on any element inside a pane',
+        props: [
+          {
+            name: '--lg-scene-well-depth',
+            type: 'length',
+            default: '10px',
+            description: 'How far the pocket sinks into the glass.',
+          },
+          {
+            name: '--lg-scene-well-bevel',
+            type: 'length',
+            default: '8px',
+            description: 'Width of the rim just outside the element, where the glass bends.',
+          },
+        ],
+      },
     ],
     types: ['GlassSceneProps', 'GlassSceneOptics', 'GlassSceneBackdropPainter', 'GlassDropProps'],
     requires:

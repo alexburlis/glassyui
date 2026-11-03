@@ -28,14 +28,16 @@ if (!baseUrl) {
 
 const engines = (process.env.GLASS_ENGINES ?? 'chromium,webkit,firefox').split(',');
 
-// The WebGL scene, what its panes hold, painted backdrops, backdrop loading, liquid control motion,
-// or the preference switch's own motion. The scene suite includes the panes and painted suites.
+// The WebGL scene, what its panes hold, painted backdrops, wells, backdrop loading, liquid control
+// motion, or the preference switch's own motion. The scene suite includes the panes, painted and
+// wells suites.
 const suites = new Set((process.env.GLASS_SUITES ?? 'scene,motion').split(','));
 
 const supportedSuites = new Set([
   'scene',
   'panes',
   'painted',
+  'wells',
   'contracts',
   'preferences',
   'motion',
@@ -45,7 +47,7 @@ const invalidSuites = [...suites].filter((suite) => !supportedSuites.has(suite))
 
 if (invalidSuites.length) {
   console.error(
-    `Invalid GLASS_SUITES: ${invalidSuites.map((suite) => suite || '(empty)').join(', ')}. Choose scene, panes, painted, contracts, preferences or motion.`,
+    `Invalid GLASS_SUITES: ${invalidSuites.map((suite) => suite || '(empty)').join(', ')}. Choose scene, panes, painted, wells, contracts, preferences or motion.`,
   );
   process.exit(1);
 }
@@ -3577,10 +3579,97 @@ async function checkOptics(engine, browser, statsPage, results) {
   }
 }
 
+// The demo card's description becomes a well: a pocket lowered into the card's glass whose rim,
+// just outside the paragraph, bends the backdrop like a groove cut into the block. Glass away from
+// it stays as it was, and taking the attribute away restores it.
+async function checkWells(engine, browser, statsPage, results) {
+  const context = await newContext(browser);
+  const log = [];
+  const card = `${scene} .glassy-scene-example-card`;
+  const text = `${card} p:last-of-type`;
+
+  try {
+    await instrument(context);
+    const page = await context.newPage();
+    watchConsole(page, log);
+    await openDemo(page);
+    await waitForRenderer(page, scene, 'webgl');
+    await setBackdrop(page, backdrops.mono);
+
+    await run(engine, 'F37 a well bends the glass around its element', results, async () => {
+      const { png: before, clip } = await sceneShot(page, `${engine}-well-before.png`);
+      const element = await boxOf(page, text);
+      const pane = await boxOf(page, card);
+
+      const local = (rect) => ({
+        x: rect.x - clip.x,
+        y: rect.y - clip.y,
+        width: rect.width,
+        height: rect.height,
+      });
+
+      const mark = (present) =>
+        page.locator(text).evaluate((node, on) => {
+          node.style.setProperty('--lg-scene-well-depth', '14px');
+          node.style.setProperty('--lg-scene-well-bevel', '8px');
+
+          if (on) node.setAttribute('data-lg-scene-well', '');
+          else node.removeAttribute('data-lg-scene-well');
+        }, present);
+
+      await mark(true);
+      await settle(page);
+
+      const { png: after } = await sceneShot(page, `${engine}-well-after.png`);
+
+      await mark(false);
+      await settle(page);
+
+      const { png: restored } = await sceneShot(page, `${engine}-well-restored.png`);
+
+      const [rim, distant] = await analyse(statsPage, { a: before, b: after }, [
+        { type: 'diff', rect: local(grow(element, 8)), exclude: [local(element)] },
+        { type: 'diff', rect: local(pane), exclude: [local(grow(element, 14))] },
+      ]);
+
+      const [back] = await analyse(statsPage, { a: before, b: restored }, [
+        { type: 'diff', rect: local(grow(pane, 4)) },
+      ]);
+
+      assert.ok(
+        rim.meanDiff > 6,
+        `a well must bend the backdrop along its rim (${rim.meanDiff.toFixed(2)})`,
+      );
+      assert.ok(
+        distant.meanDiff < 1.5,
+        `glass away from the well must not change (${distant.meanDiff.toFixed(2)})`,
+      );
+      assert.ok(
+        back.meanDiff < 1,
+        `removing the well must restore the glass (${back.meanDiff.toFixed(2)})`,
+      );
+
+      return {
+        rim: Number(rim.meanDiff.toFixed(2)),
+        distant: Number(distant.meanDiff.toFixed(2)),
+        restored: Number(back.meanDiff.toFixed(2)),
+      };
+    });
+  } finally {
+    const found = problems(log);
+
+    if (found.length)
+      failures.push(`${engine} wells console: ${found.map((entry) => entry.text).join(' | ')}`);
+
+    await context.close();
+  }
+}
+
 async function checkScene(engine, browser, statsPage, results) {
   await checkDemo(engine, browser, statsPage, results);
   await checkPaneContents(engine, browser, statsPage, results);
   await checkPaintedBackdrop(engine, browser, statsPage, results);
+  await checkWells(engine, browser, statsPage, results);
   await checkOptics(engine, browser, statsPage, results);
   await checkReducedTransparency(engine, browser, results);
   await checkMissingWebgl(engine, browser, results);
@@ -3765,6 +3854,9 @@ try {
 
       if (suites.has('painted') && !suites.has('scene'))
         await checkPaintedBackdrop(engine, browser, statsPage, results);
+
+      if (suites.has('wells') && !suites.has('scene'))
+        await checkWells(engine, browser, statsPage, results);
 
       if (suites.has('backdrops') && !suites.has('scene'))
         await checkBackdropRequests(engine, browser, results);

@@ -200,6 +200,19 @@
   inherits: false;
 }
 
+/* A well's depth and rim width: see GlassScene's data-lg-scene-well. */
+@property --lg-scene-well-depth {
+  syntax: '<length>';
+  initial-value: 10px;
+  inherits: false;
+}
+
+@property --lg-scene-well-bevel {
+  syntax: '<length>';
+  initial-value: 8px;
+  inherits: false;
+}
+
 @property --lg-scene-ink {
   syntax: '<color>';
   initial-value: transparent;
