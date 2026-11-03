@@ -24,15 +24,15 @@ export interface ProCard extends Card {
   href: string;
   slug: string;
   status: ProTemplateTeaser['status'];
-  /** The Pro site's own line: "First release, estimated <month> <year>" or "Planned, no date yet". */
-  timing: string;
+  /** The first release's line in the dialog, "First release, estimated <month> <year>". */
+  timing?: string;
 }
 
 const { month, year } = PRO_OFFER.firstRelease;
 
 const PRO_STATUS: Record<ProTemplateTeaser['status'], Pick<ProCard, 'chip' | 'timing'>> = {
   'first-release': { chip: `Coming ${month}`, timing: `First release, estimated ${month} ${year}` },
-  planned: { chip: 'Coming soon', timing: 'Planned, no date yet' },
+  planned: { chip: 'Coming soon' },
 };
 
 const poster = (slug: string) => `/templates/${slug}.jpg`;

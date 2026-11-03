@@ -445,7 +445,7 @@ try {
       layout.grids.map(() => phone),
       `${label}: ${phone ? 'every row is a shelf that swipes' : 'no row scrolls on its own'}`,
     );
-    assert.equal(layout.planned.text, 'Planned, no date yet', `${label}: planned label`);
+    assert.equal(layout.planned.text, 'Coming soon', `${label}: planned label`);
     assert.ok(
       layout.planned.top >= layout.row.bottom &&
         layout.planned.bottom <= cards.get(PRO_PLANNED[0]).top,

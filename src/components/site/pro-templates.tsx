@@ -158,7 +158,7 @@ export function ProTemplates({ backdropOffset }: { backdropOffset: number }) {
       </div>
       {planned.length > 0 ? (
         <>
-          <p className="template-subgroup">{planned[0].timing}</p>
+          <p className="template-subgroup">{planned[0].chip}</p>
           <div className="template-grid" data-status="planned">
             {planned.map((card, index) => (
               <ProTemplateCard
@@ -202,7 +202,7 @@ export function ProTemplates({ backdropOffset }: { backdropOffset: number }) {
             <div className="template-dialog-details">
               <GlassDialogTitle className="template-dialog-title">{shown.name}</GlassDialogTitle>
               <p className="template-dialog-kind">{shown.kind}</p>
-              <p className="template-dialog-timing">{shown.timing}</p>
+              {shown.timing ? <p className="template-dialog-timing">{shown.timing}</p> : null}
               <GlassDialogDescription className="template-dialog-description">
                 Pre-order Glassy UI Pro and get {shown.name} the day it ships.
               </GlassDialogDescription>

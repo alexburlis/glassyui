@@ -201,18 +201,18 @@ token in `src/styles/liquid.css`.
   past it. The free templates come first. Pro's follow under Coming soon to Pro:
   the first release, each marked with its month, beside the Pro tile, out of
   which three planned templates fan in glass windows; then the planned templates
-  under one label, Planned, no date yet, four to a row. On a phone each row is a
-  shelf to swipe through, running out to the screen's edges, so posters stay
-  large and the next card shows. A free card links to its page, except a
-  template that is not out yet, marked Coming soon. A Pro card opens one dialog
-  that sells the pre-order: the poster in the same window, a strip that switches
-  between the Pro templates, when it ships, the price, the refund promise and
-  one call to action, which opens Pro's checkout itself, with Plus any tax under
-  it as on the Pro site. On a phone the price and the button come before the
-  benefits, and a short phone crops the poster lower, so the dialog opens with
-  the button in view. While open it sits above the analytics prompt. Without
-  script, or with a modifier key, the card links to the Pro site. Pro posters
-  are design previews, and the gallery and the dialog say so.
+  under one label, Coming soon, four to a row. On a phone each row is a shelf to
+  swipe through, running out to the screen's edges, so posters stay large and
+  the next card shows. A free card links to its page, except a template that is
+  not out yet, marked Coming soon. A Pro card opens one dialog that sells the
+  pre-order: the poster in the same window, a strip that switches between the
+  Pro templates, when it ships, the price, the refund promise and one call to
+  action, which opens Pro's checkout itself, with Plus any tax under it as on
+  the Pro site. On a phone the price and the button come before the benefits,
+  and a short phone crops the poster lower, so the dialog opens with the button
+  in view. While open it sits above the analytics prompt. Without script, or
+  with a modifier key, the card links to the Pro site. Pro posters are design
+  previews, and the gallery and the dialog say so.
 - The dock is a quiet glass shelf with space around its icons. Full app artwork
   fills an item; navigation glyphs stay small inside the same generous target.
   Hover and keyboard focus never resize the dock or its neighbours. Nothing is
@@ -357,6 +357,8 @@ redesign of the tokens below.
   components that bend what sits behind them. Install with shadcn. Own the
   code."
 - Say what a thing does, not how good it is. No hype, no exclamation marks.
+- Something not out yet is Coming soon, or Coming with its month. Never narrate
+  what is missing, such as "Planned, no date yet".
 - Keep component names, identifiers, URLs, examples and share artwork
   independent of third-party product names. Describe mockups as generic laptops
   or phones. Name platforms and packages when they explain compatibility or
