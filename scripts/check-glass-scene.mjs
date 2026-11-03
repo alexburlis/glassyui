@@ -26,16 +26,17 @@ if (!baseUrl) {
 
 const engines = (process.env.GLASS_ENGINES ?? 'chromium,webkit,firefox').split(',');
 
-// The WebGL scene, backdrop loading, liquid control motion, or the preference switch's own motion.
+// The WebGL scene, what its panes hold, backdrop loading, liquid control motion, or the preference
+// switch's own motion. The scene suite includes the panes suite.
 const suites = new Set((process.env.GLASS_SUITES ?? 'scene,motion').split(','));
 
-const supportedSuites = new Set(['scene', 'contracts', 'preferences', 'motion']);
+const supportedSuites = new Set(['scene', 'panes', 'contracts', 'preferences', 'motion']);
 
 const invalidSuites = [...suites].filter((suite) => !supportedSuites.has(suite));
 
 if (invalidSuites.length) {
   console.error(
-    `Invalid GLASS_SUITES: ${invalidSuites.map((suite) => suite || '(empty)').join(', ')}. Choose scene, contracts, preferences or motion.`,
+    `Invalid GLASS_SUITES: ${invalidSuites.map((suite) => suite || '(empty)').join(', ')}. Choose scene, panes, contracts, preferences or motion.`,
   );
   process.exit(1);
 }
@@ -1433,6 +1434,245 @@ async function checkDemo(engine, browser, statsPage, results) {
 
     if (found.length)
       failures.push(`${engine} demo console: ${found.map((entry) => entry.text).join(' | ')}`);
+
+    await context.close();
+  }
+}
+
+// What a drawn pane holds. Copies of the demo's buttons stand in for nested ones, since the
+// cascade sees the same classes and attributes and the canvas never draws nested glass.
+async function checkPaneContents(engine, browser, statsPage, results) {
+  const context = await newContext(browser);
+  const log = [];
+  const pane = `${scene} .glassy-scene-example-card`;
+
+  try {
+    await instrument(context);
+    const page = await context.newPage();
+    watchConsole(page, log);
+    await openDemo(page);
+    await waitForRenderer(page, scene, 'webgl');
+    await settle(page);
+
+    await run(
+      engine,
+      'F28 a prominent button on a drawn pane keeps its tint',
+      results,
+      async () => {
+        try {
+          // The nested copies carry the Chromium lens, as a nested GlassButton does there.
+          const faces = await page.evaluate((target) => {
+            const root = document.querySelector(target);
+            const card = root.querySelector('.glassy-scene-example-card');
+
+            const place = (source, parent, name, lens) => {
+              const button = source.cloneNode(true);
+
+              button.removeAttribute('data-lg-scene');
+
+              if (lens) button.setAttribute('data-lg-lens', 'active');
+              else button.removeAttribute('data-lg-lens');
+
+              button.setAttribute('data-pane-probe', name);
+              parent.append(button);
+              const style = getComputedStyle(button.querySelector('.lg-button__distortion'));
+
+              return style.backdropFilter || style.webkitBackdropFilter;
+            };
+
+            const prominent = root.querySelector('.lg-button--prominent');
+
+            return {
+              pane: card.getAttribute('data-lg-scene'),
+              prominent: place(prominent, card, 'prominent', true),
+              plain: place(root.querySelector('.lg-button--primary'), card, 'plain', true),
+              // A prominent button's own face, off the scene and without the lens.
+              reference: place(prominent, document.body, 'reference', false),
+            };
+          }, scene);
+
+          assert.equal(faces.pane, 'active', 'the canvas must draw the card the buttons sit on');
+          assert.equal(
+            faces.prominent,
+            faces.reference,
+            `a prominent button on a drawn pane must keep its tint and drop the lens (${faces.prominent})`,
+          );
+          assert.match(
+            faces.plain,
+            /^blur\([\d.]+px\)$/,
+            `any other button on a drawn pane must keep only its frost (${faces.plain})`,
+          );
+
+          // Only Chromium paints backdrop filters headless.
+          if (engine !== 'chromium') return faces;
+
+          await addStyle(page, '[data-pane-probe] .lg-button__label { color: transparent; }');
+          await settle(page);
+          const button = await boxOf(page, `${pane} [data-pane-probe="prominent"]`);
+          const { png, clip } = await sceneShot(page, `${engine}-nested-prominent.png`);
+
+          const [centre] = await analyse(statsPage, { a: png }, [
+            {
+              type: 'mean',
+              rect: {
+                x: button.x - clip.x + button.width * 0.2,
+                y: button.y - clip.y + button.height / 2 - 3,
+                width: 8,
+                height: 6,
+              },
+            },
+          ]);
+
+          const [red, green, blue] = centre.rgb;
+          assert.ok(
+            blue > red + 60 && blue > green + 20,
+            `a prominent button on a drawn pane must read accent blue (rgb ${centre.rgb.map(Math.round)})`,
+          );
+
+          return { ...faces, rgb: centre.rgb.map(Math.round) };
+        } finally {
+          await page.evaluate(() =>
+            document.querySelectorAll('[data-pane-probe]').forEach((node) => node.remove()),
+          );
+          await clearStyles(page);
+          await settle(page);
+        }
+      },
+    );
+
+    await run(engine, 'F29 glass keeps a subgrid', results, async () => {
+      // Three panels share their parent's two rows, as feature cards do, over screens whose
+      // content differs in height.
+      const panels = await page.evaluate(() => {
+        const grid = document.createElement('div');
+
+        grid.style.cssText =
+          'position: absolute; top: 0; left: 0; display: grid; grid-template-columns: repeat(3, 160px); column-gap: 16px;';
+
+        for (const height of [40, 80, 60]) {
+          const panel = document.createElement('div');
+          const screen = document.createElement('div');
+          const figure = document.createElement('div');
+          const copy = document.createElement('p');
+
+          panel.className = 'lg-glass-surface lg-panel--card';
+          panel.style.cssText =
+            'display: grid; grid-row: span 2; grid-template-rows: subgrid; row-gap: 0;';
+          figure.style.height = `${height}px`;
+          copy.style.margin = '0';
+          copy.textContent = 'Copy';
+          screen.append(figure);
+          panel.append(screen, copy);
+          grid.append(panel);
+        }
+
+        document.body.append(grid);
+
+        const measured = [...grid.children].map((panel) => ({
+          screen: panel.children[0].getBoundingClientRect().height,
+          copy: panel.children[1].getBoundingClientRect().top,
+        }));
+
+        grid.remove();
+
+        return measured;
+      });
+
+      const spread = (values) => Math.max(...values) - Math.min(...values);
+      const screens = panels.map((panel) => panel.screen);
+      const copies = panels.map((panel) => panel.copy);
+
+      assert.ok(spread(screens) < 0.5, `the screens must share their row's height (${screens})`);
+      assert.ok(spread(copies) < 0.5, `the copy under the screens must start level (${copies})`);
+
+      return panels;
+    });
+
+    await run(engine, 'F30 changes inside a pane leave the canvas asleep', results, async () => {
+      await addStyle(page, '@keyframes pane-probe-roll { from { transform: translateY(100%); } }');
+      await settle(page);
+
+      try {
+        // Counts each time the renderer reports its loop running again, whatever the frame rate.
+        await page.evaluate((root) => {
+          const node = document.querySelector(root);
+
+          window.__sceneWakes = 0;
+          new MutationObserver(() => {
+            if (node.getAttribute('data-lg-scene-state') === 'running') window.__sceneWakes += 1;
+          }).observe(node, { attributeFilter: ['data-lg-scene-state'] });
+        }, scene);
+
+        const resting = await countFrames(page, 1_000);
+
+        // Like a live counter, text changes in place four times a second for two seconds and a
+        // rolling figure replaces the last one. Neither changes the pane's size.
+        const ticking = await page.evaluate(async (target) => {
+          const card = document.querySelector(target);
+          const text = card.querySelector('p').firstChild;
+          const original = text.nodeValue;
+          const frames = window.__glassFrames;
+          const wakes = window.__sceneWakes;
+          let figure = null;
+
+          for (let tick = 0; tick < 8; tick += 1) {
+            text.nodeValue = `${original} ${tick}`;
+            figure?.remove();
+            figure = document.createElement('span');
+            figure.textContent = String(tick);
+            figure.style.cssText =
+              'position: absolute; top: 0; right: 0; animation: pane-probe-roll 200ms both;';
+            card.append(figure);
+            await new Promise((resolve) => setTimeout(resolve, 250));
+          }
+
+          const changed = {
+            frames: window.__glassFrames - frames,
+            wakes: window.__sceneWakes - wakes,
+          };
+
+          figure.remove();
+          text.nodeValue = original;
+
+          return changed;
+        }, pane);
+
+        await settle(page);
+
+        const woken = await page.evaluate(async (target) => {
+          const card = document.querySelector(target);
+          const frames = window.__glassFrames;
+          const wakes = window.__sceneWakes;
+
+          card.setAttribute('data-pane-wake', '');
+          await new Promise((resolve) => setTimeout(resolve, 600));
+          card.removeAttribute('data-pane-wake');
+
+          return { frames: window.__glassFrames - frames, wakes: window.__sceneWakes - wakes };
+        }, pane);
+
+        assert.ok(resting <= 3, `the settled scene must be asleep (${resting} frames per second)`);
+        assert.ok(
+          ticking.wakes === 0 && ticking.frames <= 3,
+          `changes inside a pane must leave the canvas asleep (${ticking.wakes} wakes, ${ticking.frames} frames in 2 seconds)`,
+        );
+        assert.ok(
+          woken.wakes >= 1,
+          `a change to the pane itself must wake the canvas (${woken.wakes} wakes, ${woken.frames} frames)`,
+        );
+
+        return { resting, ticking, woken };
+      } finally {
+        await clearStyles(page);
+        await settle(page);
+      }
+    });
+  } finally {
+    const found = problems(log);
+    results.panesConsole = log;
+
+    if (found.length)
+      failures.push(`${engine} panes console: ${found.map((entry) => entry.text).join(' | ')}`);
 
     await context.close();
   }
@@ -2925,6 +3165,7 @@ async function checkOptics(engine, browser, statsPage, results) {
 
 async function checkScene(engine, browser, statsPage, results) {
   await checkDemo(engine, browser, statsPage, results);
+  await checkPaneContents(engine, browser, statsPage, results);
   await checkOptics(engine, browser, statsPage, results);
   await checkReducedTransparency(engine, browser, results);
   await checkMissingWebgl(engine, browser, results);
@@ -3104,6 +3345,9 @@ try {
     try {
       if (suites.has('scene')) await checkScene(engine, browser, statsPage, results);
 
+      if (suites.has('panes') && !suites.has('scene'))
+        await checkPaneContents(engine, browser, statsPage, results);
+
       if (suites.has('backdrops') && !suites.has('scene'))
         await checkBackdropRequests(engine, browser, results);
 
@@ -3135,7 +3379,8 @@ for (const [engine, results] of Object.entries(manifest.engines)) {
       name === 'console' ||
       name === 'flowConsole' ||
       name === 'homeConsole' ||
-      name === 'labConsole'
+      name === 'labConsole' ||
+      name === 'panesConsole'
     )
       continue;
 

@@ -789,7 +789,10 @@
       transform var(--lg-motion-duration) ease;
     box-shadow: var(--lg-panel-elevation-shadow, var(--lg-shadow));
     overflow: hidden;
-    contain: layout paint style;
+    /* Layout or paint containment would turn a subgrid inside the glass back
+       into a grid of its own. The overflow and isolation above already clip
+       and isolate the glass. */
+    contain: style;
   }
 
   .lg-glass-surface[data-lg-preset='subtle'] {
@@ -5275,14 +5278,24 @@
 
   /* A button on a pane the canvas draws sits on glass already. It keeps its
      frost but neither bends nor saturates that face again, which would undo
-     the face's legible range. */
+     the face's legible range. A prominent button keeps its tint, which its
+     label is set on, and drops only the lens. */
   .lg-scene
     [data-lg-scene='active']
-    .lg-button:not(.lg-button--ghost)
+    .lg-button:not(.lg-button--ghost, .lg-button--prominent)
     > .lg-button__layers
     > .lg-button__distortion {
     -webkit-backdrop-filter: blur(var(--lg-surface-blur));
     backdrop-filter: blur(var(--lg-surface-blur));
+  }
+
+  .lg-scene
+    [data-lg-scene='active']
+    .lg-button--prominent
+    > .lg-button__layers
+    > .lg-button__distortion {
+    -webkit-backdrop-filter: blur(0.6px) var(--lg-prominent-tint);
+    backdrop-filter: blur(0.6px) var(--lg-prominent-tint);
   }
 
   /* Glass nested in a scene's glass, like a segmented track, keeps its frost

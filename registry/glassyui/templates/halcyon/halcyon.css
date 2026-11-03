@@ -534,14 +534,6 @@ html:has(.halcyon-page) {
   background-color: rgb(12 20 38 / 0.12);
 }
 
-/* On glass the canvas draws, the library keeps a nested button's frost but not its tint. The
-   page's primary actions keep their aqua here as they do everywhere else. */
-.halcyon-waitlist-submit > .lg-button__layers > .lg-button__distortion,
-.halcyon-copy-button > .lg-button__layers > .lg-button__distortion {
-  -webkit-backdrop-filter: blur(0.6px) var(--lg-prominent-tint);
-  backdrop-filter: blur(0.6px) var(--lg-prominent-tint);
-}
-
 .halcyon-waitlist-clip {
   display: grid;
   padding: 18px var(--wl-pad) 20px;
@@ -1024,9 +1016,6 @@ html:has(.halcyon-page) {
   gap: 0 20px;
 }
 
-/* The library's glass contains its layout and paint, either of which turns a subgrid back into a
-   grid of its own. Without them the three screens share a height and the copy beneath them starts
-   level; the glass still clips and isolates its contents. */
 .halcyon-tile {
   --lg-panel-radius: 30px;
   display: grid;
@@ -1034,7 +1023,6 @@ html:has(.halcyon-page) {
   grid-template-rows: subgrid;
   row-gap: 0;
   padding: 12px 12px 28px;
-  contain: style;
 }
 
 .halcyon-tile-screen {

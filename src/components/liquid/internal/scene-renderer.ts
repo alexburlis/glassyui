@@ -2013,6 +2013,30 @@ export function createSceneRenderer({
     wake();
   };
 
+  const withinPane = (element: HTMLElement | null) => {
+    for (let node = element; node && node !== root; node = node.parentElement) {
+      if (records.has(node)) return true;
+    }
+
+    return false;
+  };
+
+  // The canvas draws a pane from its own style and box, so what the pane holds can only resize
+  // it, which the ResizeObserver reports. A live counter on glass therefore leaves the canvas
+  // asleep, while the pane's own attributes, animations and transitions still wake it.
+  const changesPaneContents = (mutation: MutationRecord) =>
+    withinPane(
+      // A childList target holds the nodes it gained or lost. Text lies inside its parent, and
+      // an attribute belongs to its own element.
+      mutation.type === 'childList' && mutation.target instanceof HTMLElement
+        ? mutation.target
+        : mutation.target.parentElement,
+    );
+
+  const onMotion = (event: Event) => {
+    if (!(event.target instanceof Element && withinPane(event.target.parentElement))) onChange();
+  };
+
   // Mutations the renderer causes itself never wake it.
   const rootObserver = new MutationObserver((mutations) => {
     const relevant = mutations.some(
@@ -2020,7 +2044,8 @@ export function createSceneRenderer({
         mutation.target !== canvas &&
         mutation.target !== probe &&
         mutation.target !== backdrop &&
-        !(mutation.type === 'attributes' && mutation.attributeName?.startsWith(ACTIVE)),
+        !(mutation.type === 'attributes' && mutation.attributeName?.startsWith(ACTIVE)) &&
+        !changesPaneContents(mutation),
     );
 
     if (!relevant) return;
@@ -2055,7 +2080,9 @@ export function createSceneRenderer({
     onChange();
   });
 
-  const wakeEvents = ['focusin', 'focusout', 'transitionrun', 'animationstart'] as const;
+  const wakeEvents = ['focusin', 'focusout'] as const;
+
+  const motionEvents = ['transitionrun', 'animationstart'] as const;
 
   rootObserver.observe(root, {
     attributes: true,
@@ -2068,6 +2095,7 @@ export function createSceneRenderer({
   resizeObserver.observe(root);
   intersectionObserver.observe(root);
   wakeEvents.forEach((type) => root.addEventListener(type, onChange));
+  motionEvents.forEach((type) => root.addEventListener(type, onMotion));
   window.addEventListener('resize', onChange);
   // Scrolling can change pane or viewport-backdrop coordinates, which pack detects. It does
   // not invalidate an unchanged local raster: the compositor can reuse it while it turns.
@@ -2103,6 +2131,7 @@ export function createSceneRenderer({
       intersectionObserver.disconnect();
       unsubscribe();
       wakeEvents.forEach((type) => root.removeEventListener(type, onChange));
+      motionEvents.forEach((type) => root.removeEventListener(type, onMotion));
       window.removeEventListener('resize', onChange);
       window.removeEventListener('scroll', wake, { capture: true });
       document.removeEventListener('visibilitychange', onVisibility);
