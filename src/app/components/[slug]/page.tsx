@@ -7,6 +7,7 @@ import { ComponentPreview } from '@/components/docs/component-preview';
 import { Requirement } from '@/components/docs/requirement';
 import { CopyCodeBlock } from '@/components/docs/copy-code-block';
 import { FixedWallpaperExample } from '@/components/docs/fixed-wallpaper-example';
+import { PaintedSceneExample } from '@/components/examples/painted-scene-example';
 import {
   componentDocs,
   getAdjacentComponents,
@@ -15,7 +16,7 @@ import {
 import { DocsShell } from '@/components/docs/docs-shell';
 import { PlatformPane, PlatformSwitch } from '@/components/docs/platform-switch';
 import { JsonLd } from '@/components/site/json-ld';
-import { getLaunchExampleSource } from '@/lib/launch-example-source';
+import { getExampleCode, getLaunchExampleSource } from '@/lib/launch-example-source';
 import { getNativeUsage } from '@/lib/native-usage-source';
 import { MOBILE_CARD, shareCard, shareMetadata } from '@/lib/share';
 import { SITE_URL, sourceUrl } from '@/lib/site-links';
@@ -249,7 +250,8 @@ export default async function ComponentPage({ params }: ComponentPageProps) {
             react={component.examples.map((example) => (
               <Fragment key={example.title}>
                 {example.live === 'fixed-wallpaper' ? <FixedWallpaperExample /> : null}
-                <CopyCodeBlock code={example.code} label={example.title} />
+                {example.live === 'painted-backdrop' ? <PaintedSceneExample /> : null}
+                <CopyCodeBlock code={getExampleCode(example)} label={example.title} />
               </Fragment>
             ))}
           />

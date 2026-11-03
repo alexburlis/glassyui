@@ -1,6 +1,7 @@
 import type { ComponentDoc, ComponentProp } from '@/components/docs/component-docs-data';
 import { SITE_URL } from './site-links';
 import { dependencyCommand, registryItemUrl } from './install-command';
+import { getExampleCode } from './launch-example-source';
 import { getNativeUsage } from './native-usage-source';
 
 const fence = (code: string, language = 'tsx') => `\`\`\`${language}\n${code.trim()}\n\`\`\``;
@@ -46,7 +47,7 @@ export function componentMarkdown(component: ComponentDoc, headingLevel = 2) {
   if (component.usage) sections.push(heading(1, 'Usage'), fence(component.usage));
 
   for (const example of component.examples) {
-    sections.push(heading(2, example.title), fence(example.code));
+    sections.push(heading(2, example.title), fence(getExampleCode(example)));
   }
 
   if (component.api.length > 0) {

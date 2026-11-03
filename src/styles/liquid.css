@@ -5176,6 +5176,12 @@
     background: var(--lg-scene-backdrop, var(--lg-scene-image, none)) center / cover no-repeat;
   }
 
+  /* A painted backdrop is a canvas, which keeps its own size unless told to fill the scene. */
+  canvas.lg-scene-backdrop {
+    width: 100%;
+    height: 100%;
+  }
+
   /* A viewport backdrop holds still while the page scrolls the glass across
      it, as background-attachment: fixed does. clip-path keeps it inside the
      scene without becoming its containing block, and the canvas reads where

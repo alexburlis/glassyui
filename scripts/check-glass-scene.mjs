@@ -10,7 +10,9 @@ import { chromium, firefox, webkit } from 'playwright';
 // only where the glass tilts, tint the shadow of tinted glass, merge nearby
 // glass, ignore where the pointer is, sleep when nothing moves, and step aside for
 // accessibility settings, a missing WebGL2 context, a lost one and a backdrop
-// it may not read. It must download a same-origin backdrop once. Headless
+// it may not read. It must download a same-origin backdrop once, and a painted
+// backdrop must reach the glass when it changes, at its own frame rate, only on
+// screen and with motion allowed, and show without WebGL too. Headless
 // WebKit and Firefox never paint backdrop-filter, so there the canvas is the
 // only glass a run can see. The liquid motion of the controls needs no WebGL
 // and is proved here too.
@@ -26,17 +28,24 @@ if (!baseUrl) {
 
 const engines = (process.env.GLASS_ENGINES ?? 'chromium,webkit,firefox').split(',');
 
-// The WebGL scene, what its panes hold, backdrop loading, liquid control motion, or the preference
-// switch's own motion. The scene suite includes the panes suite.
+// The WebGL scene, what its panes hold, painted backdrops, backdrop loading, liquid control motion,
+// or the preference switch's own motion. The scene suite includes the panes and painted suites.
 const suites = new Set((process.env.GLASS_SUITES ?? 'scene,motion').split(','));
 
-const supportedSuites = new Set(['scene', 'panes', 'contracts', 'preferences', 'motion']);
+const supportedSuites = new Set([
+  'scene',
+  'panes',
+  'painted',
+  'contracts',
+  'preferences',
+  'motion',
+]);
 
 const invalidSuites = [...suites].filter((suite) => !supportedSuites.has(suite));
 
 if (invalidSuites.length) {
   console.error(
-    `Invalid GLASS_SUITES: ${invalidSuites.map((suite) => suite || '(empty)').join(', ')}. Choose scene, panes, contracts, preferences or motion.`,
+    `Invalid GLASS_SUITES: ${invalidSuites.map((suite) => suite || '(empty)').join(', ')}. Choose scene, panes, painted, contracts, preferences or motion.`,
   );
   process.exit(1);
 }
@@ -51,6 +60,9 @@ const launchers = { chromium, firefox, webkit };
 const preferenceStorageKey = 'glassy-ui-preferences';
 
 const scene = '[data-release-demo="glass-scene"] .lg-scene';
+
+// The same page's painted example: a sun that rises as the scene scrolls up the window.
+const paintedScene = '.glassy-sunrise-example';
 
 const deskScene = '.home-desk .lg-scene';
 
@@ -1678,6 +1690,408 @@ async function checkPaneContents(engine, browser, statsPage, results) {
   }
 }
 
+// Times, in the painted example, each call of its painter (the scene sets the context to CSS
+// pixels right before one), each upload of its backdrop and each draw of its glass.
+function instrumentPainted(context) {
+  return context.addInitScript((target) => {
+    window.__painted = { paints: [], uploads: [], draws: 0 };
+
+    const { setTransform } = CanvasRenderingContext2D.prototype;
+    const { texImage2D, drawArrays } = WebGL2RenderingContext.prototype;
+
+    CanvasRenderingContext2D.prototype.setTransform = function setTransformProbe(...args) {
+      if (this.canvas.matches?.(`${target} .lg-scene-backdrop`))
+        window.__painted.paints.push(performance.now());
+
+      return setTransform.apply(this, args);
+    };
+
+    WebGL2RenderingContext.prototype.texImage2D = function texImage2DProbe(...args) {
+      if (this.canvas.closest?.(target)) window.__painted.uploads.push(performance.now());
+
+      return texImage2D.apply(this, args);
+    };
+
+    WebGL2RenderingContext.prototype.drawArrays = function drawArraysProbe(...args) {
+      if (this.canvas.closest?.(target)) window.__painted.draws += 1;
+
+      return drawArrays.apply(this, args);
+    };
+  }, paintedScene);
+}
+
+async function openPainted(page) {
+  await page.goto(new URL('/components/glass-scene', baseUrl).href, { waitUntil: 'load' });
+  await page.locator(paintedScene).scrollIntoViewIfNeeded();
+}
+
+// Scrolls the painted example's top to this far below the top of the window, so its sun stands
+// part way up behind the drop and the next scroll moves it there.
+function placePainted(page, top) {
+  return page.evaluate(
+    ({ target, offset }) =>
+      window.scrollBy({
+        top: document.querySelector(target).getBoundingClientRect().top - offset,
+        behavior: 'instant',
+      }),
+    { target: paintedScene, offset: top },
+  );
+}
+
+// Calls of the painter, uploads, draws and animation frames per second over a stretch of time,
+// optionally while the page scrolls a pixel every 4 ms, back and forth over 100 px. Also the
+// longest wait from a call of the painter to the upload that followed it.
+function paintedRates(page, duration, scrolling = false) {
+  return page.evaluate(
+    async ({ span, moving }) => {
+      const { paints, uploads } = window.__painted;
+      const first = { paints: paints.length, uploads: uploads.length };
+      const draws = window.__painted.draws;
+      const frames = window.__glassFrames;
+      const begin = performance.now();
+      let step = 0;
+
+      const timer = setInterval(() => {
+        if (!moving) return;
+
+        window.scrollBy({ top: step % 200 < 100 ? 1 : -1, behavior: 'instant' });
+        step += 1;
+      }, 4);
+
+      await new Promise((resolve) => setTimeout(resolve, span));
+      clearInterval(timer);
+
+      const seconds = (performance.now() - begin) / 1000;
+      const rate = (count) => Number((count / seconds).toFixed(1));
+      let slowest = 0;
+
+      for (const upload of uploads.slice(first.uploads)) {
+        const painted = paints.findLast((paint) => paint <= upload);
+
+        if (painted !== undefined) slowest = Math.max(slowest, upload - painted);
+      }
+
+      return {
+        paints: rate(paints.length - first.paints),
+        uploads: rate(uploads.length - first.uploads),
+        draws: rate(window.__painted.draws - draws),
+        frames: rate(window.__glassFrames - frames),
+        slowestUpload: Number(slowest.toFixed(1)),
+      };
+    },
+    { span: duration, moving: scrolling },
+  );
+}
+
+// The backdrop canvas, drawn where it shows within a screenshot clipped to the scene.
+async function paintedPicture(page, clip) {
+  const url = await page.evaluate(
+    ({ target, area }) => {
+      const layer = document.querySelector(`${target} .lg-scene-backdrop`);
+      const box = layer.getBoundingClientRect();
+      const copy = document.createElement('canvas');
+
+      copy.width = area.width;
+      copy.height = area.height;
+      copy.getContext('2d').drawImage(layer, box.x - area.x, box.y - area.y, box.width, box.height);
+
+      return copy.toDataURL('image/png');
+    },
+    { target: paintedScene, area: clip },
+  );
+
+  return Buffer.from(url.slice(url.indexOf(',') + 1), 'base64');
+}
+
+// Where the example's backdrop layer and glass sit, relative to a screenshot clip.
+function paintedLayout(page, clip) {
+  return page.evaluate(
+    ({ target, area }) => {
+      const root = document.querySelector(target);
+
+      const local = (node) => {
+        const box = node.getBoundingClientRect();
+
+        return { x: box.x - area.x, y: box.y - area.y, width: box.width, height: box.height };
+      };
+
+      return {
+        scene: local(root),
+        layer: local(root.querySelector('.lg-scene-backdrop')),
+        layerTag: root.querySelector('.lg-scene-backdrop').localName,
+        panes: [...root.querySelectorAll('.lg-glass-surface, .lg-scene-drop')].map(local),
+        drop: local(root.querySelector('.lg-scene-drop')),
+      };
+    },
+    { target: paintedScene, area: clip },
+  );
+}
+
+async function checkPaintedBackdrop(engine, browser, statsPage, results) {
+  await checkPaintedWithoutWebgl(engine, browser, statsPage, results);
+
+  const context = await newContext(browser);
+  const log = [];
+
+  try {
+    await instrument(context);
+    await instrumentPainted(context);
+    const page = await context.newPage();
+    watchConsole(page, log);
+
+    await run(engine, 'F31 a painted scene draws with webgl', results, async () => {
+      await openPainted(page);
+      await waitForRenderer(page, paintedScene, 'webgl');
+      await placePainted(page, 600);
+      await settle(page, paintedScene);
+      const clip = roundClip(await boxOf(page, paintedScene));
+      const layout = await paintedLayout(page, clip);
+
+      const drawn = await page.evaluate(
+        (target) => ({
+          panes: document.querySelectorAll(`${target} [data-lg-scene="active"]`).length,
+          uploads: window.__painted.uploads.length,
+          draws: window.__painted.draws,
+        }),
+        paintedScene,
+      );
+
+      assert.equal(layout.layerTag, 'canvas', 'a painter must paint a canvas backdrop');
+      assert.ok(
+        ['x', 'y', 'width', 'height'].every(
+          (side) => Math.abs(layout.layer[side] - layout.scene[side]) < 0.5,
+        ),
+        `the painted canvas must cover the scene (${JSON.stringify(layout)})`,
+      );
+      assert.equal(drawn.panes, 2, 'the canvas must draw the card and the drop');
+      assert.ok(
+        drawn.uploads >= 1 && drawn.draws >= 1,
+        `the glass must upload and draw the painting (${JSON.stringify(drawn)})`,
+      );
+
+      return { ...drawn, layer: layout.layer };
+    });
+
+    if (results['F31 a painted scene draws with webgl']?.failed) return;
+
+    await run(engine, 'F33 a repaint reaches the glass', results, async () => {
+      const { png: before, clip } = await sceneShot(
+        page,
+        `${engine}-painted-before.png`,
+        paintedScene,
+      );
+
+      // The sun climbs about 20 px through the drop.
+      const frames = await page.evaluate(async () => {
+        const { uploads } = window.__painted;
+        const count = uploads.length;
+        let waited = 0;
+
+        window.scrollBy({ top: 150, behavior: 'instant' });
+
+        while (uploads.length === count && waited < 30) {
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+          waited += 1;
+        }
+
+        return waited;
+      });
+
+      await settle(page, paintedScene);
+
+      const { png: after, clip: moved } = await sceneShot(
+        page,
+        `${engine}-painted-after.png`,
+        paintedScene,
+      );
+
+      const { drop } = await paintedLayout(page, moved);
+
+      const [glass] = await analyse(statsPage, { a: before, b: after }, [
+        {
+          type: 'diff',
+          only: [
+            {
+              cx: drop.x + drop.width / 2,
+              cy: drop.y + drop.height / 2,
+              r: drop.width * 0.4,
+            },
+          ],
+        },
+      ]);
+
+      assert.equal(moved.width, clip.width, 'the scene keeps its size while the page scrolls');
+      assert.ok(frames <= 4, `the repaint must reach the glass within a few frames (${frames})`);
+      assert.ok(
+        glass.meanDiff > 4,
+        `the glass must refract the new painting (${glass.meanDiff.toFixed(2)})`,
+      );
+
+      return { frames, glass: Number(glass.meanDiff.toFixed(2)) };
+    });
+
+    await run(engine, 'F34 backdropFps paces the repaints', results, async () => {
+      const pace = await paintedRates(page, 2_000, true);
+
+      // A loaded machine delivers fewer frames, counted here for every loop on the page; a
+      // painter that skips every other frame of a smooth display still falls short.
+      assert.ok(
+        pace.paints >= Math.min(20, pace.frames / 5) && pace.paints <= 36,
+        `a 30 fps painter must paint about 30 times a second while it moves (${JSON.stringify(pace)})`,
+      );
+      assert.ok(
+        Math.abs(pace.uploads - pace.paints) <= 2,
+        `every repaint must reach the glass before the next one (${JSON.stringify(pace)})`,
+      );
+
+      return pace;
+    });
+
+    await run(engine, 'F36 an unchanged painting leaves the glass alone', results, async () => {
+      await settle(page, paintedScene);
+      const rest = await paintedRates(page, 1_000);
+
+      // A loaded machine runs animation frames slower than the painter's rate; a loop that
+      // stopped would not paint at all.
+      assert.ok(
+        rest.paints >= 10,
+        `the scene must keep asking its painter while on screen (${JSON.stringify(rest)})`,
+      );
+      assert.ok(
+        rest.uploads === 0 && rest.draws === 0,
+        `a painter that returns false must cause no upload and no draw (${JSON.stringify(rest)})`,
+      );
+
+      return rest;
+    });
+
+    await run(
+      engine,
+      'F35 painting stops off screen and under reduced motion',
+      results,
+      async () => {
+        await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+        await page.waitForTimeout(2_000);
+        const away = await paintedRates(page, 1_000);
+
+        // The page settles for a few frames after the jump; a running loop would add dozens.
+        assert.ok(
+          away.paints === 0 && away.frames <= 10,
+          `an off-screen painter must not be called or keep frames running (${JSON.stringify(away)})`,
+        );
+
+        const still = {};
+
+        for (const variant of [
+          { name: 'system', options: { reducedMotion: 'reduce' } },
+          { name: 'preference', options: { preferences: { reduceMotion: true } } },
+        ]) {
+          const reduced = await newContext(browser, variant.options);
+
+          try {
+            await instrument(reduced);
+            await instrumentPainted(reduced);
+            const view = await reduced.newPage();
+            await openPainted(view);
+            await waitForRenderer(view, paintedScene, 'webgl');
+            await placePainted(view, 600);
+            await settle(view, paintedScene);
+
+            const picture = () =>
+              view.evaluate((target) => {
+                const layer = document.querySelector(`${target} .lg-scene-backdrop`);
+
+                return { calls: window.__painted.paints.length, image: layer.toDataURL() };
+              }, paintedScene);
+
+            const first = await picture();
+            const resting = await paintedRates(view, 1_000);
+            const scrolling = await paintedRates(view, 1_000, true);
+            const last = await picture();
+
+            still[variant.name] = { calls: first.calls, resting, scrolling };
+            assert.ok(first.calls >= 1, `${variant.name}: the backdrop must still be painted once`);
+            assert.ok(
+              resting.paints === 0 && resting.frames <= 3 && scrolling.paints === 0,
+              `${variant.name}: reduced motion must stop the painter (${JSON.stringify(still[variant.name])})`,
+            );
+            assert.equal(
+              last.image,
+              first.image,
+              `${variant.name}: the painting must hold still under reduced motion`,
+            );
+          } finally {
+            await reduced.close();
+          }
+        }
+
+        return { away, still };
+      },
+    );
+  } finally {
+    const found = problems(log);
+    results.paintedConsole = log;
+
+    if (found.length)
+      failures.push(`${engine} painted console: ${found.map((entry) => entry.text).join(' | ')}`);
+
+    await context.close();
+  }
+}
+
+async function checkPaintedWithoutWebgl(engine, browser, statsPage, results) {
+  await run(engine, 'F32 without webgl the canvas shows the painting', results, async () => {
+    const context = await newContext(browser);
+
+    try {
+      await context.addInitScript(() => {
+        const getContext = HTMLCanvasElement.prototype.getContext;
+
+        HTMLCanvasElement.prototype.getContext = function patched(type, ...rest) {
+          return type === 'webgl2' ? null : getContext.call(this, type, ...rest);
+        };
+      });
+      await instrumentPainted(context);
+      const page = await context.newPage();
+      await openPainted(page);
+      await placePainted(page, 600);
+      await page.waitForFunction(() => window.__painted.paints.length > 0);
+      await page.waitForTimeout(300);
+
+      const { png, clip } = await sceneShot(page, `${engine}-painted-css.png`, paintedScene);
+      const layout = await paintedLayout(page, clip);
+      const renderer = await readRenderer(page, paintedScene);
+      const inner = { x: 24, y: 24, width: clip.width - 48, height: clip.height - 48 };
+
+      const [match, painting] = await analyse(
+        statsPage,
+        { a: png, b: await paintedPicture(page, clip) },
+        [
+          { type: 'diff', rect: inner, exclude: layout.panes.map((pane) => grow(pane, 40)) },
+          { type: 'steps', image: 'b', rect: inner },
+        ],
+      );
+
+      assert.equal(renderer.renderer, 'css', 'without WebGL2 the scene must keep its CSS glass');
+      assert.ok(
+        ['x', 'y', 'width', 'height'].every(
+          (side) => Math.abs(layout.layer[side] - layout.scene[side]) < 0.5,
+        ),
+        `the painted canvas must cover the scene (${JSON.stringify(layout)})`,
+      );
+      assert.ok(painting.max > 40, `the canvas must hold the painting (${painting.max})`);
+      assert.ok(
+        match.count > 10_000 && match.meanDiff < 3,
+        `the scene must show the painting itself (${match.meanDiff.toFixed(2)} over ${match.count} pixels)`,
+      );
+
+      return { renderer, meanDiff: Number(match.meanDiff.toFixed(2)), steps: painting.max };
+    } finally {
+      await context.close();
+    }
+  });
+}
+
 async function checkReducedTransparency(engine, browser, results) {
   await run(engine, 'F8 reduced transparency turns the canvas off', results, async () => {
     const outcomes = {};
@@ -3166,6 +3580,7 @@ async function checkOptics(engine, browser, statsPage, results) {
 async function checkScene(engine, browser, statsPage, results) {
   await checkDemo(engine, browser, statsPage, results);
   await checkPaneContents(engine, browser, statsPage, results);
+  await checkPaintedBackdrop(engine, browser, statsPage, results);
   await checkOptics(engine, browser, statsPage, results);
   await checkReducedTransparency(engine, browser, results);
   await checkMissingWebgl(engine, browser, results);
@@ -3348,6 +3763,9 @@ try {
       if (suites.has('panes') && !suites.has('scene'))
         await checkPaneContents(engine, browser, statsPage, results);
 
+      if (suites.has('painted') && !suites.has('scene'))
+        await checkPaintedBackdrop(engine, browser, statsPage, results);
+
       if (suites.has('backdrops') && !suites.has('scene'))
         await checkBackdropRequests(engine, browser, results);
 
@@ -3380,7 +3798,8 @@ for (const [engine, results] of Object.entries(manifest.engines)) {
       name === 'flowConsole' ||
       name === 'homeConsole' ||
       name === 'labConsole' ||
-      name === 'panesConsole'
+      name === 'panesConsole' ||
+      name === 'paintedConsole'
     )
       continue;
 

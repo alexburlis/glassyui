@@ -39,8 +39,13 @@ export type ComponentDoc = {
   dependencies: string[];
   description: string;
   directFiles: string[];
-  /** `live` shows the example running above its code. */
-  examples: Array<{ code: string; live?: 'fixed-wallpaper'; title: string }>;
+  /**
+   * `live` shows the example running above its code. The painted backdrop runs
+   * src/components/examples/painted-scene-example.tsx and shows that file.
+   */
+  examples: Array<
+    { title: string } & ({ code: string; live?: 'fixed-wallpaper' } | { live: 'painted-backdrop' })
+  >;
   /** A guide that walks through the component, linked from its page. */
   guide?: string;
   id: string;
@@ -3401,6 +3406,7 @@ export default function Page() {
   return <SceneExample />;
 }`,
       },
+      { title: 'Paint a moving backdrop', live: 'painted-backdrop' },
     ],
     api: [
       {
@@ -3411,17 +3417,24 @@ export default function Page() {
         props: [
           {
             name: 'backdrop',
-            type: 'string',
+            type: 'string | GlassSceneBackdropPainter',
             default: '—',
             description:
-              'The image the glass refracts: a URL, or a CSS url() or var() value. Without it, or --lg-scene-backdrop in CSS, the scene keeps its CSS glass.',
+              'What the glass refracts: an image URL or a CSS url() or var() value, or a function that paints it on a canvas in CSS pixels. Without it, or --lg-scene-backdrop in CSS, the scene keeps its CSS glass.',
+          },
+          {
+            name: 'backdropFps',
+            type: 'number',
+            default: '0',
+            description:
+              'Repaints a painted backdrop this many times a second while the scene is on screen and motion is allowed. 0 paints it only when it mounts or resizes and when the painter changes.',
           },
           {
             name: 'backdropSpace',
             type: "'local' | 'viewport'",
             default: "'local'",
             description:
-              'local covers the scene with the backdrop; viewport pins it to the viewport, like background-attachment: fixed.',
+              'local covers the scene with the backdrop; viewport pins it to the viewport, like background-attachment: fixed. A painted backdrop always covers the scene.',
           },
           {
             name: 'flow',
@@ -3488,9 +3501,9 @@ export default function Page() {
         ],
       },
     ],
-    types: ['GlassSceneProps', 'GlassSceneOptics', 'GlassDropProps'],
+    types: ['GlassSceneProps', 'GlassSceneOptics', 'GlassSceneBackdropPainter', 'GlassDropProps'],
     requires:
-      'WebGL2 and a backdrop image from your origin or served with CORS. Without either, every piece keeps its CSS glass.',
+      'WebGL2 and a backdrop: an image from your origin or served with CORS, or a painted one. Without them, every piece keeps its CSS glass.',
     accessibility:
       'Scene glass keeps text in its --lg-scene-ink colour at 4.5:1 contrast over any backdrop; set --lg-scene-ink to transparent on custom glass that carries no text.',
     pageToc: standardToc,

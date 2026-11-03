@@ -521,7 +521,11 @@ Registry dependencies: `@glassyui/glass-provider`.
 Purpose: draws the surfaces, panels, buttons and drops inside it as thick
 bevelled glass that bends and splits a backdrop image and melts together, with
 WebGL2. Without it, and under reduced transparency or increased contrast, every
-piece keeps its CSS glass.
+piece keeps its CSS glass. The backdrop can also be a painter function: the
+scene paints it on a canvas, which the CSS glass shows too, and `backdropFps`
+repaints moving art while the scene is on screen and motion is allowed. A
+painter that returns `false` keeps its last picture, and the glass does not
+redraw.
 
 ### `glass-logo-reveal`
 

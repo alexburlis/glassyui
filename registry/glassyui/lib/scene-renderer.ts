@@ -57,6 +57,8 @@ export type SceneSettings = {
 
 export type SceneRenderer = {
   update: (settings: SceneSettings) => void;
+  /** The scene repainted its canvas backdrop: the glass takes the new picture on its next frame. */
+  backdropChanged: () => void;
   destroy: () => void;
 };
 
@@ -78,7 +80,7 @@ const TAIL_MS = 400;
 // phone's GPU memory.
 const MAX_PIXELS = 4_200_000;
 
-const MAX_TEXTURE = 4096;
+export const MAX_TEXTURE = 4096;
 
 // The light sits above the top left, where interfaces conventionally light their surfaces.
 const LIGHT = (() => {
@@ -808,7 +810,7 @@ export function createSceneRenderer({
     warnOnce('webgl2', 'WebGL2 is unavailable, so the scene keeps its CSS glass.');
     setAttribute(RENDERER, 'css');
 
-    return { update: () => {}, destroy: () => {} };
+    return { update: () => {}, backdropChanged: () => {}, destroy: () => {} };
   }
 
   const gl = context;
@@ -852,10 +854,15 @@ export function createSceneRenderer({
   let cellsReady = false;
   let uniformsReady = false;
 
-  // Backdrop image, from the CSS value to the texture on the GPU.
+  // Backdrop image, from the CSS value to the texture on the GPU. A canvas layer is the scene's
+  // own painted backdrop instead: its picture is the source, and each repaint a new version.
+  const painted = backdrop instanceof HTMLCanvasElement;
+  let paintVersion = 0;
+  // A canvas that drew another origin's image cannot be read again, however often it repaints.
+  let paintUnreadable = false;
   let requestedUrl: string | null | undefined;
   let loadGeneration = 0;
-  let image: HTMLImageElement | null = null;
+  let image: HTMLImageElement | HTMLCanvasElement | null = null;
   let imageUrl: string | null = null;
   let fill = 'rgb(255, 255, 255)';
 
@@ -1125,6 +1132,26 @@ export function createSceneRenderer({
     // has no computed style, which is not a missing backdrop.
     if (!backdrop.isConnected) return;
 
+    if (painted) {
+      if (paintUnreadable) return;
+
+      if (paintVersion === 0) {
+        setAttribute(BACKDROP, 'loading');
+
+        return;
+      }
+
+      if (image !== backdrop) {
+        image = backdrop;
+        imageUrl = 'painted';
+        requestedUrl = 'painted';
+        dirty = true;
+        wake();
+      }
+
+      return;
+    }
+
     const url = firstUrl(getComputedStyle(backdrop).backgroundImage);
 
     if (url === requestedUrl) return;
@@ -1160,13 +1187,24 @@ export function createSceneRenderer({
     highlightStrength = Number.isFinite(highlight) ? highlight : 0;
   };
 
-  const coverFit = (width: number, height: number, source: HTMLImageElement) => {
-    const scale = Math.max(width / source.naturalWidth, height / source.naturalHeight);
+  // A painted canvas is drawn at the backdrop's own size, so it covers the box exactly.
+  const naturalSize = (source: HTMLImageElement | HTMLCanvasElement) =>
+    source instanceof HTMLImageElement
+      ? { width: source.naturalWidth, height: source.naturalHeight }
+      : { width: Math.max(backdropBox.width, 1), height: Math.max(backdropBox.height, 1) };
+
+  const coverFit = (
+    width: number,
+    height: number,
+    source: HTMLImageElement | HTMLCanvasElement,
+  ) => {
+    const natural = naturalSize(source);
+    const scale = Math.max(width / natural.width, height / natural.height);
 
     return {
       scale,
-      offsetX: (width - source.naturalWidth * scale) / 2,
-      offsetY: (height - source.naturalHeight * scale) / 2,
+      offsetX: (width - natural.width * scale) / 2,
+      offsetY: (height - natural.height * scale) / 2,
     };
   };
 
@@ -1180,11 +1218,16 @@ export function createSceneRenderer({
     try {
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, raster.canvas);
     } catch (error) {
+      paintUnreadable = painted;
       fail(
         'backdrop',
-        `the backdrop image ${describeUrl(raster.url)} cannot be read by WebGL (${
-          error instanceof Error ? error.message : String(error)
-        }). Serve it from this origin or with CORS headers.`,
+        painted
+          ? `the painted backdrop cannot be read by WebGL (${
+              error instanceof Error ? error.message : String(error)
+            }). Draw only images from this origin or served with CORS headers into it.`
+          : `the backdrop image ${describeUrl(raster.url)} cannot be read by WebGL (${
+              error instanceof Error ? error.message : String(error)
+            }). Serve it from this origin or with CORS headers.`,
       );
 
       return false;
@@ -1216,13 +1259,15 @@ export function createSceneRenderer({
 
     const textureWidth = Math.max(1, Math.ceil(width * density));
     const textureHeight = Math.max(1, Math.ceil(height * density));
-    const key = `${textureWidth}x${textureHeight}@${density}|${fill}|${imageUrl}`;
+    const key = `${textureWidth}x${textureHeight}@${density}|${fill}|${imageUrl}#${paintVersion}`;
 
     if (raster?.key === key) return uploaded || upload();
 
     const now = performance.now();
 
+    // A repaint is already paced by the scene, so only a resize waits out the throttle.
     if (
+      !painted &&
       raster &&
       raster.url === imageUrl &&
       uploaded &&
@@ -1244,10 +1289,11 @@ export function createSceneRenderer({
     // background. Firefox resamples an SVG drawn at a fractional size, which
     // would blur the glass by half a pixel.
     const fit = coverFit(width, height, image);
+    const natural = naturalSize(image);
     const left = Math.round(fit.offsetX * density);
     const top = Math.round(fit.offsetY * density);
-    const drawnWidth = Math.round((fit.offsetX + image.naturalWidth * fit.scale) * density) - left;
-    const drawnHeight = Math.round((fit.offsetY + image.naturalHeight * fit.scale) * density) - top;
+    const drawnWidth = Math.round((fit.offsetX + natural.width * fit.scale) * density) - left;
+    const drawnHeight = Math.round((fit.offsetY + natural.height * fit.scale) * density) - top;
 
     target.width = textureWidth;
     target.height = textureHeight;
@@ -1264,8 +1310,8 @@ export function createSceneRenderer({
       height: textureHeight,
       left,
       top,
-      stepX: drawnWidth / image.naturalWidth,
-      stepY: drawnHeight / image.naturalHeight,
+      stepX: drawnWidth / natural.width,
+      stepY: drawnHeight / natural.height,
     };
     rasterAt = now;
     uploaded = false;
@@ -2119,6 +2165,14 @@ export function createSceneRenderer({
     update(next) {
       settings = next;
       dirty = true;
+      wake();
+    },
+    backdropChanged() {
+      if (!painted || destroyed) return;
+
+      paintVersion += 1;
+      dirty = true;
+      checkBackdrop();
       wake();
     },
     destroy() {

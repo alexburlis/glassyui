@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import type { ComponentDoc } from '@/components/docs/component-docs-data';
 import { installCommand } from './install-command';
 
 const exampleFiles = new Map([
@@ -9,11 +10,7 @@ const exampleFiles = new Map([
 ]);
 
 /** The rendered module is also the copy source; only its consumer import paths differ. */
-export function getLaunchExampleSource(id: string) {
-  const file = exampleFiles.get(id);
-
-  if (!file) return null;
-
+function getExampleSource(file: string) {
   const installedItems = new Set<string>();
 
   const source = readFileSync(
@@ -32,4 +29,15 @@ export function getLaunchExampleSource(id: string) {
     items: [...installedItems],
     install: installCommand([...installedItems], 'react'),
   };
+}
+
+export function getLaunchExampleSource(id: string) {
+  const file = exampleFiles.get(id);
+
+  return file ? getExampleSource(file) : null;
+}
+
+/** An example's code. The painted backdrop shows the source of the example it runs. */
+export function getExampleCode(example: ComponentDoc['examples'][number]) {
+  return 'code' in example ? example.code : getExampleSource('painted-scene-example.tsx').source;
 }
