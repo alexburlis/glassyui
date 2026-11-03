@@ -6,7 +6,16 @@ type Ray = { height: number; opacity: number; width: number; x: number; y: numbe
 
 type Star = { big: boolean; opacity: number; radius: number; x: number; y: number };
 
-type Art = { rays: Ray[]; stars: Star[]; width: number; horizon: number };
+type Art = {
+  rays: Ray[];
+  stars: Star[];
+  width: number;
+  height: number;
+  horizon: number;
+  band: number;
+  bandY: number;
+  accent: string;
+};
 
 // The aurora's curve across a 1440 x 600 band: M0 150 C380 250 560 338 720 338 S1100 260 1440 170.
 const CURVE = [
@@ -119,12 +128,23 @@ export function useHeroArt(
     const layout = () => {
       const height = hero.offsetHeight;
       const width = hero.offsetWidth;
-      const top = card.offsetTop;
+      let top = card.offsetTop;
+
+      for (
+        let parent = card.offsetParent;
+        parent instanceof HTMLElement && parent !== hero;
+        parent = parent.offsetParent
+      ) {
+        top += parent.offsetTop;
+      }
+
       const cardHeight = card.offsetHeight;
       // On phones the card fills the width: the aurora's arms end level with its top edge, so
       // only the rays rise above it.
       const narrow = width <= 560;
-      const band = parseFloat(getComputedStyle(hero).getPropertyValue('--band-h'));
+      const style = getComputedStyle(hero);
+      const band = parseFloat(style.getPropertyValue('--band-h'));
+      const accent = style.getPropertyValue('--hc-accent').trim();
       const bandY = narrow ? top - 16 + band * 0.25 : top + cardHeight / 2;
       const horizon = Math.round(Math.min(height - 40, top + cardHeight * (narrow ? 0.6 : 0.72)));
 
@@ -132,13 +152,23 @@ export function useHeroArt(
       hero.style.setProperty('--horizon', `${horizon}px`);
       hero.toggleAttribute('data-tight', height - (top + cardHeight) < 104);
       setArt((drawn) =>
-        drawn && Math.abs(width - drawn.width) <= 24 && Math.abs(horizon - drawn.horizon) <= 24
+        drawn &&
+        drawn.width === width &&
+        drawn.height === height &&
+        drawn.horizon === horizon &&
+        drawn.band === band &&
+        drawn.bandY === bandY &&
+        drawn.accent === accent
           ? drawn
           : {
-              rays: drawn && Math.abs(width - drawn.width) <= 24 ? drawn.rays : drawRays(width),
+              rays: drawn?.width === width ? drawn.rays : drawRays(width),
               stars: drawStars(width, horizon),
               width,
+              height,
               horizon,
+              band,
+              bandY,
+              accent,
             },
       );
     };
@@ -170,6 +200,80 @@ export function useHeroArt(
   }, [cardRef, heroRef]);
 
   return art;
+}
+
+/** The image shown by the hero and sampled by its glass share this measured dawn. */
+export function heroBackdrop(art: Art | null) {
+  if (!art) return undefined;
+
+  const { width, height, horizon, band, bandY, rays, stars } = art;
+
+  const accent = art.accent
+    .replaceAll('&', '&amp;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('<', '&lt;');
+
+  const sea = height - horizon;
+  const curve = 'M0 150C380 250 560 338 720 338S1100 260 1440 170';
+
+  const starMarkup = stars
+    .map(
+      (star) =>
+        `${star.big ? `<circle cx="${star.x.toFixed(1)}" cy="${star.y.toFixed(1)}" r="3.6" fill="#cfefff" opacity="${(star.opacity * 0.2).toFixed(2)}"/>` : ''}<circle cx="${star.x.toFixed(1)}" cy="${star.y.toFixed(1)}" r="${star.radius.toFixed(2)}" fill="#eaf4ff" opacity="${star.opacity.toFixed(2)}"/>`,
+    )
+    .join('');
+
+  const rayMarkup = rays
+    .map(
+      (ray) =>
+        `<rect x="${ray.x.toFixed(1)}" y="${ray.y.toFixed(1)}" width="${ray.width.toFixed(2)}" height="${ray.height.toFixed(1)}" opacity="${ray.opacity.toFixed(2)}"/>`,
+    )
+    .join('');
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+    <defs>
+      <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#080d1a"/><stop offset=".32" stop-color="#0c1222"/><stop offset=".6" stop-color="#111a33"/><stop offset=".82" stop-color="#1c2242"/><stop offset=".94" stop-color="#2c2a4a"/><stop offset="1" stop-color="#3a3150"/></linearGradient>
+      <radialGradient id="sky-peach" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${width / 2} ${horizon}) scale(${width * 0.52} ${horizon * 0.58})"><stop stop-color="#ffb38a" stop-opacity=".36"/><stop offset=".44" stop-color="#ffb38a" stop-opacity=".12"/><stop offset=".74" stop-color="#ffb38a" stop-opacity="0"/></radialGradient>
+      <radialGradient id="sky-light" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${width / 2} ${horizon}) scale(${width * 0.28} ${horizon * 0.26})"><stop stop-color="#ffdecc" stop-opacity=".3"/><stop offset=".72" stop-color="#ffdecc" stop-opacity="0"/></radialGradient>
+      <linearGradient id="sea" x2="0" y2="1"><stop stop-color="#1f2342"/><stop offset=".34" stop-color="#151c36"/><stop offset="1" stop-color="#0f1628"/></linearGradient>
+      <radialGradient id="sea-peach" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${width / 2} ${horizon}) scale(${width * 0.34} ${sea * 0.44})"><stop stop-color="#ffb38a" stop-opacity=".26"/><stop offset=".72" stop-color="#ffb38a" stop-opacity="0"/></radialGradient>
+      <radialGradient id="sea-aqua" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${width / 2} ${horizon}) scale(${width * 0.7} ${sea * 0.6})"><stop stop-color="${accent}" stop-opacity=".1"/><stop offset=".74" stop-color="${accent}" stop-opacity="0"/></radialGradient>
+      <radialGradient id="sea-fade" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${width / 2} ${horizon}) scale(${width * 0.56} ${sea})"><stop offset=".1" stop-color="white"/><stop offset=".78" stop-color="white" stop-opacity="0"/></radialGradient>
+      <pattern id="sea-lines" width="${width}" height="7" y="${horizon}" patternUnits="userSpaceOnUse"><rect width="${width}" height="1" fill="#ffe2d2" fill-opacity=".08"/></pattern>
+      <mask id="sea-mask" maskUnits="userSpaceOnUse"><rect width="${width}" height="${height}" fill="url(#sea-fade)"/></mask>
+      <linearGradient id="band-fade" x2="0" y2="1"><stop stop-color="white" stop-opacity="0"/><stop offset="${width <= 560 ? '.12' : '.3'}" stop-color="white"/><stop offset=".82" stop-color="white"/><stop offset="1" stop-color="white" stop-opacity="0"/></linearGradient>
+      <mask id="band-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="${width}" height="${band}"><rect width="${width}" height="${band}" fill="url(#band-fade)"/></mask>
+      <linearGradient id="aqua"><stop stop-color="#3ad1e0" stop-opacity="0"/><stop offset=".22" stop-color="#3ad1e0" stop-opacity=".75"/><stop offset=".5" stop-color="#86e9f1"/><stop offset=".78" stop-color="#3ad1e0" stop-opacity=".75"/><stop offset="1" stop-color="#3ad1e0" stop-opacity="0"/></linearGradient>
+      <linearGradient id="peach"><stop offset=".1" stop-color="#ffb38a" stop-opacity="0"/><stop offset=".38" stop-color="#ffb38a" stop-opacity=".9"/><stop offset=".62" stop-color="#ffc9a8" stop-opacity=".9"/><stop offset=".9" stop-color="#ffb38a" stop-opacity="0"/></linearGradient>
+      <linearGradient id="curve-line"><stop offset=".04" stop-color="#e6fdff" stop-opacity="0"/><stop offset=".3" stop-color="#e6fdff" stop-opacity=".5"/><stop offset=".5" stop-color="#f4feff" stop-opacity=".85"/><stop offset=".7" stop-color="#e6fdff" stop-opacity=".5"/><stop offset=".96" stop-color="#e6fdff" stop-opacity="0"/></linearGradient>
+      <linearGradient id="ray" x1="0" x2="0" y1="1" y2="0"><stop stop-color="#d4fafc" stop-opacity=".95"/><stop offset=".14" stop-color="#3ad1e0" stop-opacity=".8"/><stop offset=".55" stop-color="#3ad1e0" stop-opacity=".2"/><stop offset="1" stop-color="#3ad1e0" stop-opacity="0"/></linearGradient>
+      ${[48, 22, 6].map((blur) => `<filter id="b${blur}" filterUnits="userSpaceOnUse" x="-240" y="-360" width="1920" height="1320"><feGaussianBlur stdDeviation="${blur}"/></filter>`).join('')}
+      <filter id="soft"><feGaussianBlur stdDeviation=".7"/></filter>
+      <linearGradient id="horizon"><stop stop-color="#ffccb4" stop-opacity="0"/><stop offset=".22" stop-color="#ffcdb4" stop-opacity=".5"/><stop offset=".5" stop-color="#fff2ea" stop-opacity=".95"/><stop offset=".78" stop-color="#ffcdb4" stop-opacity=".5"/><stop offset="1" stop-color="#ffccb4" stop-opacity="0"/></linearGradient>
+      <filter id="horizon-glow" x="-10%" y="-1000%" width="120%" height="2100%"><feGaussianBlur stdDeviation="11"/></filter>
+    </defs>
+    <rect width="${width}" height="${horizon}" fill="url(#sky)"/>
+    <rect width="${width}" height="${horizon}" fill="url(#sky-light)"/>
+    <rect width="${width}" height="${horizon}" fill="url(#sky-peach)"/>
+    ${starMarkup}
+    <g transform="translate(0 ${bandY - band / 2})"><g mask="url(#band-mask)">
+      <svg width="${width}" height="${band}" viewBox="0 0 1440 600" preserveAspectRatio="none">
+        <path d="${curve}" fill="none" stroke="url(#aqua)" stroke-width="230" opacity=".3" transform="translate(0 -100)" filter="url(#b48)"/>
+        <path d="${curve}" fill="none" stroke="url(#peach)" stroke-width="80" opacity=".5" transform="translate(0 34)" filter="url(#b22)"/>
+        <path d="${curve}" fill="none" stroke="url(#aqua)" stroke-width="16" opacity=".8" filter="url(#b6)"/>
+        <path d="${curve}" fill="none" stroke="url(#curve-line)" stroke-width="1.2" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <svg width="${width}" height="${band}" viewBox="0 0 ${width} 600" preserveAspectRatio="none"><g fill="url(#ray)" filter="url(#soft)">${rayMarkup}</g></svg>
+    </g></g>
+    <rect y="${horizon}" width="${width}" height="${sea}" fill="url(#sea)"/>
+    <rect y="${horizon}" width="${width}" height="${sea}" fill="url(#sea-aqua)"/>
+    <rect y="${horizon}" width="${width}" height="${sea}" fill="url(#sea-peach)"/>
+    <rect y="${horizon}" width="${width}" height="${sea}" fill="url(#sea-lines)" mask="url(#sea-mask)"/>
+    <rect y="${horizon - 3}" width="${width}" height="7" fill="#ffb38a" fill-opacity=".26" filter="url(#horizon-glow)"/>
+    <rect y="${horizon}" width="${width}" height="1" fill="url(#horizon)"/>
+  </svg>`;
+
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
 export function HeroArt({ art }: { art: Art | null }) {

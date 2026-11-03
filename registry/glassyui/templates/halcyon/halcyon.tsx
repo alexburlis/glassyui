@@ -14,6 +14,7 @@ import { GlassBadge } from '../../glass-badge';
 import { GlassButton } from '../../glass-button';
 import { GlassHeader } from '../../glass-header';
 import { GlassPanel } from '../../glass-panel';
+import { GlassScene } from '../../glass-scene';
 import { GlassScrollArea } from '../../glass-scroll-area';
 import { GlassSheet, GlassSheetContent, GlassSheetTitle } from '../../glass-sheet';
 import {
@@ -24,7 +25,7 @@ import {
 } from '../../glass-toast';
 import { Countdown } from './countdown';
 import { FeatureTiles } from './feature-tiles';
-import { HeroArt, useHeroArt } from './hero-art';
+import { HeroArt, heroBackdrop, useHeroArt } from './hero-art';
 import {
   ArrowIcon,
   CheckIcon,
@@ -303,33 +304,47 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
             className="halcyon-hero"
             id="top"
           >
-            <HeroArt art={art} />
-            <div className="halcyon-wrap halcyon-hero-inner">
-              <GlassBadge className="halcyon-hero-chip" dot>
-                Private beta · Invites from 12 January
-              </GlassBadge>
-              <h1 className="halcyon-hero-title" id="halcyon-hero-title">
-                <span className="halcyon-line">Let your week</span>
-                <span className="halcyon-line">
-                  arrange <em>itself</em>.
-                </span>
-              </h1>
-              <p className="halcyon-hero-sub">
-                Halcyon books, moves and protects your meetings, so your best hours stay yours.
-              </p>
-              <div ref={waitlistSlotRef} className="halcyon-waitlist-slot">
-                <WaitlistForm
-                  ref={waitlistRef}
-                  onJoin={onJoin}
-                  onJoinedChange={setJoined}
-                  onNotice={notify}
-                />
+            <GlassScene
+              backdrop={heroBackdrop(art)}
+              className="halcyon-hero-scene"
+              optics={{
+                bevel: 18,
+                thickness: 24,
+                ior: 1.5,
+                dispersion: 0,
+                frost: 0.75,
+                specular: 1,
+                merge: 0,
+              }}
+            >
+              <HeroArt art={art} />
+              <div className="halcyon-wrap halcyon-hero-inner">
+                <GlassBadge className="halcyon-hero-chip" dot>
+                  Private beta · Invites from 12 January
+                </GlassBadge>
+                <h1 className="halcyon-hero-title" id="halcyon-hero-title">
+                  <span className="halcyon-line">Let your week</span>
+                  <span className="halcyon-line">
+                    arrange <em>itself</em>.
+                  </span>
+                </h1>
+                <p className="halcyon-hero-sub">
+                  Halcyon books, moves and protects your meetings, so your best hours stay yours.
+                </p>
+                <div ref={waitlistSlotRef} className="halcyon-waitlist-slot">
+                  <WaitlistForm
+                    ref={waitlistRef}
+                    onJoin={onJoin}
+                    onJoinedChange={setJoined}
+                    onNotice={notify}
+                  />
+                </div>
               </div>
-            </div>
-            <a className="halcyon-hero-more" href="#what">
-              What it will do
-              <DownIcon />
-            </a>
+              <a className="halcyon-hero-more" href="#what">
+                What it will do
+                <DownIcon />
+              </a>
+            </GlassScene>
           </section>
 
           <FeatureTiles />

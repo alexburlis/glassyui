@@ -292,13 +292,32 @@ html:has(.halcyon-page) {
   --band-h: 600px;
   position: relative;
   isolation: isolate;
+  overflow: clip;
+}
+
+.halcyon-hero-scene {
   display: flex;
   flex-direction: column;
   justify-content: center;
   min-height: 100vh;
   min-height: 100svh;
   padding: 112px 0 124px;
-  overflow: clip;
+}
+
+/* The image beneath the glass is the image the rays trace. Keep the CSS art for fallback. */
+.halcyon-hero-scene[data-lg-scene-renderer='webgl'] > .halcyon-hero-art {
+  visibility: hidden;
+}
+
+.halcyon-hero-scene[data-lg-scene-renderer='webgl'] .halcyon-aurora-rays {
+  animation: none !important;
+  will-change: auto;
+}
+
+.halcyon-hero-scene .halcyon-waitlist {
+  --lg-scene-tint: rgb(12 20 38 / 0.12);
+  --lg-scene-frost: 1px;
+  --lg-scene-ink: var(--hc-ink-2);
 }
 
 .halcyon-hero-art {
@@ -507,17 +526,6 @@ html:has(.halcyon-page) {
   text-align: left;
 }
 
-/* Keep the face clear; the narrow lens carries the thickness at the rim. */
-.halcyon-waitlist {
-  --lg-glass-thickness: 1;
-  --lg-lens-bevel: 18;
-  --lg-lens-thickness: 64;
-  --lg-lens-depth: 1;
-  --lg-lens-ior: 1.5;
-  --lg-lens-blur: 0.75;
-  --lg-lens-dispersion: 0;
-}
-
 .halcyon-waitlist::before {
   background-color: rgb(12 20 38 / 0.12);
 }
@@ -525,10 +533,6 @@ html:has(.halcyon-page) {
 .halcyon-waitlist-submit {
   --lg-accent-foreground: #e7fbff;
   --lg-prominent-tint: saturate(0.85) brightness(1.05);
-  --lg-lens-bevel: 10;
-  --lg-lens-thickness: 28;
-  --lg-lens-blur: 0.5;
-  --lg-lens-dispersion: 0;
 }
 
 .halcyon-waitlist-submit > .lg-button__layers > .lg-button__distortion {
@@ -2349,6 +2353,9 @@ html:has(.halcyon-page) {
 
   .halcyon-hero {
     --band-h: 520px;
+  }
+
+  .halcyon-hero-scene {
     padding: 92px 0 84px;
   }
 

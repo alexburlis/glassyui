@@ -276,7 +276,7 @@ export function WaitlistForm({ onJoin, onJoinedChange, onNotice, ref }: Waitlist
         data-pending={pending ? '' : undefined}
         data-state={joined ? 'done' : 'form'}
         id="waitlist"
-        lens
+        lens={false}
         variant="card"
       >
         <div ref={clipRef} className="halcyon-waitlist-clip">
@@ -320,6 +320,7 @@ export function WaitlistForm({ onJoin, onJoinedChange, onNotice, ref }: Waitlist
               <GlassButton
                 aria-busy={pending || undefined}
                 className="halcyon-button-xl halcyon-waitlist-submit"
+                lens={false}
                 type="submit"
                 variant="prominent"
               >
@@ -382,6 +383,7 @@ export function WaitlistForm({ onJoin, onJoinedChange, onNotice, ref }: Waitlist
               <GlassButton
                 ref={copyRef}
                 className="halcyon-button-xl halcyon-copy-button"
+                lens={false}
                 data-copied={copied ? '' : undefined}
                 variant="prominent"
                 onClick={copy}
