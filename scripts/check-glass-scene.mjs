@@ -409,6 +409,41 @@ async function analyse(statsPage, images, operations) {
           return { max: largest, at };
         }
 
+        // Pixels brighter or darker than all eight neighbours by more than a threshold: stray
+        // pixels, which neither smooth light nor a thin line makes.
+        if (operation.type === 'speckle') {
+          const bounds = boundsOf(image, rect);
+          const threshold = operation.threshold ?? 24;
+          let count = 0;
+          let at = null;
+          eachPixel(
+            image,
+            rect,
+            exclude,
+            (x, y) => {
+              const neighbours = [-1, 0, 1]
+                .flatMap((dx) => [-1, 0, 1].map((dy) => [x + dx, y + dy]))
+                .filter(([nx, ny]) => nx !== x || ny !== y);
+
+              if (!neighbours.every(([nx, ny]) => counts(nx, ny, bounds, exclude, only))) return;
+
+              const here = luminance(pixel(image, x, y));
+              const steps = neighbours.map(([nx, ny]) => here - luminance(pixel(image, nx, ny)));
+
+              if (
+                steps.every((step) => step > threshold) ||
+                steps.every((step) => step < -threshold)
+              ) {
+                count += 1;
+                at ??= [x, y];
+              }
+            },
+            only,
+          );
+
+          return { count, at };
+        }
+
         if (operation.type === 'mean') {
           const sum = [0, 0, 0];
           let count = 0;
@@ -3453,7 +3488,11 @@ async function checkOptics(engine, browser, statsPage, results) {
       'F39 a near eye sees thick glass in perspective as the page scrolls',
       results,
       async () => {
-        await addStyle(page, `${loneDrop} ${labDrop} { --lg-scene-tint: transparent !important; }`);
+        // The site's navigation would scroll over the scene.
+        await addStyle(
+          page,
+          `${loneDrop} ${labDrop} { --lg-scene-tint: transparent !important; } .site-nav { visibility: hidden !important; }`,
+        );
         await setOptics(page, { Thickness: 'End', Dome: 'Home' });
         const scrolled = await page.evaluate(() => window.scrollY);
 
@@ -3482,9 +3521,25 @@ async function checkOptics(engine, browser, statsPage, results) {
             ),
             labScene,
           );
-          const shot = await sceneShot(page, `${engine}-viewer-${offset}.png`, labScene);
 
-          const [column] = await analyse(statsPage, { a: shot.png }, [
+          const shot = await sceneShot(
+            page,
+            `${engine}-viewer-${strays.length}-${offset}.png`,
+            labScene,
+          );
+
+          // The far side, where the drop's rim faces away from the eye in the middle of the view.
+          const awayFromEye = await page.evaluate((selector) => {
+            const box = document.querySelector(selector).getBoundingClientRect();
+
+            return box.left + box.width / 2 < window.innerWidth / 2 ? -1 : 1;
+          }, labDrop);
+
+          const top = Math.round(drop.cy - drop.r);
+          const bottom = Math.round(drop.cy + drop.r);
+
+          // The drop and the wall it shows from the side, which reaches up to 90 pixels out.
+          const [column, farColumn, speckle] = await analyse(statsPage, { a: shot.png }, [
             {
               type: 'line',
               axis: 'y',
@@ -3492,11 +3547,26 @@ async function checkOptics(engine, browser, statsPage, results) {
               from,
               to: Math.round(drop.cy + reach),
             },
+            {
+              type: 'line',
+              axis: 'y',
+              at: Math.round(drop.cx + awayFromEye * drop.r * 0.8),
+              from: top,
+              to: bottom,
+            },
+            { type: 'speckle', only: [{ cx: drop.cx, cy: drop.cy, r: drop.r + 90 }] },
           ]);
 
-          return from + column.indexOf(Math.max(...column)) - Math.round(drop.cy);
+          const middle = from + column.indexOf(Math.max(...column));
+
+          strays.push(speckle);
+          farSide.push(top + farColumn.indexOf(Math.max(...farColumn)) - middle);
+
+          return middle - Math.round(drop.cy);
         };
 
+        const strays = [];
+        const farSide = [];
         const far = await lineAt(150);
 
         // 400 pixels away.
@@ -3521,7 +3591,29 @@ async function checkOptics(engine, browser, statsPage, results) {
         assert.ok(below >= 4, `glass below the eye must show the line lower (moved ${below})`);
         assert.ok(above <= -4, `glass above the eye must show the line higher (moved ${above})`);
 
-        return { far, below, above };
+        // A horizontal line through the middle crosses the rim where it tilts only sideways, so
+        // seen from infinitely far it stays straight. Seen from the side, light through the far
+        // rim heads outward and leaves through the far wall, so the line breaks away there.
+        assert.ok(
+          Math.abs(farSide[0]) <= 1,
+          `from infinitely far the line must stay straight across the rim (${farSide[0]})`,
+        );
+        assert.ok(
+          Math.abs(farSide[1]) >= 8 && Math.abs(farSide[2]) >= 8,
+          `light through the far rim must leave through its wall (moved ${farSide[1]} and ${farSide[2]})`,
+        );
+
+        for (const { count, at } of strays) {
+          // Light through glass varies smoothly or along lines, never in lone pixels. Light guided
+          // around the curved wall seen from 400 pixels away parts so finely that a few pixels
+          // still stand alone; a root solver that settles on the wrong point leaves dozens.
+          assert.ok(
+            count <= 12,
+            `glass must not leave stray pixels (${count}, first at ${at}; far, below, above: ${strays.map((stray) => stray.count).join(', ')})`,
+          );
+        }
+
+        return { far, below, above, farSide, strays: strays.map(({ count }) => count) };
       },
     );
 

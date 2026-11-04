@@ -244,16 +244,22 @@ void main() {
  *   T + gap below the screen, so its picture shows each of its points where an
  *   air ray from the eye sees it.
  * - Refraction: the view ray bends through the surface normal into the glass
- *   (GLSL refract, eta = 1 / n), crosses the slab, bends again at the flat
- *   underside, where n sin θ = sin θ', and crosses an air gap to the backdrop.
+ *   (GLSL refract, eta = 1 / n) and is followed through the glass to the
+ *   surface it leaves by: the flat underside, the outline's wall or the top
+ *   from below. There the exact Fresnel term splits it. Light that leaves
+ *   downward bends by n sin θ = sin θ' and crosses the air to the backdrop,
+ *   light that leaves upward comes from the surroundings, and light reflected
+ *   back, all of it past the critical angle sin θ = 1 / n, is followed for up
+ *   to ten bounces, enough to carry light guided between the faces to a rim.
  *   The rim bends rays toward the middle, so it magnifies the backdrop beneath
  *   it; past the steepest point the shift turns back, which gives the mirrored
- *   strip real glass shows at its edge. A flat face seen head on shows the
- *   backdrop in place; a domed one magnifies it like a lens and bows the
- *   straight lines behind it.
- * - Total internal reflection: the underside's exact Fresnel term rises to 1
- *   at the critical angle, sin θ = 1 / n, and the backdrop fades into the
- *   surroundings the glass reflects back up.
+ *   strip real glass shows at its edge, and seen from the side, light leaves
+ *   through the far wall. A flat face seen head on shows the backdrop in
+ *   place; a domed one magnifies it like a lens and bows the straight lines
+ *   behind it.
+ * - Pixels: an eye takes in all the light across a pixel. Each path samples
+ *   the backdrop over the stretch neighbouring pixels land apart, and where
+ *   paths part within a pixel, four more rays through it add their light.
  * - Dispersion: violet and red light each take their own path, with indices
  *   from Cauchy's law. Seven bands of the spectrum between the two add up to
  *   red, green and blue, so white light fans out into a rainbow where the
@@ -397,24 +403,6 @@ float fresnel(float a, float b, float cosI, float cosT) {
   return 0.5 * (s * s + q * q);
 }
 
-// Follows a view ray I down through glass of index n that is z thick where it
-// enters. Returns where it lands on the backdrop, as a shift from where it
-// entered; 1 / cos of its angle inside, which stretches the path through the
-// glass; and the share of light the underside lets out, relative to head on.
-vec4 through(vec3 I, vec3 N, float n, float z) {
-  vec3 inside = refract(I, N, 1.0 / n);
-  float cosB = max(-inside.z, 0.05);
-  float sinOut = n * length(inside.xy);
-  float cosOut = sqrt(max(1.0 - sinOut * sinOut, 0.0));
-  // Past the critical angle the ray lands as if it had left at grazing
-  // angle, so the backdrop stays continuous as it fades out.
-  vec2 leaving = n * inside.xy / max(sinOut, 1.0);
-  vec2 shift = inside.xy * (z / cosB) + leaving * (AIR_GAP / max(cosOut, 0.1));
-  float head = (n - 1.0) / (n + 1.0);
-
-  return vec4(shift, 1.0 / cosB, clamp((1.0 - fresnel(n, 1.0, cosB, cosOut)) / (1.0 - head * head), 0.0, 1.0));
-}
-
 // The shadow under glass of this tint, premultiplied.
 vec4 castShadow(vec2 p, float shadow, vec4 tint) {
   vec3 filtered = 1.0 - tint.a + tint.rgb;
@@ -541,10 +529,239 @@ vec3 surfaceOf(Glass G, vec2 p) {
   return vec3(tilt, z);
 }
 
-void main() {
-  vec2 p = vec2(gl_FragCoord.x, u_backing.y - gl_FragCoord.y) * (u_size / u_backing);
+// The share of light passing from index a into index b at these cosines, relative to head on, so
+// clear glass seen straight through keeps the backdrop's brightness.
+float passing(float a, float b, float cosI, float cosT) {
+  float head = (a - b) / (a + b);
+
+  return clamp((1.0 - fresnel(a, b, cosI, cosT)) / (1.0 - head * head), 0.0, 1.0);
+}
+
+// Where the light along a ray inside the glass came from. The ray started at P, h above the
+// underside, along D. It meets the underside, the outline's wall or the top from below, and
+// splits there by the exact Fresnel term: what leaves downward lands on the backdrop, what
+// leaves upward comes from the surroundings above, and what reflects stays inside for the
+// next bounce. Glass between parallel faces guides light along by total internal reflection,
+// so a ray gets ten bounces to reach a rim it can leave through. Up to three paths land, at
+// land[i] with share w[i], later ones joining the third; length is how far the first travelled
+// through the glass. Light under a hundredth of the whole comes from the surroundings too.
+struct Light {
+  vec2 land[3];
+  float w[3];
+  float length;
+};
+
+Light trace(vec2 P, float h, vec3 D, float n, Glass start) {
+  Light L;
+  L.land[0] = P;
+  L.land[1] = P;
+  L.land[2] = P;
+  L.w[0] = 0.0;
+  L.w[1] = 0.0;
+  L.w[2] = 0.0;
+  L.length = 0.0;
+
+  float T = u_optics.y;
+  float zTop = T + u_eye.w + 1.0;
+  float weight = 1.0;
+  float travelled = 0.0;
+  int landed = 0;
+  // How deep P lies inside the outline, while that is known.
+  float depth = -start.d;
+  float W = max(start.bevel, 1.0);
+
+  for (int bounce = 0; bounce < 10; bounce++) {
+    if (weight < 0.01) break;
+
+    float across = length(D.xy);
+    float reach = D.z < -1e-4 ? h / -D.z : (zTop - h) / max(D.z, 1e-3);
+    float tExit = reach;
+    vec3 Nout = vec3(0.0, 0.0, -1.0);
+
+    // The distance to the outline changes by at most a pixel per pixel, and past the rim the
+    // face slopes by at most twice the dome. A ray that starts deeper than it travels across,
+    // plus the rim, and falls faster than that slope can only leave through the underside.
+    bool clear = u_wells == 0 && depth > across * reach + W;
+    bool safe = clear && D.z < -1e-4 && -D.z > 2.0 * u_dome * across;
+    // Rising through the same clear part, it can only leave through the face, above which the end
+    // of its reach lies.
+    bool rising = clear && D.z > 1e-4;
+
+    if (!safe) {
+      // Outside the body when max(distance, height above the face) is positive: three steps
+      // find where the ray leaves, and regula falsi closes in on it.
+      float tLo = 0.0;
+      float oLo = -1.0;
+      float tHi = -1.0;
+      float oHi = 0.0;
+
+      for (int k = 1; k <= 3; k++) {
+        float tk = rising ? reach : reach * float(k) / 3.0;
+        vec2 xk = P + D.xy * tk;
+        Glass K = glassAt(xk);
+        float ok = max(K.d, h + D.z * tk - surfaceOf(K, xk).z);
+
+        if (ok > 0.0) {
+          tHi = tk;
+          oHi = ok;
+          break;
+        }
+
+        tLo = tk;
+        oLo = ok;
+      }
+
+      if (tHi > 0.0) {
+        int kept = 0;
+        // Regula falsi closes in on the root while one end of its bracket may stay put, so the
+        // exit is its best estimate, not the bracket's middle.
+        float tBest = tHi;
+        float oBest = oHi;
+
+        for (int k = 0; k < 24; k++) {
+          if (abs(oBest) < 0.002 || tHi - tLo < 0.002) break;
+
+          // Every third step halves the bracket, and every step from the eighth, so a kink where
+          // the wall meets the rim cannot stall it.
+          float tm = k % 3 == 2 || k >= 8 ? 0.5 * (tLo + tHi) : tLo + (tHi - tLo) * oLo / (oLo - oHi);
+          vec2 xm = P + D.xy * tm;
+          Glass M = glassAt(xm);
+          float om = max(M.d, h + D.z * tm - surfaceOf(M, xm).z);
+
+          if (abs(om) < abs(oBest)) {
+            tBest = tm;
+            oBest = om;
+          }
+
+          if (om > 0.0) {
+            tHi = tm;
+            oHi = om;
+            if (kept == 1) oLo *= 0.5;
+            kept = 1;
+          } else {
+            tLo = tm;
+            oLo = om;
+            if (kept == -1) oHi *= 0.5;
+            kept = -1;
+          }
+        }
+
+        // A hundredth of a pixel inside the exit, the bound closer to breaking says which surface
+        // the ray leaves through.
+        tExit = tBest;
+        float tIn = max(tExit - 0.01, 0.0);
+        vec2 xe = P + D.xy * tIn;
+        Glass E = glassAt(xe);
+        vec3 Se = surfaceOf(E, xe);
+        float gl = length(E.g);
+        vec2 out2 = gl > 1e-4 ? E.g / gl : vec2(0.0, -1.0);
+
+        Nout = E.d > h + D.z * tIn - Se.z ? vec3(out2, 0.0) : normalize(vec3(Se.xy, 1.0));
+      }
+    }
+
+    vec3 at = vec3(P + D.xy * tExit, max(h + D.z * tExit, 0.0));
+    travelled += tExit;
+
+    float cosI = clamp(dot(D, Nout), 0.0, 1.0);
+    float sinT = n * sqrt(max(1.0 - cosI * cosI, 0.0));
+    float t = 0.0;
+
+    if (sinT < 1.0) {
+      float cosT = sqrt(1.0 - sinT * sinT);
+      t = passing(n, 1.0, cosI, cosT);
+      vec3 Dt = refract(D, -Nout, n);
+
+      // Light that leaves downward crosses the air to the backdrop's plane.
+      if (Dt.z < -1e-3) {
+        vec2 land = at.xy + Dt.xy * (at.z + AIR_GAP) / -Dt.z;
+
+        if (landed == 0) {
+          L.land[0] = land;
+          L.w[0] = weight * t;
+          L.length = travelled;
+        } else if (landed == 1) {
+          L.land[1] = land;
+          L.w[1] = weight * t;
+        } else {
+          L.land[2] = mix(L.land[2], land, weight * t / max(L.w[2] + weight * t, 1e-6));
+          L.w[2] += weight * t;
+        }
+
+        landed += 1;
+      }
+    }
+
+    if (landed == 0) L.length = travelled;
+
+    weight *= 1.0 - t;
+    D = reflect(D, Nout);
+    P = at.xy - Nout.xy * 0.05;
+    h = max(at.z - Nout.z * 0.05, 0.0);
+    // A pixel along the way brings the outline a pixel nearer at most.
+    depth -= across * tExit;
+  }
+
+  return L;
+}
+
+// The height at which the eye's ray through p, falling a per unit of height, crosses the
+// outline, between heights zIn and zOut where its distances to the outline are dIn below zero
+// and dOut above. The distance is smooth along the ray, so regula falsi with the Illinois rule
+// settles within a thousandth of a pixel; every third step halves the bracket.
+float crossing(vec2 p, vec2 a, float zIn, float dIn, float zOut, float dOut) {
+  float T = u_optics.y;
+  float zBest = zIn;
+  float dBest = dIn;
+  int kept = 0;
+
+  for (int k = 0; k < 16; k++) {
+    if (abs(dBest) < 0.001 || abs(zOut - zIn) < 1e-4) break;
+
+    float zc = k % 3 == 2 ? 0.5 * (zIn + zOut) : zIn + (zOut - zIn) * dIn / (dIn - dOut);
+    float dc = glassAt(p + a * (T - zc)).d;
+
+    if (abs(dc) < abs(dBest)) {
+      zBest = zc;
+      dBest = dc;
+    }
+
+    if (dc < 0.0) {
+      zIn = zc;
+      dIn = dc;
+      if (kept == -1) dOut *= 0.5;
+      kept = -1;
+    } else {
+      zOut = zc;
+      dOut = dc;
+      if (kept == 1) dIn *= 0.5;
+      kept = 1;
+    }
+  }
+
+  return zBest;
+}
+
+// What the eye sees of the glass along the ray through screen point p: the ray I, where it
+// enters the glass and through which surface, the glass there and under its foot, and how much
+// of the pixel the glass covers. far says no glass or shadow lies within reach.
+struct View {
+  vec3 I;
+  vec2 at;
+  Glass G;
+  Glass under;
+  vec3 surface;
+  float entry;
+  bool wall;
+  float cover;
+  bool far;
+};
+
+View look(vec2 p) {
   float T = u_optics.y;
   float viewer = u_eye.z;
+  View V;
+  V.far = false;
 
   // The eye looks down the ray I. From infinitely far it meets the glass right under p. From
   // nearer it runs from the eye through p on the screen, which lies level with the flat top of
@@ -567,8 +784,8 @@ void main() {
     under = glassAt(p + a * T);
 
     if (under.d > SHADOW_REACH + length(a) * zOut) {
-      fragColor = vec4(0.0);
-      return;
+      V.far = true;
+      return V;
     }
 
     // F(z) is negative inside the body and positive above or beside it. The march steps down
@@ -615,37 +832,17 @@ void main() {
     // A ray whose foot lies inside the outline has passed through the body.
     nearest = min(nearest, under.d);
 
-    // A ray that leaves the outline on its way down passes over the far side's rim, whose rounded
-    // top may catch it for only a pixel or two. Secant steps on the smooth distance find where
+    // A ray the march missed that leaves the outline on its way down passed over the far side's
+    // rim, whose rounded top may catch it for only a pixel or two. Secant steps on the smooth distance find where
     // it leaves; the rim then lies just inside, so a few heights above that crossing, a quarter
     // of a pixel to eight pixels in, decide whether and how deep it ran through the glass.
     float graze = -1.0;
 
-    if (top.d < 0.0 && under.d > 0.0) {
-      float zHi = zOut;
-      float dHi = top.d;
-      float zLo = 0.0;
-      float dLo = under.d;
-
-      for (int k = 0; k < 3; k++) {
-        float zc = zLo + (zHi - zLo) * dLo / (dLo - dHi);
-        float dc = glassAt(p + a * (T - zc)).d;
-
-        if (dc < 0.0) {
-          zHi = zc;
-          dHi = dc;
-        } else {
-          zLo = zc;
-          dLo = dc;
-        }
-      }
-
-      float zc = zLo + (zHi - zLo) * dLo / (dLo - dHi);
-      // Height per pixel of depth inside the outline along the ray.
-      float climb = (zHi - zLo) / max(dLo - dHi, 1e-4);
+    if (zIn < 0.0 && top.d < 0.0 && under.d > 0.0) {
+      float zc = crossing(p, a, zOut, top.d, 0.0, under.d);
+      // Height per pixel of depth inside the outline along the ray, from the outline's slope there.
+      float climb = 1.0 / max(abs(dot(glassAt(p + a * (T - zc)).g, a)), 1e-3);
       float deepest = 0.0;
-
-      zIn = -1.0;
 
       for (int k = 0; k < 4; k++) {
         float zk = zc + climb * 0.25 * pow(2.0, 1.66 * float(k));
@@ -688,27 +885,11 @@ void main() {
       // steps on the smooth distance find that crossing; below the rim's top there, the ray
       // enters through the wall, and above it the face lies lower down.
       if (dAbove > 0.0) {
-        float zLo = zIn;
-        float dLo = G.d;
-        float zHi = zAbove;
-        float dHi = dAbove;
-
-        for (int k = 0; k < 3; k++) {
-          float zc = zLo + (zHi - zLo) * dLo / (dLo - dHi);
-          float dc = glassAt(p + a * (T - zc)).d;
-
-          if (dc < 0.0) {
-            zLo = zc;
-            dLo = dc;
-          } else {
-            zHi = zc;
-            dHi = dc;
-          }
-        }
-
         // The rim rises a third of the slab within its first pixel, too steep to tell from a wall,
         // so the wall reaches up to the rim's height a pixel inside the crossing.
-        float zw = zLo + (zHi - zLo) * dLo / (dLo - dHi) - (zHi - zLo) / max(dHi - dLo, 1e-4);
+        float zc = crossing(p, a, zIn, G.d, zAbove, dAbove);
+        float zw = zc - 1.0 / max(abs(dot(glassAt(p + a * (T - zc)).g, a)), 1e-3);
+        float zLo;
         vec2 xc = p + a * (T - zw);
         Glass C = glassAt(xc);
         vec3 Sc = surfaceOf(C, xc);
@@ -728,11 +909,13 @@ void main() {
       }
 
       int kept = 0;
+      // How far below the face the inside end lies; the Illinois rule halves fIn, not this.
+      float below = surface.z - zIn;
 
-      for (int k = 0; k < 5; k++) {
-        if (wall) break;
+      for (int k = 0; k < 12; k++) {
+        if (wall || below < 0.01 || zAbove - zIn < 0.002) break;
 
-        float zMid = zIn + (zAbove - zIn) * fIn / (fIn - fAbove);
+        float zMid = k % 3 == 2 ? 0.5 * (zIn + zAbove) : zIn + (zAbove - zIn) * fIn / (fIn - fAbove);
         vec2 mid = p + a * (T - zMid);
         Glass M = glassAt(mid);
         vec3 midSurface = surfaceOf(M, mid);
@@ -740,6 +923,7 @@ void main() {
         if (M.d < 0.0 && zMid < midSurface.z) {
           zIn = zMid;
           fIn = zMid - midSurface.z;
+          below = -fIn;
           G = M;
           at = mid;
           surface = midSurface;
@@ -754,8 +938,26 @@ void main() {
       }
     }
 
+    // However it was found, an entry within the rim's first pixel, which stands as steep as the
+    // wall, is measured as the wall is: a pixel inside where the ray crosses the outline.
+    if (!wall && G.d > -1.0 && top.d > 0.0) {
+      float zc = crossing(p, a, zIn, G.d, zOut, top.d);
+      float zw = zc - 1.0 / max(abs(dot(glassAt(p + a * (T - zc)).g, a)), 1e-3);
+      vec2 xc = p + a * (T - zw);
+      Glass C = glassAt(xc);
+      vec3 Sc = surfaceOf(C, xc);
+
+      if (zw > 0.0 && zw < Sc.z) {
+        wall = true;
+        zIn = zw;
+        G = C;
+        at = xc;
+        surface = Sc;
+      }
+    }
+
     entry = clamp(zIn, 0.0, surface.z);
-    // However it was found, a ray entering below the face beside the outline came through the wall.
+    // A ray entering below the face beside the outline came through the wall.
     wall = wall || (G.d > -1.5 && surface.z - entry > 1.0);
     cover = graze >= 0.0 ? graze : clamp(0.5 - min(nearest, G.d) * u_look.w, 0.0, 1.0);
   } else {
@@ -763,49 +965,102 @@ void main() {
     entry = surface.z;
   }
 
-  if (under.d > SHADOW_REACH && cover <= 0.0) {
-    fragColor = vec4(0.0);
-    return;
-  }
+  V.I = I;
+  V.at = at;
+  V.G = G;
+  V.under = under;
+  V.surface = surface;
+  V.entry = entry;
+  V.wall = wall;
+  V.cover = cover;
+  V.far = under.d > SHADOW_REACH && cover <= 0.0;
 
-  float shadow = u_look.x * under.alpha * (0.6 * softStep(under.d - 8.0 * under.g.y, 14.0) + 0.4 * softStep(under.d, 3.0));
+  return V;
+}
 
-  if (cover <= 0.0) {
-    fragColor = castShadow(p, shadow, under.tint);
-    return;
-  }
+// The light paths behind a view, landing on the backdrop's picture: base for the main path,
+// second and third for paths that reflected inside first, and the spectrum's fan from violet
+// across span to red.
+struct Paths {
+  vec3 N;
+  vec2 n2;
+  Light light;
+  vec2 base;
+  vec2 second;
+  vec2 third;
+  vec2 violet;
+  vec2 span;
+};
 
-  float s = -G.d;
-  float W = max(G.bevel, 1.0);
-  vec2 tilt = surface.xy;
-  float z = entry;
-  float rise = z / max(T, 1e-4);
+Paths follow(View V) {
+  float T = u_optics.y;
+  float viewer = u_eye.z;
+  Glass G = V.G;
+  vec2 tilt = V.surface.xy;
   float gradLength = length(G.g);
-  vec2 n2 = gradLength > 1e-4 ? G.g / gradLength : vec2(0.0, -1.0);
+  Paths P;
 
-  vec3 N = wall ? vec3(n2, 0.0) : normalize(vec3(tilt, 1.0));
+  P.n2 = gradLength > 1e-4 ? G.g / gradLength : vec2(0.0, -1.0);
+  P.N = V.wall ? vec3(P.n2, 0.0) : normalize(vec3(tilt, 1.0));
+
   float ior = max(u_optics.x, 1.0);
   // The backdrop's picture shows each point of its plane, AIR_GAP + T below the screen, where
   // the eye sees it through air: nearer the middle of the view than the point itself.
   float project = viewer > 0.0 ? viewer / (viewer + AIR_GAP + T) : 1.0;
   vec2 eye = u_eye.xy;
-  vec4 ray = through(I, N, ior, z);
-  vec2 base = eye + (at + ray.xy - eye) * project;
 
-  float R = G.frost * rise;
-  float lod = max(log2(max(R * u_density * 0.5, 1.0)), u_baseLod);
+  P.light = trace(V.at, V.entry, refract(V.I, P.N, 1.0 / ior), ior, G);
+  P.base = eye + (P.light.land[0] - eye) * project;
+  P.second = eye + (P.light.land[1] - eye) * project;
+  P.third = eye + (P.light.land[2] - eye) * project;
+  P.violet = P.base;
+  P.span = vec2(0.0);
 
-  // Violet and red land at the ends of a short line; the spectrum between
-  // them only shows once that line spans half a device pixel.
+  // Violet and red land at the ends of a short line.
   float spread = 0.4 * u_optics.z;
-  vec2 violet = base;
-  vec2 span = vec2(0.0);
 
   if (spread > 0.0 && (dot(tilt, tilt) > 1e-8 || viewer > 0.0)) {
-    violet = eye + (at + through(I, N, ior + spread * VIOLET, z).xy - eye) * project;
-    span = eye + (at + through(I, N, max(ior + spread * RED, 1.0), z).xy - eye) * project - violet;
+    float nViolet = ior + spread * VIOLET;
+    float nRed = max(ior + spread * RED, 1.0);
+
+    Light lightViolet = trace(V.at, V.entry, refract(V.I, P.N, 1.0 / nViolet), nViolet, G);
+    Light lightRed = trace(V.at, V.entry, refract(V.I, P.N, 1.0 / nRed), nRed, G);
+
+    // A colour none of whose light reaches the backdrop on this path adds nothing to the fan.
+    P.violet = lightViolet.w[0] > 0.0 ? eye + (lightViolet.land[0] - eye) * project : P.base;
+    P.span = (lightRed.w[0] > 0.0 ? eye + (lightRed.land[0] - eye) * project : P.base) - P.violet;
   }
 
+  return P;
+}
+
+// The colour a view shows, its paths sampling the backdrop over footprint, the stretch of the
+// backdrop each spans across a pixel.
+vec3 shade(View V, Paths P, vec2 p, vec3 footprint) {
+  float T = u_optics.y;
+  float viewer = u_eye.z;
+  Glass G = V.G;
+  vec3 I = V.I;
+  vec3 N = P.N;
+  vec2 n2 = P.n2;
+  Light light = P.light;
+  vec2 base = P.base;
+  vec2 violet = P.violet;
+  vec2 span = P.span;
+  float z = V.entry;
+  float s = -G.d;
+  float W = max(G.bevel, 1.0);
+  float rise = z / max(T, 1e-4);
+  float ior = max(u_optics.x, 1.0);
+  float project = viewer > 0.0 ? viewer / (viewer + AIR_GAP + T) : 1.0;
+  vec2 eye = u_eye.xy;
+  vec2 at = V.at;
+
+  float R = G.frost * rise;
+  float lodFrost = max(log2(max(R * u_density * 0.5, 1.0)), u_baseLod);
+  float lod = max(lodFrost, log2(max(footprint.x * u_density, 1.0)));
+
+  // The spectrum between violet and red only shows once their line spans half a device pixel.
   float spanLength = length(span);
   bool split = spanLength * u_look.w >= 0.5;
   float texels = spanLength * u_density;
@@ -817,7 +1072,7 @@ void main() {
     for (int i = 0; i < 9; i++) col += sampleAt(base + DISK[i] * R, lod);
     col /= 9.0;
   } else if (!split || !sharp) {
-    col = sampleAt(base, u_baseLod);
+    col = sampleAt(base, lod);
   }
 
   if (split) {
@@ -848,13 +1103,20 @@ void main() {
   float reflectance = clamp((fresnel(1.0, ior, cosI, cosIn) - head) / (1.0 - head) * u_optics.w, 0.0, 1.0);
   vec3 sky = vec3(1.0);
 
-  if (ray.w < 0.996 || reflectance > 0.004) {
+  float room = 1.0 - light.w[0] - light.w[1] - light.w[2];
+
+  if (room > 0.004 || reflectance > 0.004) {
     sky = mix(sampleAt(p + n2 * 18.0, log2(max(u_density, 1.0)) + 3.5), vec3(1.0), 0.3);
   }
 
-  if (ray.w < 0.996) col = mix(sky, col, ray.w);
+  // The paths that reflected inside first land elsewhere on the backdrop; the rest of the light
+  // came from the surroundings above.
+  col *= light.w[0];
+  if (light.w[1] > 0.0) col += light.w[1] * sampleAt(P.second, max(lodFrost, log2(max(footprint.y * u_density, 1.0))));
+  if (light.w[2] > 0.0) col += light.w[2] * sampleAt(P.third, max(lodFrost, log2(max(footprint.z * u_density, 1.0))));
+  col += max(room, 0.0) * sky;
 
-  float depth = rise * ray.z;
+  float depth = light.length / max(T, 1e-4);
   float passed = exp2(log2(max(1.0 - G.tint.a, 1e-4)) * depth);
   col = col * passed + G.tint.rgb / max(G.tint.a, 1e-4) * (1.0 - passed);
 
@@ -872,8 +1134,10 @@ void main() {
   }
 
   float facing = pow(abs(dot(n2, normalize(LIGHT.xy))), 1.5);
-  // The hairline runs along the rim's top edge, which a wall seen from the side lies below.
-  float edge = wall ? surface.z - entry : max(s, 0.0);
+  // The hairline runs along the rim's top edge. A wall seen from the side lies below it, and
+  // each pixel of height down the wall shows |I.xy| / -I.z pixels across the screen, so the
+  // line keeps its width on screen.
+  float edge = V.wall ? (V.surface.z - V.entry) * length(I.xy) / max(-I.z, 1e-3) : max(s, 0.0);
   col += exp(-edge / 0.9) * 0.34 * (0.3 + 0.7 * facing) * u_look.y;
 
   // A pressed pane brightens as a whole, wherever it was touched.
@@ -886,9 +1150,89 @@ void main() {
   if (G.cap < 1.0 || G.lift > 0.0)
     col = mix(col, legible(col, G.cap, G.lift), smoothstep(max(0.15 * W, 0.5), max(0.45 * W, 2.0), s));
 
-  float alpha = cover * G.alpha;
+  return col;
+}
+
+// Sub-pixel offsets, in device pixels, of the rays a pixel adds where its light paths part.
+const vec2 SUBPIXEL[4] = vec2[4](vec2(0.125, 0.375), vec2(0.375, -0.125), vec2(-0.125, -0.375), vec2(-0.375, 0.125));
+
+void main() {
+  vec2 p = vec2(gl_FragCoord.x, u_backing.y - gl_FragCoord.y) * (u_size / u_backing);
+  View V = look(p);
+
+  if (V.far) {
+    fragColor = vec4(0.0);
+    return;
+  }
+
+  Glass under = V.under;
+  float shadow = u_look.x * under.alpha * (0.6 * softStep(under.d - 8.0 * under.g.y, 14.0) + 0.4 * softStep(under.d, 3.0));
+  bool covered = V.cover > 0.0;
+  Paths P;
+  P.base = p;
+  P.second = p;
+  P.third = p;
+  P.violet = p;
+  P.span = vec2(0.0);
+
+  if (covered) P = follow(V);
+
+  // An eye takes in all the light across a pixel. Where the glass squeezes much of the backdrop
+  // into one, as along a guiding wall, each path samples the backdrop over the stretch its
+  // neighbouring pixels land apart, measured only between pixels that both show glass.
+  float shown = covered ? 1.0 : 0.0;
+  vec2 apart = vec2(dFdx(shown) == 0.0 ? 1.0 : 0.0, dFdy(shown) == 0.0 ? 1.0 : 0.0);
+  vec3 footprint = vec3(
+    max(length(dFdx(P.base)) * apart.x, length(dFdy(P.base)) * apart.y),
+    max(length(dFdx(P.second)) * apart.x, length(dFdy(P.second)) * apart.y),
+    max(length(dFdx(P.third)) * apart.x, length(dFdy(P.third)) * apart.y)
+  );
+
+  // And how far the share reaching the backdrop changes between them, where some paths leave
+  // for the room and their neighbours do not.
+  vec2 landing = covered ? vec2(P.light.w[0], P.light.w[1] + P.light.w[2]) : vec2(0.0);
+  vec2 split2 = max(abs(dFdx(landing)) * apart.x, abs(dFdy(landing)) * apart.y);
+  float split = max(split2.x, split2.y);
+  // A path that reflected inside first counts once it carries a twentieth of the light, and the
+  // ends of the spectrum count as well.
+  vec2 red = P.violet + P.span;
+  float fan = max(
+    max(length(dFdx(P.violet)) * apart.x, length(dFdy(P.violet)) * apart.y),
+    max(length(dFdx(red)) * apart.x, length(dFdy(red)) * apart.y)
+  );
+  float spread = max(max(footprint.x, fan), landing.y > 0.05 ? max(footprint.y, footprint.z) : 0.0);
+
+  if (!covered) {
+    fragColor = castShadow(p, shadow, under.tint);
+    return;
+  }
+
+  // The glass's light over the pixel, premultiplied by how much of it the glass covers.
+  float alpha = V.cover * V.G.alpha;
+  vec3 lit = shade(V, P, p, footprint) * alpha;
+
+  // Where neighbouring pixels' light lands more than two pixels apart, or a fifth more or less of
+  // it reaches the backdrop, the paths part within the pixel too, past where a blur of the
+  // backdrop can stand for them: the eye takes in light from every path across it, so four
+  // more rays through it add theirs, each with the glass it finds.
+  if (spread * u_look.w > 2.0 || split > 0.2) {
+    for (int k = 0; k < 4; k++) {
+      vec2 q = p + SUBPIXEL[k] / u_look.w;
+      View Vk = look(q);
+
+      if (Vk.far || Vk.cover <= 0.0) continue;
+
+      float alphaK = Vk.cover * Vk.G.alpha;
+      lit += shade(Vk, follow(Vk), q, footprint * 0.5) * alphaK;
+      alpha += alphaK;
+    }
+
+    lit /= 5.0;
+    alpha /= 5.0;
+  }
+
   vec4 behind = alpha < 0.999 ? castShadow(p, shadow, under.tint) : vec4(0.0);
-  fragColor = vec4(col * alpha + (1.0 - alpha) * behind.rgb, alpha + (1.0 - alpha) * behind.a);
+  fragColor = vec4(lit + (1.0 - alpha) * behind.rgb, alpha + (1.0 - alpha) * behind.a);
 }`;
 
 const UNIFORMS = [
@@ -1939,21 +2283,19 @@ export function createSceneRenderer({
     frame.set([optics.ior, optics.thickness, optics.dispersion, optics.specular], OPTICS);
     frame[DOME] = optics.dome;
 
+    // The top of the tallest lens bounds every ray's search.
+    const tallest = drawn.reduce(
+      (peak, pane) =>
+        Math.max(
+          peak,
+          LENS_PEAK * optics.dome * Math.min(pane.hx, pane.hy) * (0.6 + 0.4 * pane.presence.value),
+        ),
+      0,
+    );
+
     if (optics.viewer > 0) {
       // The eye looks from the middle of the viewport, so scrolling moves it across the scene.
       const rect = root.getBoundingClientRect();
-
-      const tallest = drawn.reduce(
-        (peak, pane) =>
-          Math.max(
-            peak,
-            LENS_PEAK *
-              optics.dome *
-              Math.min(pane.hx, pane.hy) *
-              (0.6 + 0.4 * pane.presence.value),
-          ),
-        0,
-      );
 
       frame.set(
         [
@@ -1965,7 +2307,7 @@ export function createSceneRenderer({
         EYE,
       );
     } else {
-      frame.set([0, 0, 0, 0], EYE);
+      frame.set([0, 0, 0, tallest], EYE);
     }
 
     frame[TIME] = flowing ? flowTime : 0;
