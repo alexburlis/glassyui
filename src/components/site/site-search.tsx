@@ -41,7 +41,7 @@ const PAGES: Entry[] = [
     title: 'Getting started',
   },
   { description: 'Every component, live', href: '/components', title: 'All components' },
-  { description: 'Free and Pro landing pages', href: '/#templates', title: 'Templates' },
+  { description: 'Free and Pro landing pages', href: '/templates', title: 'Templates' },
   { description: 'Step-by-step tutorials', href: '/guides', title: 'Guides' },
   { description: 'Liquid glass tutorials for web and mobile apps', href: '/blog', title: 'Blog' },
 ];

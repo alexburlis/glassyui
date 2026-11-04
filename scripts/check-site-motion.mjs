@@ -62,12 +62,20 @@ import { chromium, firefox, webkit } from 'playwright';
 //     the slab.
 // 23. Reduced motion is ignored by the slab or its light: with the system setting or the site
 //     preference, a frame falls between rest and the settled slab lit from the top left.
+// 24. A template's page does not scroll: with a mouse over a card that holds its whole page, the
+//     page starts before a passing pointer could have left, jumps to its foot rather than taking
+//     its time, or stops short of where its foot meets the stage's edge; leaving does not glide it
+//     back to the top; or a template with only its poster moves.
+// 25. A touch screen loads the long photograph: a phone's card takes the whole page, which it
+//     cannot scroll, instead of the poster; or a mouse's card takes the poster.
+// 26. Reduced motion is ignored by the templates: with the system setting or the site
+//     preference, pointing at a card scrolls its page.
 
 const baseUrl = process.argv[2];
 
 if (!baseUrl || !['127.0.0.1', 'localhost'].includes(new URL(baseUrl).hostname)) {
   console.error(
-    'Usage: node scripts/check-site-motion.mjs http://127.0.0.1:3100 [artifact-directory] [theme|firefox-failures]',
+    'Usage: node scripts/check-site-motion.mjs http://127.0.0.1:3100 [artifact-directory] [theme|firefox-failures|template-scroll]',
   );
   process.exit(1);
 }
@@ -84,7 +92,7 @@ const HERO = [
   '.home-title',
   '.home-lead',
   '.home-hero .home-actions > .lg-button--prominent',
-  '.home-hero .home-actions a[href="/#templates"]',
+  '.home-hero .home-actions a[href="/templates"]',
   '.home-desk-frame',
   '.desk-widgets > :first-child',
   '.desk-dock',
@@ -108,6 +116,9 @@ const themeOnly = process.argv[4] === 'theme';
 
 const firefoxFailuresOnly = process.argv[4] === 'firefox-failures';
 
+// A bounded rerun of failure modes 24 to 26 alone.
+const templateScrollOnly = process.argv[4] === 'template-scroll';
+
 // A bounded rerun can name its engines; the manifest records which ran.
 const selectedEngines = (process.env.GLASS_ENGINES ?? 'chromium,webkit,firefox').split(',');
 
@@ -119,7 +130,13 @@ const activeContexts = new Set();
 
 const manifest = {
   baseUrl,
-  scope: firefoxFailuresOnly ? 'firefox-failures' : themeOnly ? 'theme' : 'full',
+  scope: templateScrollOnly
+    ? 'template-scroll'
+    : firefoxFailuresOnly
+      ? 'firefox-failures'
+      : themeOnly
+        ? 'theme'
+        : 'full',
   selectedEngines,
   failures,
   engines: {},
@@ -983,6 +1000,235 @@ async function checkProCard(browser, name) {
   }
 }
 
+const SCROLLING_CARD = '.template-card[href="/templates/halcyon"]';
+
+const STILL_CARD = '.template-card[data-template="relay"]';
+
+// How far a card's page has scrolled down its window, and how far it can before its foot meets
+// the stage's lower edge, in pixels, recorded by a page-owned animation-frame loop armed before
+// the pointer moves.
+function armPageSamples(page, selector, duration) {
+  return page.evaluateHandle(
+    ({ selector, duration }) => {
+      const frame = document.querySelector(`${selector} .template-card-poster`);
+      const stage = frame.closest('.template-card-stage');
+      const image = frame.querySelector('img');
+      const samples = [];
+      const started = performance.now();
+
+      const done = new Promise((resolve) => {
+        const sample = () => {
+          const elapsedMs = performance.now() - started;
+          const window = frame.getBoundingClientRect();
+          const whole = image.getBoundingClientRect();
+          const edge = stage.getBoundingClientRect().bottom;
+
+          samples.push({
+            elapsedMs,
+            scrolled: window.top - whole.top,
+            travel: whole.height - (edge - window.top),
+          });
+
+          if (elapsedMs >= duration) resolve(samples);
+          else requestAnimationFrame(sample);
+        };
+
+        requestAnimationFrame(sample);
+      });
+
+      return { done };
+    },
+    { selector, duration },
+  );
+}
+
+async function recordPage(page, selector, duration, move) {
+  const capture = await armPageSamples(page, selector, duration);
+
+  try {
+    await move();
+
+    return await capture.evaluate((handle) => handle.done);
+  } finally {
+    await capture.dispose();
+  }
+}
+
+async function windowCentre(page, selector) {
+  const box = await page.locator(`${selector} .template-card-poster`).boundingBox();
+
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+}
+
+async function checkTemplateScroll(browser, name) {
+  // 24 to 26: a template with its whole page scrolls down it under a mouse and glides back as the
+  // mouse leaves; a phone takes the poster; reduced motion holds every page at its top.
+  const results = {};
+
+  for (const [mode, options] of [
+    ['motion', {}],
+    ['reduced (system)', { reducedMotion: 'reduce' }],
+    ['reduced (preference)', { preferences: { reduceMotion: true, theme: 'light' } }],
+  ]) {
+    await check(`${name} template scroll (${mode})`, async () => {
+      const { context, page } = await open(browser, options);
+      const result = {};
+
+      results[mode] = result;
+      await page.goto(new URL('/templates', baseUrl).href, { waitUntil: 'networkidle' });
+      // The window's turn toward the pointer would skew the boxes that measure the scroll.
+      await page.addStyleTag({
+        content: '.template-card[data-pointer] .template-window { rotate: none !important; }',
+      });
+      await page
+        .locator(SCROLLING_CARD)
+        .evaluate((node) => node.scrollIntoView({ block: 'center' }));
+      await page.mouse.move(2, 2);
+      await page.waitForFunction(
+        (selector) => {
+          const image = document.querySelector(`${selector} .template-card-poster img`);
+
+          return image?.complete && image.naturalHeight > 0;
+        },
+        SCROLLING_CARD,
+        { timeout: 15_000 },
+      );
+
+      const source = await page
+        .locator(`${SCROLLING_CARD} .template-card-poster img`)
+        .evaluate((image) => decodeURIComponent(image.currentSrc));
+
+      assert.match(source, /\/templates\/pages\/halcyon\.jpg/, 'a mouse must load the whole page');
+
+      const centre = await windowCentre(page, SCROLLING_CARD);
+
+      // Halcyon's page runs on for 3.3 windows, which take 2.3 s after a 150 ms pause.
+      const going = await recordPage(page, SCROLLING_CARD, 3200, () =>
+        page.mouse.move(centre.x, centre.y),
+      );
+
+      const travel = going.at(-1).travel;
+      const reach = going.at(-1).scrolled;
+
+      result.travel = Math.round(travel);
+      result.reached = Math.round(reach);
+
+      if (mode !== 'motion') {
+        assert.ok(
+          going.every((sample) => Math.abs(sample.scrolled) < 0.5),
+          `the page must hold at its top under reduced motion (it reached ${reach}px)`,
+        );
+
+        return;
+      }
+
+      // Headless Firefox draws the frosted window over its form in software, a few frames a
+      // second, so the scroll is judged by its timing rather than by its frame rate.
+      const share = (sample) => sample.scrolled / sample.travel;
+      const between = going.filter((sample) => share(sample) > 0.02 && share(sample) < 0.98);
+
+      const largestStep = Math.max(
+        ...going.slice(1).map((sample, index) => share(sample) - share(going[index])),
+      );
+
+      const started = going.find((sample) => sample.scrolled > 0.5)?.elapsedMs ?? Infinity;
+      const arrived = going.find((sample) => share(sample) >= 0.98)?.elapsedMs ?? Infinity;
+
+      result.startedMs = Math.round(started);
+      result.scrollMs = Math.round(arrived - started);
+      result.frames = between.length;
+      result.largestStep = Number(largestStep.toFixed(3));
+
+      assert.ok(travel > 300, `Halcyon's page must run on below its window (${travel}px)`);
+      assert.ok(
+        started >= 100,
+        `the page must wait out a passing pointer (it started at ${started} ms)`,
+      );
+      // Halcyon's page takes 2.3 s to scroll.
+      assert.ok(
+        arrived - started >= 1500 && between.length >= 3 && largestStep < 0.5,
+        `the page must take its time to scroll down (${result.scrollMs} ms, ${between.length} frames in between, largest step ${largestStep})`,
+      );
+      assert.ok(
+        Math.abs(reach - travel) < 1.5,
+        `the page must scroll until its foot meets the stage's edge (${reach} of ${travel}px)`,
+      );
+      await page.screenshot({
+        clip: await page.locator(SCROLLING_CARD).boundingBox(),
+        path: path.join(artifactDirectory, `${name}-template-scroll-foot.png`),
+      });
+
+      const leaving = await recordPage(page, SCROLLING_CARD, 1800, () => page.mouse.move(2, 2));
+      const gliding = leaving.filter((sample) => share(sample) > 0.05 && share(sample) < 0.95);
+      const back = leaving.find((sample) => Math.abs(sample.scrolled) < 0.5)?.elapsedMs ?? Infinity;
+
+      result.backMs = Math.round(back);
+      result.glideFrames = gliding.length;
+      // A jump back draws no frame in between; Firefox's few a second still catch the glide.
+      assert.ok(
+        gliding.length >= 1,
+        `leaving must glide the page back rather than jump (${gliding.length} frames in between)`,
+      );
+      assert.ok(back < 1600, `the page must be back at its top within 1.6 s (${back} ms)`);
+
+      // Relay has only its poster, which fills its window.
+      await page.locator(STILL_CARD).evaluate((node) => node.scrollIntoView({ block: 'center' }));
+      await page.waitForTimeout(300);
+
+      const still = await windowCentre(page, STILL_CARD);
+
+      const holding = await recordPage(page, STILL_CARD, 1200, () =>
+        page.mouse.move(still.x, still.y),
+      );
+
+      assert.equal(
+        await page.locator(`${STILL_CARD} .template-card-poster[data-page]`).count(),
+        0,
+        'Relay must have only its poster',
+      );
+      assert.ok(
+        holding.every((sample) => Math.abs(sample.scrolled) < 0.5),
+        'a template with only its poster must hold still',
+      );
+
+      await context.close();
+    });
+  }
+
+  if (name === 'chromium') {
+    await check(`${name} template scroll (phone)`, async () => {
+      const context = await browser.newContext({
+        hasTouch: true,
+        isMobile: true,
+        viewport: { width: 390, height: 844 },
+      });
+
+      activeContexts.add(context);
+      context.once('close', () => activeContexts.delete(context));
+
+      const page = await context.newPage();
+
+      await page.goto(new URL('/templates', baseUrl).href, { waitUntil: 'networkidle' });
+      await page.locator(SCROLLING_CARD).scrollIntoViewIfNeeded();
+      await page.waitForFunction(
+        (selector) => document.querySelector(`${selector} .template-card-poster img`)?.complete,
+        SCROLLING_CARD,
+        { timeout: 15_000 },
+      );
+
+      const source = await page
+        .locator(`${SCROLLING_CARD} .template-card-poster img`)
+        .evaluate((image) => decodeURIComponent(image.currentSrc));
+
+      results.phone = { poster: !source.includes('/templates/pages/') };
+      assert.match(source, /\/templates\/halcyon\.jpg/, 'a phone must load the poster');
+      await context.close();
+    });
+  }
+
+  return results;
+}
+
 const PROMINENT = '.home-cta .lg-button--prominent';
 
 // How high the prominent button's slab rests above the page, where its light comes from and how
@@ -1497,6 +1743,12 @@ for (const [name, launcher] of Object.entries(engines)) {
   const browser = await launcher.launch(options);
 
   try {
+    if (templateScrollOnly) {
+      manifest.engines[name] = { templateScroll: await checkTemplateScroll(browser, name) };
+
+      continue;
+    }
+
     if (firefoxFailuresOnly) {
       const scrolling = await checkScrolling(browser, name);
       const header = await checkHeader(browser, name);
@@ -1523,6 +1775,7 @@ for (const [name, launcher] of Object.entries(engines)) {
 
       await checkDeskReplay(browser, name);
       await checkProCard(browser, name);
+      manifest.engines[name].templateScroll = await checkTemplateScroll(browser, name);
       manifest.engines[name].buttonLight = await checkButtonLight(browser, name);
 
       if (name === 'chromium') {

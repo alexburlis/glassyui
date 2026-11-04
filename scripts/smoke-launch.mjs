@@ -212,10 +212,9 @@ try {
 
   assert.equal(imageUrls.size, 3, 'Each launch component needs its own share image');
 
-  // The free portfolio template was retired: its addresses, its guide and the old templates
-  // index lead to Glassy UI Pro. Free templates have their own pages under /templates/<slug>.
+  // The free portfolio template was retired: its addresses and its guide lead to Glassy UI Pro.
+  // Every template is on /templates, and the free ones have their own pages under it.
   for (const route of [
-    '/templates',
     '/templates/portfolio',
     '/templates/portfolio/preview',
     '/guides/portfolio',
@@ -245,6 +244,10 @@ try {
     'The retired template is out of the sitemap',
   );
   assert.ok(
+    sitemap.includes('<loc>https://glassyui.com/templates</loc>'),
+    'The templates page is in the sitemap',
+  );
+  assert.ok(
     sitemap.includes('<loc>https://glassyui.com/templates/halcyon</loc>'),
     'The Halcyon template page is in the sitemap',
   );
@@ -257,6 +260,23 @@ try {
     'The Still template page is in the sitemap',
   );
   assert.equal(sitemap.includes('/preview<'), false, 'Template previews are out of the sitemap');
+
+  // The templates page has its own title and address, and leads to each free template's page.
+  await visit('/templates');
+  await assertContained('/templates');
+  assert.equal(await page.locator('main h1').innerText(), 'Start from a whole page.');
+  assert.match(await page.locator('link[rel="canonical"]').getAttribute('href'), /\/templates$/);
+  assert.match(await page.title(), /^Glass landing page templates for React \| Glassy UI$/);
+
+  for (const slug of ['halcyon', 'fieldnotes', 'still']) {
+    assert.equal(
+      await page.locator(`main a.template-card[href="/templates/${slug}"]`).count(),
+      1,
+      `The templates page leads to /templates/${slug}`,
+    );
+  }
+
+  checks.push({ route: '/templates', links: ['halcyon', 'fieldnotes', 'still'] });
 
   // A free template's page frames its live preview; the preview stands alone, unindexed.
   await visit('/templates/halcyon');

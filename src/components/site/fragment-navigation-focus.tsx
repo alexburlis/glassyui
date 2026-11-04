@@ -4,9 +4,10 @@ import { useEffect } from 'react';
 import { focusFragmentAfterNavigation } from '@/lib/fragment-focus';
 
 /**
- * A link the router follows, such as Templates to /#templates, scrolls to its fragment without
- * moving the keyboard's place, so the next Tab would jump back to the link or the top of the page.
- * The browser moves it when it follows such a link itself; this does the same for the router.
+ * A link the router follows, such as Installation guide to /docs#installation, scrolls to its
+ * fragment without moving the keyboard's place, so the next Tab would jump back to the link or the
+ * top of the page. The browser moves it when it follows such a link itself; this does the same for
+ * the router.
  */
 export function FragmentNavigationFocus() {
   useEffect(() => {

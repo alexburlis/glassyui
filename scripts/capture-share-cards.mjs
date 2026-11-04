@@ -65,6 +65,7 @@ const blogPosts = await createMdxBlog({
 
 const cards = [
   { file: 'components.jpg', route: 'components' },
+  { file: 'templates.jpg', route: 'templates' },
   { file: 'docs.jpg', route: 'docs' },
   { file: 'guides.jpg', route: 'guides' },
   { file: 'blog.jpg', route: 'blog' },

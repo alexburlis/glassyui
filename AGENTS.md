@@ -107,11 +107,18 @@
   `src/components/site/framed-preview-anchors.tsx` keeps its in-page links
   inside the frame. `src/lib/template-fonts.ts` serves each template's faces
   from `src/fonts`, beside their SIL Open Font License files, and preloads
-  none, so a preview fetches only its own. The home page's gallery
+  none, so a preview fetches only its own. The gallery
   (`src/lib/template-gallery.ts`, `src/components/site/template-gallery.tsx`)
-  shows them first, then the Pro templates
-  (`src/components/site/pro-templates.tsx`), whose cards open one Pro dialog;
-  every poster is in `public/templates`.
+  is the templates page, `/templates` (`src/app/templates/page.tsx`), where
+  every Templates link leads, and a section of the home page, which the old
+  address `/#templates` still reaches. It shows them first, then the Pro
+  templates (`src/components/site/pro-templates.tsx`), whose cards open one Pro
+  dialog; every poster is in `public/templates`. A card whose template's whole
+  page is photographed in `public/templates/pages`, with its size in
+  `src/lib/template-pages.json`, scrolls down it under a pointer; one with only
+  its poster holds still. `node scripts/capture-template-pages.mjs <loopback-url>
+[<slug>[=<loopback-page-url>] ...]` photographs the free templates from their
+  previews, and any other template from the address given with its slug.
 
 ## Build, test, and development commands
 
@@ -249,12 +256,14 @@
   for persisted toggles instead of reimplementing storage logic.
 - Glassy UI Pro is a separate private application repository. This site owns
   only external Pro links and public teaser copies: the offer and the template
-  names and slugs in `src/lib/pro-teaser.ts`, and the Pro posters in
-  `public/templates`, byte-identical to the Pro catalogue's. A Pro card opens
-  the home page's Pro dialog, and without script or with a modifier key links
-  to `<Pro origin>/#<slug>`, so the Pro catalogue must carry those ids. Keep the
-  prices, refund window, release month, names, slugs and posters in sync with
-  the private offer.
+  names and slugs in `src/lib/pro-teaser.ts`, the Pro posters in
+  `public/templates`, byte-identical to the Pro catalogue's, and the whole
+  pages of the Pro templates that exist, photographed from the Pro
+  repository's `templates/launch` (Northstar) and `templates/app` (Tempo) run on
+  their own. A Pro card opens the gallery's Pro dialog, and without script or
+  with a modifier key links to `<Pro origin>/#<slug>`, so the Pro catalogue must
+  carry those ids. Keep the prices, refund window, release month, names, slugs,
+  posters and pages in sync with the private offer.
   `src/lib/site-links.ts` owns the public Pro origin and the Pro dialog's
   checkout link, which must stay the private app's `PRO_CHECKOUT_URL`. `/pro`
   addresses redirect there on every host; never add Pro routes or paid source to

@@ -62,11 +62,13 @@ function CheckGlyph() {
 function ProTemplateCard({
   backdrop,
   card,
+  level,
   onOpen,
   sizes,
 }: {
   backdrop: number;
   card: ProCard;
+  level: 3 | 4;
   onOpen: (event: MouseEvent<HTMLAnchorElement>, card: ProCard) => void;
   sizes: string;
 }) {
@@ -82,6 +84,7 @@ function ProTemplateCard({
       <TemplateCardBody
         backdrop={backdrop}
         card={card}
+        level={level}
         sizes={sizes}
         // The planned templates share one label above them rather than one each.
         tag={card.status === 'first-release' ? card.chip : undefined}
@@ -91,7 +94,11 @@ function ProTemplateCard({
   );
 }
 
-export function ProTemplates({ backdropOffset }: { backdropOffset: number }) {
+/** The Pro group. `level` is the heading level of its title, which its cards' names sit under. */
+export function ProTemplates({ backdropOffset, level }: { backdropOffset: number; level: 2 | 3 }) {
+  const Title = level === 2 ? 'h2' : 'h3';
+  const cardLevel = level === 2 ? 3 : 4;
+
   const [open, setOpen] = useState(false);
   // Separate from open, so the dialog keeps its template while it closes.
   const [shown, setShown] = useState(PRO_CARDS[0]);
@@ -150,7 +157,7 @@ export function ProTemplates({ backdropOffset }: { backdropOffset: number }) {
   return (
     <div className="template-group">
       <header className="template-group-header">
-        <h3 className="template-group-title">Coming soon to Pro</h3>
+        <Title className="template-group-title">Coming soon to Pro</Title>
         <span className="template-group-count">
           {PRO_CARDS.length}
           <span className="sr-only"> templates</span>
@@ -163,6 +170,7 @@ export function ProTemplates({ backdropOffset }: { backdropOffset: number }) {
               backdrop={backdropOffset + index}
               card={card}
               key={card.slug}
+              level={cardLevel}
               onOpen={show}
               sizes="(min-width: 1024px) 340px, (min-width: 640px) 45vw, 80vw"
             />
@@ -204,6 +212,7 @@ export function ProTemplates({ backdropOffset }: { backdropOffset: number }) {
                 backdrop={backdropOffset + firstRelease.length + index}
                 card={card}
                 key={card.slug}
+                level={cardLevel}
                 onOpen={show}
                 sizes="(min-width: 1024px) 250px, (min-width: 640px) 45vw, 64vw"
               />

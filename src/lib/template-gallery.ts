@@ -1,5 +1,6 @@
 import { PRO_OFFER, PRO_TEMPLATE_TEASERS, type ProTemplateTeaser } from '@/lib/pro-teaser';
 import { PRO_ORIGIN } from '@/lib/site-links';
+import TEMPLATE_PAGES from '@/lib/template-pages.json';
 import {
   FREE_TEMPLATES,
   freeTemplatePath,
@@ -7,9 +8,21 @@ import {
   type FreeTemplateSlug,
 } from '@/lib/templates';
 
+/**
+ * A photograph of a template's whole page at its poster's width, taken by
+ * scripts/capture-template-pages.mjs.
+ */
+export interface TemplatePage {
+  height: number;
+  src: string;
+  width: number;
+}
+
 interface Card {
   kind: string;
   name: string;
+  /** The page its window scrolls down under a pointer; with only a poster, the card holds still. */
+  page?: TemplatePage;
   poster: string;
 }
 
@@ -37,10 +50,19 @@ const PRO_STATUS: Record<ProTemplateTeaser['status'], Pick<ProCard, 'chip' | 'ti
 
 const poster = (slug: string) => `/templates/${slug}.jpg`;
 
+const pages: Record<string, Omit<TemplatePage, 'src'>> = TEMPLATE_PAGES;
+
+function pageOf(slug: string): TemplatePage | undefined {
+  const page = pages[slug];
+
+  return page ? { ...page, src: `/templates/pages/${slug}.jpg` } : undefined;
+}
+
 function freeCard(template: FreeTemplate): FreeCard {
   const card = {
     kind: template.kind,
     name: template.name,
+    page: pageOf(template.slug),
     poster: poster(template.slug),
     slug: template.slug,
   };
@@ -56,6 +78,7 @@ function proCard(template: ProTemplateTeaser): ProCard {
     href: `${PRO_ORIGIN}/#${template.slug}`,
     kind: template.kind,
     name: template.name,
+    page: pageOf(template.slug),
     poster: poster(template.slug),
     slug: template.slug,
     status: template.status,
@@ -78,3 +101,7 @@ const slugs = [...FREE_CARDS, ...PRO_CARDS].map((card) => card.slug);
 const repeated = slugs.find((slug, index) => slugs.indexOf(slug) !== index);
 
 if (repeated) throw new Error(`Two templates use the slug ${repeated}.`);
+
+const strayPage = Object.keys(pages).find((slug) => !slugs.includes(slug));
+
+if (strayPage) throw new Error(`A page photograph names ${strayPage}, which no template uses.`);

@@ -110,7 +110,7 @@ export default function Home() {
                 <Link href="/components">Browse components</Link>
               </GlassButton>
               <GlassButton asChild size="lg" variant="primary">
-                <Link href="/#templates">Browse Templates</Link>
+                <Link href="/templates">Browse Templates</Link>
               </GlassButton>
             </div>
             <KeynoteReplay />

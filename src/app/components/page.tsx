@@ -74,7 +74,7 @@ export default function ComponentsPage() {
         ))}
       </ReleaseFeedbackProvider>
       <p className="docs-section" id="templates">
-        <Link className="home-section-link" href="/#templates">
+        <Link className="home-section-link" href="/templates">
           Browse templates<span aria-hidden> ›</span>
         </Link>
       </p>

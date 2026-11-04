@@ -10,6 +10,7 @@ card fails the build.
 | `home.jpg`, `loops/home.mp4`     | A pill of clear glass springing across the real dock        | `link-previews/`, `home` cut   |
 | `mobile.jpg`, `loops/mobile.mp4` | The pill springing between the real Today screen's segments | `link-previews/`, `mobile` cut |
 | `components.jpg`                 | Four live demos                                             | Share studio                   |
+| `templates.jpg`                  | Halcyon's live preview beside Templates                     | Share studio                   |
 | `docs.jpg`, `guides.jpg`         | The install command; the lens                               | Share studio                   |
 | `guides/<slug>.jpg`              | Each guide's demo beside its title                          | Share studio                   |
 | `blog.jpg`, `blog/<slug>.jpg`    | The blog and each article, illustrated with live web demos  | Share studio                   |

@@ -4232,6 +4232,12 @@ main :focus {
   margin: 0 auto;
 }
 
+/* The templates page's gallery keeps a home section's gutters, which a phone's shelves run out
+   over to the screen's edges. */
+.templates-gallery {
+  padding: 0 24px;
+}
+
 .template-group + .template-group {
   margin-top: 88px;
 }
@@ -4365,8 +4371,20 @@ main :focus {
     0 24px 48px -22px rgb(0 0 0 / 0.4);
 }
 
+/* How much of a window's foot the stage's lower edge hides: its overhang less its frame. It is
+   registered so that it resolves against the card here, as the overhang does, rather than against
+   the poster inside, whose page scrolls down to just above that edge. */
+@property --window-tuck {
+  inherits: true;
+  initial-value: 0px;
+  syntax: '<length>';
+}
+
 .template-window {
-  margin-bottom: calc(-1 * clamp(14px, 7cqi, 30px));
+  --window-overhang: clamp(14px, 7cqi, 30px);
+  --window-tuck: calc(var(--window-overhang) - var(--window-frame));
+
+  margin-bottom: calc(-1 * var(--window-overhang));
 }
 
 .template-window::before,
@@ -4440,6 +4458,17 @@ main :focus {
   height: 100%;
   object-fit: cover;
   object-position: top;
+}
+
+/* A template's whole page runs on below its window, which shows its top as the poster would
+   (template-card.tsx). The window is 62.5% as tall as it is wide, and scrolled to its foot the
+   page ends at the stage's edge. */
+.template-window .template-card-poster[data-page] {
+  container-type: inline-size;
+}
+
+.template-window .template-card-poster[data-page] img {
+  height: auto;
 }
 
 /* Glass that cannot be drawn becomes a plain frame. */
@@ -5312,6 +5341,35 @@ a.template-card:hover .template-card-title {
   :root:not([data-lg-reduce-motion='1']) .template-card[data-pointer] .template-window {
     rotate: calc(0.5 - var(--pointer-y)) calc(var(--pointer-x) - 0.5) 0
       calc(hypot(var(--pointer-x) - 0.5, var(--pointer-y) - 0.5) * 11deg);
+  }
+
+  /* A template with its whole page scrolls down it at an even pace under a mouse or pen, or
+     while the card has the keyboard's focus, and glides back up as they leave. A pointer that
+     only passes over starts nothing. */
+  :root:not([data-lg-reduce-motion='1']) .template-window .template-card-poster[data-page] img {
+    transition: translate clamp(0.5s, calc(0.4s + var(--page-screens) * 0.1s), 1.4s)
+      cubic-bezier(0.65, 0, 0.35, 1);
+  }
+
+  :root:not([data-lg-reduce-motion='1'])
+    .template-card:focus-visible
+    .template-card-poster[data-page]
+    img {
+    translate: 0 calc(62.5cqi - 100% - var(--window-tuck));
+    transition: translate clamp(1.2s, calc(var(--page-screens) * 0.7s), 10s)
+      cubic-bezier(0.45, 0.05, 0.55, 0.95) 150ms;
+  }
+
+  /* The pointer also raises the window 8px out of its stage. */
+  @media (hover: hover) {
+    :root:not([data-lg-reduce-motion='1'])
+      .template-card:hover
+      .template-card-poster[data-page]
+      img {
+      translate: 0 calc(62.5cqi - 100% - var(--window-tuck) + 8px);
+      transition: translate clamp(1.2s, calc(var(--page-screens) * 0.7s), 10s)
+        cubic-bezier(0.45, 0.05, 0.55, 0.95) 150ms;
+    }
   }
 
   /* Paging through the dialog crossfades the posters, the new one settling from slightly near. */

@@ -275,449 +275,471 @@ try {
     await closePage(context);
   }
 
-  // The home page's templates: the free ones first, then Pro's under their own heading, with the
-  // first release beside the Pro tile and the planned ones under one label, four to a row on a wide
-  // screen and two below. A phone shows each row as a shelf to swipe through instead. Every
-  // template rises in a window out of its stage, showing most of its poster. A Pro card opens one
-  // dialog that sells Pro and switches between the Pro templates, and the page never scrolls
-  // sideways.
-  for (const width of [320, 360, 390, 768, 1280]) {
-    const label = `home templates ${width}px`;
-    const wide = width >= 1024;
-    const phone = width < 640;
-    const { context, failures, page } = await openPage({ width });
+  // The templates, on their own page and in the home page's section: the free ones first, then
+  // Pro's under their own heading, with the first release beside the Pro tile and the planned ones
+  // under one label, four to a row on a wide screen and two below. A phone shows each row as a
+  // shelf to swipe through instead. Every template rises in a window out of its stage, showing most
+  // of its poster. A Pro card opens one dialog that sells Pro and switches between the Pro
+  // templates, and the page never scrolls sideways. The group titles sit one level under the
+  // page's own heading: the templates page's title, or the home section's.
+  const galleries = [
+    { level: 2, name: 'templates', route: '/templates' },
+    { level: 3, name: 'home', route: '/#templates' },
+  ];
 
-    await page.goto(`${MAIN}/#templates`, { waitUntil: 'networkidle' });
+  for (const gallery of galleries) {
+    for (const width of [320, 360, 390, 768, 1280]) {
+      const label = `${gallery.name} templates ${width}px`;
+      const wide = width >= 1024;
+      const phone = width < 640;
+      const { context, failures, page } = await openPage({ width });
 
-    const section = page.locator('#templates');
+      await page.goto(`${MAIN}${gallery.route}`, { waitUntil: 'networkidle' });
 
-    await section.scrollIntoViewIfNeeded();
+      const section = page.locator('.template-gallery');
 
-    const layout = await section.evaluate((node) => {
-      const box = (element) => {
-        const rect = element.getBoundingClientRect();
+      await section.scrollIntoViewIfNeeded();
 
-        return {
-          bottom: Math.round(rect.bottom),
-          left: Math.round(rect.left),
-          right: Math.round(rect.right),
-          top: Math.round(rect.top),
-          width: Math.round(rect.width),
-        };
-      };
-
-      const tile = node.querySelector('.template-pro-tile');
-      const main = node.closest('main').cloneNode(true);
-
-      main.querySelector('.template-pro-tile').remove();
-
-      return {
-        cards: [...node.querySelectorAll('.template-card')].map((card) => {
-          const stage = card.querySelector('.template-card-stage').getBoundingClientRect();
-          const poster = card.querySelector('.template-card-poster').getBoundingClientRect();
+      const layout = await section.evaluate((node) => {
+        const box = (element) => {
+          const rect = element.getBoundingClientRect();
 
           return {
-            ...box(card),
-            arrives: card.querySelector('.template-tag')?.textContent ?? null,
-            ignored: card.hasAttribute('data-analytics-ignore'),
-            href: card.getAttribute('href'),
-            name: card.querySelector('h4')?.textContent,
-            popup: card.getAttribute('aria-haspopup'),
-            posterInside: poster.left >= stage.left && poster.right <= stage.right,
-            posterShown: (Math.min(stage.bottom, poster.bottom) - poster.top) / poster.height,
-            tag: card.tagName,
-            template: card.getAttribute('data-template'),
+            bottom: Math.round(rect.bottom),
+            left: Math.round(rect.left),
+            right: Math.round(rect.right),
+            top: Math.round(rect.top),
+            width: Math.round(rect.width),
           };
-        }),
-        grids: [...node.querySelectorAll('.template-grid')].map((grid) => ({
-          ...box(grid),
-          shelf: getComputedStyle(grid).overflowX === 'auto',
-          swipes: grid.scrollWidth > grid.clientWidth,
-        })),
-        headings: [...node.querySelectorAll('h3')].map((heading) => ({
-          ...box(heading),
-          name: heading.textContent,
-        })),
-        planned: {
-          ...box(node.querySelector('.template-subgroup')),
-          text: node.querySelector('.template-subgroup').textContent,
-        },
-        priceElsewhere: /\$\d/.test(main.textContent),
-        row: box(node.querySelector('.template-row')),
-        tile: {
-          ...box(tile),
-          href: tile.getAttribute('href'),
-          source: tile.getAttribute('data-analytics-source'),
-          text: tile.textContent,
-        },
-      };
-    });
+        };
 
-    const freeNames = FREE_TEMPLATES.map(([name]) => name);
+        const tile = node.querySelector('.template-pro-tile');
+        const main = node.closest('main').cloneNode(true);
 
-    assert.deepEqual(
-      layout.cards.map((card) => card.name),
-      [...freeNames, ...PRO_FIRST_RELEASE, ...PRO_PLANNED],
-      `${label}: the free templates, then Pro's first release, then its planned templates`,
-    );
+        main.querySelector('.template-pro-tile').remove();
 
-    const cards = new Map(layout.cards.map((card) => [card.name, card]));
+        return {
+          cards: [...node.querySelectorAll('.template-card')].map((card) => {
+            const stage = card.querySelector('.template-card-stage').getBoundingClientRect();
+            const poster = card.querySelector('.template-card-poster').getBoundingClientRect();
 
-    for (const [name, href] of FREE_TEMPLATES) {
-      const card = cards.get(name);
+            return {
+              ...box(card),
+              arrives: card.querySelector('.template-tag')?.textContent ?? null,
+              ignored: card.hasAttribute('data-analytics-ignore'),
+              href: card.getAttribute('href'),
+              level: card.querySelector('.template-card-title').tagName,
+              name: card.querySelector('.template-card-title').textContent,
+              popup: card.getAttribute('aria-haspopup'),
+              posterInside: poster.left >= stage.left && poster.right <= stage.right,
+              posterShown: (Math.min(stage.bottom, poster.bottom) - poster.top) / poster.height,
+              tag: card.tagName,
+              template: card.getAttribute('data-template'),
+            };
+          }),
+          grids: [...node.querySelectorAll('.template-grid')].map((grid) => ({
+            ...box(grid),
+            shelf: getComputedStyle(grid).overflowX === 'auto',
+            swipes: grid.scrollWidth > grid.clientWidth,
+          })),
+          headings: [...node.querySelectorAll('.template-group-title')].map((heading) => ({
+            ...box(heading),
+            level: heading.tagName,
+            name: heading.textContent,
+          })),
+          planned: {
+            ...box(node.querySelector('.template-subgroup')),
+            text: node.querySelector('.template-subgroup').textContent,
+          },
+          priceElsewhere: /\$\d/.test(main.textContent),
+          row: box(node.querySelector('.template-row')),
+          tile: {
+            ...box(tile),
+            href: tile.getAttribute('href'),
+            source: tile.getAttribute('data-analytics-source'),
+            text: tile.textContent,
+          },
+        };
+      });
 
-      assert.equal(card.tag, 'A', `${label}: ${name} is one link`);
-      assert.equal(card.href, href, `${label}: ${name} leads to ${href}`);
-      assert.equal(card.arrives, null, `${label}: ${name} is out, so it says no arrival`);
-    }
+      const freeNames = FREE_TEMPLATES.map(([name]) => name);
 
-    for (const name of [...PRO_FIRST_RELEASE, ...PRO_PLANNED]) {
-      const card = cards.get(name);
-      const slug = name.toLowerCase();
-      // The planned templates share the label above them instead.
-      const arrives = PRO_FIRST_RELEASE.includes(name) ? 'Coming November' : null;
-
-      assert.equal(card.tag, 'A', `${label}: ${name} is one link`);
-      assert.equal(card.href, `${PRO}/#${slug}`, `${label}: without script ${name} leads to Pro`);
-      assert.equal(card.template, slug, `${label}: ${name} names its template`);
-      assert.equal(card.popup, 'dialog', `${label}: ${name} says it opens a dialog`);
-      assert.equal(
-        card.ignored,
-        true,
-        `${label}: opening ${name}'s dialog is not a Pro link click`,
+      assert.deepEqual(
+        layout.cards.map((card) => card.name),
+        [...freeNames, ...PRO_FIRST_RELEASE, ...PRO_PLANNED],
+        `${label}: the free templates, then Pro's first release, then its planned templates`,
       );
-      assert.equal(card.arrives, arrives, `${label}: ${name} says when it arrives`);
-    }
 
-    for (const card of layout.cards) {
-      assert.equal(card.posterInside, true, `${label}: ${card.name}'s window fits its stage`);
+      const cards = new Map(layout.cards.map((card) => [card.name, card]));
+
+      for (const [name, href] of FREE_TEMPLATES) {
+        const card = cards.get(name);
+
+        assert.equal(card.tag, 'A', `${label}: ${name} is one link`);
+        assert.equal(card.href, href, `${label}: ${name} leads to ${href}`);
+        assert.equal(card.arrives, null, `${label}: ${name} is out, so it says no arrival`);
+      }
+
+      for (const name of [...PRO_FIRST_RELEASE, ...PRO_PLANNED]) {
+        const card = cards.get(name);
+        const slug = name.toLowerCase();
+        // The planned templates share the label above them instead.
+        const arrives = PRO_FIRST_RELEASE.includes(name) ? 'Coming November' : null;
+
+        assert.equal(card.tag, 'A', `${label}: ${name} is one link`);
+        assert.equal(card.href, `${PRO}/#${slug}`, `${label}: without script ${name} leads to Pro`);
+        assert.equal(card.template, slug, `${label}: ${name} names its template`);
+        assert.equal(card.popup, 'dialog', `${label}: ${name} says it opens a dialog`);
+        assert.equal(
+          card.ignored,
+          true,
+          `${label}: opening ${name}'s dialog is not a Pro link click`,
+        );
+        assert.equal(card.arrives, arrives, `${label}: ${name} says when it arrives`);
+      }
+
+      for (const card of layout.cards) {
+        assert.equal(card.posterInside, true, `${label}: ${card.name}'s window fits its stage`);
+        assert.ok(
+          card.posterShown >= 0.8 && card.posterShown < 1,
+          `${label}: ${card.name}'s poster runs on past its stage, but most of it shows (${card.posterShown})`,
+        );
+      }
+
+      const [freeHeading, proHeading] = layout.headings;
+      const firstPro = cards.get(PRO_FIRST_RELEASE[0]);
+      const lastPro = cards.get(PRO_FIRST_RELEASE.at(-1));
+
+      assert.deepEqual(
+        layout.headings.map((heading) => heading.name),
+        ['Free templates', 'Coming soon to Pro'],
+        `${label}: one heading per group`,
+      );
+      assert.deepEqual(
+        [...new Set(layout.headings.map((heading) => heading.level))],
+        [`H${gallery.level}`],
+        `${label}: the groups' titles sit under the page's heading`,
+      );
+      assert.deepEqual(
+        [...new Set(layout.cards.map((card) => card.level))],
+        [`H${gallery.level + 1}`],
+        `${label}: the templates' names sit under their group's title`,
+      );
       assert.ok(
-        card.posterShown >= 0.8 && card.posterShown < 1,
-        `${label}: ${card.name}'s poster runs on past its stage, but most of it shows (${card.posterShown})`,
-      );
-    }
-
-    const [freeHeading, proHeading] = layout.headings;
-    const firstPro = cards.get(PRO_FIRST_RELEASE[0]);
-    const lastPro = cards.get(PRO_FIRST_RELEASE.at(-1));
-
-    assert.deepEqual(
-      layout.headings.map((heading) => heading.name),
-      ['Free templates', 'Coming soon to Pro'],
-      `${label}: one heading per group`,
-    );
-    assert.ok(
-      freeHeading.bottom <= cards.get(freeNames[0]).top &&
-        cards.get(freeNames.at(-1)).bottom <= proHeading.top &&
-        proHeading.bottom <= firstPro.top,
-      `${label}: each heading stands over its own templates`,
-    );
-
-    const cardsPerRow = (names) => {
-      const tops = names.map((name) => cards.get(name).top);
-
-      return [...new Set(tops)].map((top) => tops.filter((value) => value === top).length);
-    };
-
-    const [freeGrid] = layout.grids;
-
-    assert.deepEqual(
-      cardsPerRow(freeNames),
-      wide || phone ? [3] : [1, 2],
-      `${label}: free columns`,
-    );
-    assert.ok(
-      wide || phone || cards.get(freeNames[0]).width === freeGrid.width,
-      `${label}: from 640 to 1023px the first free template spans its row, so none sits alone`,
-    );
-    assert.deepEqual(
-      cardsPerRow(PRO_FIRST_RELEASE),
-      [2],
-      `${label}: the first release shares one row`,
-    );
-    assert.deepEqual(
-      cardsPerRow(PRO_PLANNED),
-      wide ? [4, 4] : phone ? [8] : [2, 2, 2, 2],
-      `${label}: planned columns`,
-    );
-    assert.deepEqual(
-      layout.grids.map((grid) => grid.shelf && grid.swipes),
-      layout.grids.map(() => phone),
-      `${label}: ${phone ? 'every row is a shelf that swipes' : 'no row scrolls on its own'}`,
-    );
-    assert.equal(layout.planned.text, 'Coming soon', `${label}: planned label`);
-    assert.ok(
-      layout.planned.top >= layout.row.bottom &&
-        layout.planned.bottom <= cards.get(PRO_PLANNED[0]).top,
-      `${label}: the label stands between the first release and the planned templates`,
-    );
-
-    const { tile } = layout;
-
-    assert.equal(tile.href, PRO, `${label}: the Pro tile leads to the Pro site`);
-    assert.equal(tile.source, 'template', `${label}: the Pro tile counts as a template link`);
-    assert.match(tile.text, /Every Pro template, one price/);
-    assert.equal(
-      layout.priceElsewhere,
-      false,
-      `${label}: with the dialog closed, the tile is the one price on the page`,
-    );
-    assert.ok(
-      wide
-        ? tile.top === lastPro.top && tile.bottom === lastPro.bottom && tile.left > lastPro.right
-        : tile.top >= lastPro.bottom && tile.width === layout.row.width,
-      `${label}: the Pro tile stands ${wide ? 'beside the first release, as tall as its cards' : 'full width under the first release'} (${JSON.stringify({ lastPro, tile })})`,
-    );
-
-    const tileLocator = section.locator('.template-pro-tile');
-
-    // A screenshot includes the fixed header and consent panel over the tile, so the tile is
-    // measured just under the header, where neither reaches it.
-    await tileLocator.evaluate((node) => scrollBy(0, node.getBoundingClientRect().top - 100));
-
-    const tileRed = await lowestWhiteContrast(
-      page,
-      tileLocator,
-      '.template-pro-tile-title',
-      '.template-pro-tile-action',
-    );
-
-    assert.ok(
-      tileRed.ratio >= 5,
-      `${label}: the Pro tile's copy keeps 5:1 (${JSON.stringify(tileRed)})`,
-    );
-    assert.match(
-      await section.locator('.template-gallery-note').textContent(),
-      /^Pro images are design previews\.$/,
-    );
-
-    // Every poster loads, including those the page holds back until they are near.
-    for (const poster of await section.locator('img').all()) {
-      await poster.scrollIntoViewIfNeeded();
-    }
-
-    await page.waitForFunction(
-      () =>
-        [...document.querySelectorAll('#templates img')].every(
-          (image) => image.complete && image.naturalWidth > 0,
-        ),
-      null,
-      { timeout: 15_000 },
-    );
-    await noSidewaysScroll(page, label);
-    await section.screenshot({ path: path.join(artifactDirectory, `home-${width}-templates.png`) });
-    screenshots.push(`home-${width}-templates.png`);
-
-    const northstar = section.locator('[data-template="northstar"]');
-
-    // The page's own listener runs after the card's and cancels the navigation it lets through.
-    const modifiedClickFollowsLink = await northstar.evaluate((node) => {
-      let followed;
-
-      document.addEventListener(
-        'click',
-        (event) => {
-          followed = !event.defaultPrevented;
-          event.preventDefault();
-        },
-        { once: true },
-      );
-      node.dispatchEvent(
-        new MouseEvent('click', { bubbles: true, button: 0, cancelable: true, metaKey: true }),
+        freeHeading.bottom <= cards.get(freeNames[0]).top &&
+          cards.get(freeNames.at(-1)).bottom <= proHeading.top &&
+          proHeading.bottom <= firstPro.top,
+        `${label}: each heading stands over its own templates`,
       );
 
-      return followed;
-    });
+      const cardsPerRow = (names) => {
+        const tops = names.map((name) => cards.get(name).top);
 
-    assert.equal(
-      modifiedClickFollowsLink,
-      true,
-      `${label}: a modified click on Northstar keeps its link to Pro`,
-    );
-
-    // A short screen, like a small phone or a browser with its toolbars showing, makes the dialog
-    // taller than the window.
-    await page.setViewportSize({ width, height: 560 });
-    await northstar.click();
-
-    const dialog = page.getByRole('dialog');
-
-    await page.getByRole('dialog', { name: 'Northstar' }).waitFor();
-
-    const opened = await dialog.evaluate((node) => {
-      const parts = [
-        ...node.querySelectorAll(
-          '.template-dialog-eyebrow, .template-dialog-poster, .template-dialog-title, .template-dialog-description, .template-dialog-benefits, .template-dialog-price, .template-dialog-cta, .template-dialog-tax, .template-dialog-strip',
-        ),
-      ].map((part) => ({ box: part.getBoundingClientRect(), name: part.className }));
-
-      const face = node.getBoundingClientRect();
-      const action = node.querySelector('.template-dialog-cta').getBoundingClientRect();
-
-      const overlaps = parts.flatMap((a, index) =>
-        parts
-          .slice(index + 1)
-          .flatMap((b) =>
-            a.box.left < b.box.right - 1 &&
-            b.box.left < a.box.right - 1 &&
-            a.box.top < b.box.bottom - 1 &&
-            b.box.top < a.box.bottom - 1
-              ? [`${a.name} over ${b.name}`]
-              : [],
-          ),
-      );
-
-      return {
-        actionInView: action.top >= face.top && action.bottom <= face.bottom,
-        focused: document.activeElement === node,
-        overlaps,
-        scrollTop: node.scrollTop,
+        return [...new Set(tops)].map((top) => tops.filter((value) => value === top).length);
       };
-    });
 
-    assert.deepEqual(opened.overlaps, [], `${label}: on a short screen no part covers another`);
-    assert.equal(opened.scrollTop, 0, `${label}: the dialog opens at its poster`);
-    assert.equal(opened.focused, true, `${label}: the dialog itself takes focus first`);
+      const [freeGrid] = layout.grids;
 
-    if (width < 768) {
+      assert.deepEqual(
+        cardsPerRow(freeNames),
+        wide || phone ? [3] : [1, 2],
+        `${label}: free columns`,
+      );
+      assert.ok(
+        wide || phone || cards.get(freeNames[0]).width === freeGrid.width,
+        `${label}: from 640 to 1023px the first free template spans its row, so none sits alone`,
+      );
+      assert.deepEqual(
+        cardsPerRow(PRO_FIRST_RELEASE),
+        [2],
+        `${label}: the first release shares one row`,
+      );
+      assert.deepEqual(
+        cardsPerRow(PRO_PLANNED),
+        wide ? [4, 4] : phone ? [8] : [2, 2, 2, 2],
+        `${label}: planned columns`,
+      );
+      assert.deepEqual(
+        layout.grids.map((grid) => grid.shelf && grid.swipes),
+        layout.grids.map(() => phone),
+        `${label}: ${phone ? 'every row is a shelf that swipes' : 'no row scrolls on its own'}`,
+      );
+      assert.equal(layout.planned.text, 'Coming soon', `${label}: planned label`);
+      assert.ok(
+        layout.planned.top >= layout.row.bottom &&
+          layout.planned.bottom <= cards.get(PRO_PLANNED[0]).top,
+        `${label}: the label stands between the first release and the planned templates`,
+      );
+
+      const { tile } = layout;
+
+      assert.equal(tile.href, PRO, `${label}: the Pro tile leads to the Pro site`);
+      assert.equal(tile.source, 'template', `${label}: the Pro tile counts as a template link`);
+      assert.match(tile.text, /Every Pro template, one price/);
       assert.equal(
-        opened.actionInView,
-        true,
-        `${label}: a phone opens the dialog with its action in view, ahead of the benefits`,
+        layout.priceElsewhere,
+        false,
+        `${label}: with the dialog closed, the tile is the one price on the page`,
       );
-    }
+      assert.ok(
+        wide
+          ? tile.top === lastPro.top && tile.bottom === lastPro.bottom && tile.left > lastPro.right
+          : tile.top >= lastPro.bottom && tile.width === layout.row.width,
+        `${label}: the Pro tile stands ${wide ? 'beside the first release, as tall as its cards' : 'full width under the first release'} (${JSON.stringify({ lastPro, tile })})`,
+      );
 
-    assert.equal(
-      await dialog.evaluate(
-        (node) => document.getElementById(node.getAttribute('aria-describedby'))?.textContent,
-      ),
-      'Pre-order Glassy UI Pro and get Northstar the day it ships.',
-      `${label}: the dialog says what pre-ordering Pro gets`,
-    );
+      const tileLocator = section.locator('.template-pro-tile');
 
-    const cta = dialog.getByRole('link', { name: 'Pre-order for $99', exact: true });
+      // A screenshot includes the fixed header and consent panel over the tile, so the tile is
+      // measured just under the header, where neither reaches it.
+      await tileLocator.evaluate((node) => scrollBy(0, node.getBoundingClientRect().top - 100));
 
-    assert.equal(
-      await cta.getAttribute('href'),
-      CHECKOUT,
-      `${label}: the dialog's action opens Pro's checkout`,
-    );
-    assert.equal(
-      await cta.getAttribute('data-analytics-source'),
-      'template',
-      `${label}: the dialog's action counts as a template link`,
-    );
-    assert.notEqual(
-      await cta.getAttribute('data-analytics-checkout'),
-      null,
-      `${label}: the dialog's action counts as a checkout click`,
-    );
-    assert.equal(
-      await dialog.locator('.template-dialog-price').textContent(),
-      '$99Early bird for the first 100, then $199',
-      `${label}: the dialog states the regular price as the price after the early bird`,
-    );
-    assert.equal(
-      await dialog.locator('.template-dialog-tax').textContent(),
-      'Plus any tax',
-      `${label}: like the Pro site's button, the dialog's says tax comes on top`,
-    );
-    await page.keyboard.press('Tab');
-    assert.equal(
-      await cta.evaluate((node) => node === document.activeElement),
-      true,
-      `${label}: Tab reaches the dialog's action first`,
-    );
-    // A first visit still shows the analytics prompt, which sits over the rest of the page.
-    assert.equal(
-      await page.locator('.analytics-consent').isVisible(),
-      true,
-      `${label}: the analytics prompt is still waiting for an answer`,
-    );
-    await cta.scrollIntoViewIfNeeded();
-    assert.equal(
-      await cta.evaluate((node) => {
-        // The open dialog turns pointer events off outside it, which hides the prompt from hit
-        // testing, so they come back for the one reading of what is drawn on top.
-        const { style } = document.body;
-        const pointerEvents = style.pointerEvents;
-        const box = node.getBoundingClientRect();
+      const tileRed = await lowestWhiteContrast(
+        page,
+        tileLocator,
+        '.template-pro-tile-title',
+        '.template-pro-tile-action',
+      );
 
-        style.pointerEvents = 'auto';
+      assert.ok(
+        tileRed.ratio >= 5,
+        `${label}: the Pro tile's copy keeps 5:1 (${JSON.stringify(tileRed)})`,
+      );
+      assert.match(
+        await section.locator('.template-gallery-note').textContent(),
+        /^Pro images are design previews\.$/,
+      );
 
-        const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+      // Every poster loads, including those the page holds back until they are near.
+      for (const poster of await section.locator('img').all()) {
+        await poster.scrollIntoViewIfNeeded();
+      }
 
-        style.pointerEvents = pointerEvents;
-
-        return node.contains(hit);
-      }),
-      true,
-      `${label}: nothing covers the dialog's action, the analytics prompt included`,
-    );
-
-    await dialog.getByRole('button', { name: 'Show Tempo' }).click();
-    await page.getByRole('dialog', { name: 'Tempo' }).waitFor();
-    assert.equal(
-      await dialog.getByRole('button', { name: 'Show Tempo' }).getAttribute('aria-current'),
-      'true',
-      `${label}: the strip marks Tempo as shown`,
-    );
-    await noSidewaysScroll(page, `${label} with the dialog open`);
-    assert.equal(
-      await dialog.evaluate((node) => {
-        const box = node.getBoundingClientRect();
-
-        return node.scrollWidth <= node.clientWidth && box.left >= 0 && box.right <= innerWidth;
-      }),
-      true,
-      `${label}: the dialog fits the screen's width`,
-    );
-    await page.waitForFunction(
-      () => {
-        const poster = document.querySelector('.template-dialog-poster img[data-shown]');
-
-        return poster?.complete && poster.naturalWidth > 0 && poster.currentSrc.includes('tempo');
-      },
-      null,
-      { timeout: 15_000 },
-    );
-    await capture(page, `home-${width}-dialog`, { fullPage: false });
-
-    // The arrow keys page through the whole collection, round from the last to the first.
-    await page.keyboard.press('ArrowRight');
-    await page.getByRole('dialog', { name: PRO_PLANNED[0] }).waitFor();
-    assert.equal(
-      await dialog.locator('.template-dialog-count').textContent(),
-      `3 of ${PRO_FIRST_RELEASE.length + PRO_PLANNED.length}`,
-      `${label}: the dialog counts its place in the collection`,
-    );
-    await page.keyboard.press('ArrowLeft');
-    await page.keyboard.press('ArrowLeft');
-    await page.keyboard.press('ArrowLeft');
-    await page.getByRole('dialog', { name: PRO_PLANNED.at(-1) }).waitFor();
-
-    await page.keyboard.press('Escape');
-    await dialog.waitFor({ state: 'hidden' });
-
-    const focusReturned = await page
-      .waitForFunction(
-        () => document.activeElement?.getAttribute('data-template') === 'northstar',
+      await page.waitForFunction(
+        () =>
+          [...document.querySelectorAll('.template-gallery img')].every(
+            (image) => image.complete && image.naturalWidth > 0,
+          ),
         null,
-        { timeout: 5_000 },
-      )
-      .then(
-        () => true,
-        () => false,
+        { timeout: 15_000 },
+      );
+      await noSidewaysScroll(page, label);
+      await section.screenshot({
+        path: path.join(artifactDirectory, `${gallery.name}-${width}-templates.png`),
+      });
+      screenshots.push(`${gallery.name}-${width}-templates.png`);
+
+      const northstar = section.locator('[data-template="northstar"]');
+
+      // The page's own listener runs after the card's and cancels the navigation it lets through.
+      const modifiedClickFollowsLink = await northstar.evaluate((node) => {
+        let followed;
+
+        document.addEventListener(
+          'click',
+          (event) => {
+            followed = !event.defaultPrevented;
+            event.preventDefault();
+          },
+          { once: true },
+        );
+        node.dispatchEvent(
+          new MouseEvent('click', { bubbles: true, button: 0, cancelable: true, metaKey: true }),
+        );
+
+        return followed;
+      });
+
+      assert.equal(
+        modifiedClickFollowsLink,
+        true,
+        `${label}: a modified click on Northstar keeps its link to Pro`,
       );
 
-    assert.equal(focusReturned, true, `${label}: closing the dialog returns focus to Northstar`);
-    assert.deepEqual(failures, [], `${label}: every file loads and nothing leaves the page`);
-    pass(label);
-    await closePage(context);
+      // A short screen, like a small phone or a browser with its toolbars showing, makes the dialog
+      // taller than the window.
+      await page.setViewportSize({ width, height: 560 });
+      await northstar.click();
+
+      const dialog = page.getByRole('dialog');
+
+      await page.getByRole('dialog', { name: 'Northstar' }).waitFor();
+
+      const opened = await dialog.evaluate((node) => {
+        const parts = [
+          ...node.querySelectorAll(
+            '.template-dialog-eyebrow, .template-dialog-poster, .template-dialog-title, .template-dialog-description, .template-dialog-benefits, .template-dialog-price, .template-dialog-cta, .template-dialog-tax, .template-dialog-strip',
+          ),
+        ].map((part) => ({ box: part.getBoundingClientRect(), name: part.className }));
+
+        const face = node.getBoundingClientRect();
+        const action = node.querySelector('.template-dialog-cta').getBoundingClientRect();
+
+        const overlaps = parts.flatMap((a, index) =>
+          parts
+            .slice(index + 1)
+            .flatMap((b) =>
+              a.box.left < b.box.right - 1 &&
+              b.box.left < a.box.right - 1 &&
+              a.box.top < b.box.bottom - 1 &&
+              b.box.top < a.box.bottom - 1
+                ? [`${a.name} over ${b.name}`]
+                : [],
+            ),
+        );
+
+        return {
+          actionInView: action.top >= face.top && action.bottom <= face.bottom,
+          focused: document.activeElement === node,
+          overlaps,
+          scrollTop: node.scrollTop,
+        };
+      });
+
+      assert.deepEqual(opened.overlaps, [], `${label}: on a short screen no part covers another`);
+      assert.equal(opened.scrollTop, 0, `${label}: the dialog opens at its poster`);
+      assert.equal(opened.focused, true, `${label}: the dialog itself takes focus first`);
+
+      if (width < 768) {
+        assert.equal(
+          opened.actionInView,
+          true,
+          `${label}: a phone opens the dialog with its action in view, ahead of the benefits`,
+        );
+      }
+
+      assert.equal(
+        await dialog.evaluate(
+          (node) => document.getElementById(node.getAttribute('aria-describedby'))?.textContent,
+        ),
+        'Pre-order Glassy UI Pro and get Northstar the day it ships.',
+        `${label}: the dialog says what pre-ordering Pro gets`,
+      );
+
+      const cta = dialog.getByRole('link', { name: 'Pre-order for $99', exact: true });
+
+      assert.equal(
+        await cta.getAttribute('href'),
+        CHECKOUT,
+        `${label}: the dialog's action opens Pro's checkout`,
+      );
+      assert.equal(
+        await cta.getAttribute('data-analytics-source'),
+        'template',
+        `${label}: the dialog's action counts as a template link`,
+      );
+      assert.notEqual(
+        await cta.getAttribute('data-analytics-checkout'),
+        null,
+        `${label}: the dialog's action counts as a checkout click`,
+      );
+      assert.equal(
+        await dialog.locator('.template-dialog-price').textContent(),
+        '$99Early bird for the first 100, then $199',
+        `${label}: the dialog states the regular price as the price after the early bird`,
+      );
+      assert.equal(
+        await dialog.locator('.template-dialog-tax').textContent(),
+        'Plus any tax',
+        `${label}: like the Pro site's button, the dialog's says tax comes on top`,
+      );
+      await page.keyboard.press('Tab');
+      assert.equal(
+        await cta.evaluate((node) => node === document.activeElement),
+        true,
+        `${label}: Tab reaches the dialog's action first`,
+      );
+      // A first visit still shows the analytics prompt, which sits over the rest of the page.
+      assert.equal(
+        await page.locator('.analytics-consent').isVisible(),
+        true,
+        `${label}: the analytics prompt is still waiting for an answer`,
+      );
+      await cta.scrollIntoViewIfNeeded();
+      assert.equal(
+        await cta.evaluate((node) => {
+          // The open dialog turns pointer events off outside it, which hides the prompt from hit
+          // testing, so they come back for the one reading of what is drawn on top.
+          const { style } = document.body;
+          const pointerEvents = style.pointerEvents;
+          const box = node.getBoundingClientRect();
+
+          style.pointerEvents = 'auto';
+
+          const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+
+          style.pointerEvents = pointerEvents;
+
+          return node.contains(hit);
+        }),
+        true,
+        `${label}: nothing covers the dialog's action, the analytics prompt included`,
+      );
+
+      await dialog.getByRole('button', { name: 'Show Tempo' }).click();
+      await page.getByRole('dialog', { name: 'Tempo' }).waitFor();
+      assert.equal(
+        await dialog.getByRole('button', { name: 'Show Tempo' }).getAttribute('aria-current'),
+        'true',
+        `${label}: the strip marks Tempo as shown`,
+      );
+      await noSidewaysScroll(page, `${label} with the dialog open`);
+      assert.equal(
+        await dialog.evaluate((node) => {
+          const box = node.getBoundingClientRect();
+
+          return node.scrollWidth <= node.clientWidth && box.left >= 0 && box.right <= innerWidth;
+        }),
+        true,
+        `${label}: the dialog fits the screen's width`,
+      );
+      await page.waitForFunction(
+        () => {
+          const poster = document.querySelector('.template-dialog-poster img[data-shown]');
+
+          return poster?.complete && poster.naturalWidth > 0 && poster.currentSrc.includes('tempo');
+        },
+        null,
+        { timeout: 15_000 },
+      );
+      await capture(page, `${gallery.name}-${width}-dialog`, { fullPage: false });
+
+      // The arrow keys page through the whole collection, round from the last to the first.
+      await page.keyboard.press('ArrowRight');
+      await page.getByRole('dialog', { name: PRO_PLANNED[0] }).waitFor();
+      assert.equal(
+        await dialog.locator('.template-dialog-count').textContent(),
+        `3 of ${PRO_FIRST_RELEASE.length + PRO_PLANNED.length}`,
+        `${label}: the dialog counts its place in the collection`,
+      );
+      await page.keyboard.press('ArrowLeft');
+      await page.keyboard.press('ArrowLeft');
+      await page.keyboard.press('ArrowLeft');
+      await page.getByRole('dialog', { name: PRO_PLANNED.at(-1) }).waitFor();
+
+      await page.keyboard.press('Escape');
+      await dialog.waitFor({ state: 'hidden' });
+
+      const focusReturned = await page
+        .waitForFunction(
+          () => document.activeElement?.getAttribute('data-template') === 'northstar',
+          null,
+          { timeout: 5_000 },
+        )
+        .then(
+          () => true,
+          () => false,
+        );
+
+      assert.equal(focusReturned, true, `${label}: closing the dialog returns focus to Northstar`);
+      assert.deepEqual(failures, [], `${label}: every file loads and nothing leaves the page`);
+      pass(label);
+      await closePage(context);
+    }
   }
 
   // The components page: a sticky Pro card beside the gallery on a wide screen, and a link to the
-  // home page's templates at the very end on every screen.
+  // templates page at the very end on every screen.
   for (const width of [390, 768, 1280]) {
     const label = `components ${width}px`;
     const { context, failures, page } = await openPage({ width });
@@ -755,8 +777,8 @@ try {
       await templates
         .locator('a[href]')
         .evaluateAll((links) => links.map((link) => link.getAttribute('href'))),
-      ['/#templates'],
-      `${label}: leads to the home page's templates`,
+      ['/templates'],
+      `${label}: leads to the templates page`,
     );
     await templates.scrollIntoViewIfNeeded();
     await noSidewaysScroll(page, label);

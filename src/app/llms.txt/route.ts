@@ -33,7 +33,7 @@ export function GET() {
     link('All components', '/components', 'Every component with a live demo'),
     link(
       'Templates',
-      '/#templates',
+      '/templates',
       'Whole pages built from Glassy UI components: free ones install with one command, the rest come with Glassy UI Pro',
     ),
     link('React Native', '/mobile', 'The same components for React Native and Expo apps'),
