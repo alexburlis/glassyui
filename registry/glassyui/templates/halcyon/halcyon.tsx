@@ -288,6 +288,7 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
               optics={{
                 bevel: 34,
                 dome: 0.8,
+                viewer: 2688,
                 thickness: 72,
                 ior: 1.5,
                 dispersion: 0.25,
@@ -422,6 +423,7 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
             optics={{
               bevel: 32,
               dome: 0.8,
+              viewer: 2688,
               thickness: 68,
               ior: 1.5,
               dispersion: 0.25,

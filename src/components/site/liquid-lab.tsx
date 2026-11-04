@@ -40,6 +40,14 @@ const SETTINGS: Array<{
   { key: 'bevel', label: 'Bevel', min: 4, max: 64, step: 1, format: (value) => `${value} px` },
   { key: 'dome', label: 'Dome', min: 0, max: 1, step: 0.05, format: (value) => value.toFixed(2) },
   {
+    key: 'viewer',
+    label: 'Viewer',
+    min: 0,
+    max: 4000,
+    step: 50,
+    format: (value) => (value ? `${value} px` : 'Far'),
+  },
+  {
     key: 'dispersion',
     label: 'Dispersion',
     min: 0,
@@ -63,6 +71,7 @@ const OPTICS: LabOptics = {
   thickness: 36,
   bevel: 28,
   dome: 0,
+  viewer: 0,
   dispersion: 0.25,
   frost: 1,
   merge: 40,

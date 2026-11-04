@@ -530,7 +530,10 @@ pocket lowered into the glass around it, whose rim bends the backdrop like a
 groove. `--lg-scene-well-depth` (10px) and `--lg-scene-well-bevel` (8px) set its
 depth and rim width; a scene draws up to eight. `optics.dome` curves each pane's
 face like a lens, so it magnifies the backdrop and bows the lines behind it; 0,
-the default, keeps the face flat.
+the default, keeps the face flat. `optics.viewer` places the eye that many CSS
+pixels from the screen, looking from the middle of the viewport, so the glass
+shows parallax and shifts as the page scrolls; 2688 is the CSS reference viewing
+distance, and 0, the default, looks straight down from infinitely far.
 
 ### `glass-logo-reveal`
 

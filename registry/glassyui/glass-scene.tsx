@@ -61,6 +61,7 @@ const DEFAULT_OPTICS: GlassSceneOptics = {
   thickness: 40,
   bevel: 28,
   dome: 0,
+  viewer: 0,
   dispersion: 0.15,
   frost: 1,
   merge: 12,
@@ -262,7 +263,7 @@ export const GlassScene = forwardRef<HTMLDivElement, GlassSceneProps>(
     const scale = preferences.thickness;
 
     // The site's thickness preference scales the default slab. Optics a scene sets itself stay as set.
-    const { ior, thickness, bevel, dome, dispersion, frost, specular, merge } = {
+    const { ior, thickness, bevel, dome, viewer, dispersion, frost, specular, merge } = {
       ...DEFAULT_OPTICS,
       thickness: DEFAULT_OPTICS.thickness * scale,
       bevel: DEFAULT_OPTICS.bevel * (0.6 + 0.4 * scale),
@@ -271,8 +272,11 @@ export const GlassScene = forwardRef<HTMLDivElement, GlassSceneProps>(
     };
 
     const settings = useMemo<SceneSettings>(
-      () => ({ flow, optics: { ior, thickness, bevel, dome, dispersion, frost, specular } }),
-      [flow, ior, thickness, bevel, dome, dispersion, frost, specular],
+      () => ({
+        flow,
+        optics: { ior, thickness, bevel, dome, viewer, dispersion, frost, specular },
+      }),
+      [flow, ior, thickness, bevel, dome, viewer, dispersion, frost, specular],
     );
 
     const settingsRef = useRef(settings);

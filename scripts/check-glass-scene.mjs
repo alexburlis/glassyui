@@ -3448,6 +3448,83 @@ async function checkOptics(engine, browser, statsPage, results) {
       return { offFlat, offDomed, middleFlat, middleDomed };
     });
 
+    await run(
+      engine,
+      'F39 a near eye sees thick glass in perspective as the page scrolls',
+      results,
+      async () => {
+        await addStyle(page, `${loneDrop} ${labDrop} { --lg-scene-tint: transparent !important; }`);
+        await setOptics(page, { Thickness: 'End', Dome: 'Home' });
+        const scrolled = await page.evaluate(() => window.scrollY);
+
+        // Scrolls the drop's centre to offset pixels below the middle of the viewport, then finds
+        // the row where a bright line through its centre shows in its middle column.
+        const lineAt = async (offset) => {
+          await page.evaluate(
+            ({ selector, offset }) => {
+              const box = document.querySelector(selector).getBoundingClientRect();
+              window.scrollBy(0, box.top + box.height / 2 - (window.innerHeight / 2 + offset));
+            },
+            { selector: labDrop, offset },
+          );
+          await settle(page, labScene);
+          const { clip } = await sceneShot(page, null, labScene);
+          const drop = await dropCircle(page, clip);
+          const reach = drop.r - drop.bevel - 4;
+          const from = Math.round(drop.cy - reach);
+
+          await setBackdrop(
+            page,
+            svg(
+              `<rect width="100%" height="100%" fill="#000"/><rect y="${drop.cy - 1}" width="100%" height="3" fill="#fff"/>`,
+              size.width,
+              size.height,
+            ),
+            labScene,
+          );
+          const shot = await sceneShot(page, `${engine}-viewer-${offset}.png`, labScene);
+
+          const [column] = await analyse(statsPage, { a: shot.png }, [
+            {
+              type: 'line',
+              axis: 'y',
+              at: Math.round(drop.cx),
+              from,
+              to: Math.round(drop.cy + reach),
+            },
+          ]);
+
+          return from + column.indexOf(Math.max(...column)) - Math.round(drop.cy);
+        };
+
+        const far = await lineAt(150);
+
+        // 400 pixels away.
+        await setOptic(page, 'Viewer', 'Home');
+
+        for (let step = 0; step < 8; step += 1) await setOptic(page, 'Viewer', 'ArrowRight');
+        await page.mouse.move(1, 1);
+
+        const below = await lineAt(150);
+        const above = await lineAt(-150);
+
+        await page.evaluate((y) => window.scrollTo(0, y), scrolled);
+
+        await resetLab(page);
+
+        assert.ok(
+          Math.abs(far) <= 1,
+          `from infinitely far a flat face must show the line in place (moved ${far})`,
+        );
+        // Seen at an angle, the slab raises what lies under it toward the eye, so it shows further
+        // from the middle of the view.
+        assert.ok(below >= 4, `glass below the eye must show the line lower (moved ${below})`);
+        assert.ok(above <= -4, `glass above the eye must show the line higher (moved ${above})`);
+
+        return { far, below, above };
+      },
+    );
+
     await run(engine, 'F25 extreme optics stay finite', results, async () => {
       const ends = {
         low: {
@@ -3455,6 +3532,7 @@ async function checkOptics(engine, browser, statsPage, results) {
           Thickness: 'Home',
           Bevel: 'Home',
           Dome: 'Home',
+          Viewer: 'Home',
           Dispersion: 'Home',
           Frost: 'Home',
           Merge: 'Home',
@@ -3464,6 +3542,7 @@ async function checkOptics(engine, browser, statsPage, results) {
           Thickness: 'End',
           Bevel: 'End',
           Dome: 'End',
+          Viewer: 'End',
           Dispersion: 'End',
           Frost: 'End',
           Merge: 'End',
@@ -3473,6 +3552,7 @@ async function checkOptics(engine, browser, statsPage, results) {
           Thickness: 'End',
           Bevel: 'Home',
           Dome: 'End',
+          Viewer: 'End',
           Dispersion: 'End',
           Frost: 'Home',
           Merge: 'Home',

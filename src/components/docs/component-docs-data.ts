@@ -3469,6 +3469,13 @@ export default function Page() {
               'Curves each face like a lens, so it magnifies the backdrop and bows the lines behind it. The slope at the middle of its longer edges; 0 keeps it flat.',
           },
           {
+            name: 'optics.viewer',
+            type: 'number',
+            default: '0',
+            description:
+              'How far the eye sits from the screen in CSS pixels, looking from the middle of the viewport, so the glass shows parallax and shifts as the page scrolls. 2688 is the CSS reference viewing distance; 0 looks straight down from infinitely far.',
+          },
+          {
             name: 'optics.dispersion',
             type: 'number',
             default: '0.15 × thickness preference',

@@ -44,6 +44,13 @@ export type SceneOptics = {
    */
   dome: number;
   /**
+   * How far the eye sits from the screen, in CSS pixels, looking from the middle of the viewport.
+   * Glass then shows the parallax and oblique bending real glass shows from there, and it shifts
+   * as the page scrolls. The CSS reference pixel, a ninety-sixth of an inch seen from 28 inches,
+   * puts the eye 2688 pixels away. 0 views it from infinitely far, straight down everywhere.
+   */
+  viewer: number;
+  /**
    * Spreads the refractive index by 0.4 times this value from red to violet
    * light. Flint glass spreads it by about 0.05. 0 turns it off.
    */
@@ -184,6 +191,18 @@ const CENTROID = [1, 2, 3].map(
     BANDS.reduce((sum, band) => sum + band[channel], 0),
 );
 
+// A domed face is cut from an ellipsoid whose semi-axes are √LENS_REACH times the pane's half
+// sizes, so the lens spans every corner. LENS_EDGE and LENS_CORNER are the ellipsoid's height
+// over the middle of an edge and over a corner as shares of its peak, and a dome of 1 rises
+// LENS_PEAK times the pane's shorter half size above its corners.
+const LENS_REACH = 3;
+
+const LENS_EDGE = Math.sqrt(1 - 1 / LENS_REACH);
+
+const LENS_CORNER = Math.sqrt(1 - 2 / LENS_REACH);
+
+const LENS_PEAK = LENS_REACH * LENS_EDGE * (1 - LENS_CORNER);
+
 // Each vertex carries a cell corner and the mask of panes that can reach the
 // cell. The mask is an integer, so it goes to the fragment shader flat.
 const VERTEX_SHADER = `#version 300 es
@@ -205,22 +224,33 @@ void main() {
  *   takes on the look of both sides. A pane can change the fold only within
  *   about k of the others, so a cell folds just the panes whose shadow and
  *   bridges can reach it.
- * - Height: with s the depth inside the edge and u = s / W across a bevel of
- *   width W, the surface rises as f(u) = (1 - (1 - u)^4)^(1/4): vertical at
- *   the edge, flat from u = 1. The slab is z = T (0.3 + 0.7 f) thick and its
- *   slope is 0.7 T / W · f'(u). A dome D curves the face like a pillow: with x and y the
- *   position across each half size and m the shorter half, its slope along y is
- *   D (m / h) y (1 - x² / 2), D at the middle of the longer edges, and along x likewise.
- *   Each slope rolls off to nothing across the rim of the sides it runs into, so a line that
- *   enters through a side bends across that rim, as under a rod's rounded end.
- * - Refraction: the view ray (0, 0, -1) bends through the surface normal into
- *   the glass (GLSL refract, eta = 1 / n), crosses the slab, bends again at
- *   the flat underside, where n sin θ = sin θ', and crosses an air gap to the
- *   backdrop. The rim bends rays toward the middle, so it magnifies the
- *   backdrop beneath it; past the steepest point the shift turns back, which
- *   gives the mirrored strip real glass shows at its edge. A flat face
- *   shows the backdrop in place; a domed one magnifies it like a lens and
- *   bows the straight lines behind it.
+ * - Height: one surface, so every normal is the true normal of the height and
+ *   every path the true thickness. With s the depth inside the edge and
+ *   u = s / W across a bevel of width W, the rim rises as
+ *   f(u) = (1 - (1 - u)^4)^(1/4): vertical at the edge, flat from u = 1. A dome
+ *   D cuts the face from an ellipsoid over the pane whose semi-axes are √3
+ *   times its half sizes: with X and Y the position across each half size and
+ *   r = sqrt(1 - (X² + Y²) / 3), it adds 3 D m √(2/3) (r - √(1/3)), m being the
+ *   shorter half size, which slopes by D at the middle of the longer edges and
+ *   stays above zero at the corners. The glass stands
+ *   z = T (0.3 + 0.7 f) + dome above its flat underside, and its normal is
+ *   (-∇z, 1). Like a lens cut to a rectangle, the face still slopes along a
+ *   side where it meets it, so a straight line bends as it enters.
+ * - View: from infinitely far the eye looks straight down at every pixel. From
+ *   a viewer distance V it looks from the middle of the viewport, through the
+ *   screen, which lies level with the flat top. Its ray meets the glass where it
+ *   first enters the body, on the face or through the wall of the rim that
+ *   faces it, found by regula falsi along the ray. The backdrop lies on a plane
+ *   T + gap below the screen, so its picture shows each of its points where an
+ *   air ray from the eye sees it.
+ * - Refraction: the view ray bends through the surface normal into the glass
+ *   (GLSL refract, eta = 1 / n), crosses the slab, bends again at the flat
+ *   underside, where n sin θ = sin θ', and crosses an air gap to the backdrop.
+ *   The rim bends rays toward the middle, so it magnifies the backdrop beneath
+ *   it; past the steepest point the shift turns back, which gives the mirrored
+ *   strip real glass shows at its edge. A flat face seen head on shows the
+ *   backdrop in place; a domed one magnifies it like a lens and bows the
+ *   straight lines behind it.
  * - Total internal reflection: the underside's exact Fresnel term rises to 1
  *   at the critical angle, sin θ = 1 / n, and the backdrop fades into the
  *   surroundings the glass reflects back up.
@@ -266,6 +296,11 @@ const vec2 DISK[9] = vec2[9](${DISK});
 const float BAND_AT[7] = float[7](${BANDS.map(([at]) => at.toFixed(4)).join(', ')});
 const vec3 BAND_RGB[7] = vec3[7](${BANDS.map(([, red, green, blue]) => `vec3(${red.toFixed(4)}, ${green.toFixed(4)}, ${blue.toFixed(4)})`).join(', ')});
 const vec3 CENTROID = vec3(${CENTROID.map((value) => value.toFixed(4)).join(', ')});
+const float LENS_REACH = ${LENS_REACH.toFixed(1)};
+const float LENS_EDGE = ${LENS_EDGE.toFixed(5)};
+const float LENS_CORNER = ${LENS_CORNER.toFixed(5)};
+const float SPAN = ${SLAB_RISE_SPAN.toFixed(1)};
+const float MAX_SLOPE = ${SLAB_MAX_SLOPE.toFixed(1)};
 
 uniform sampler2D u_backdrop;
 uniform vec2 u_size;
@@ -283,6 +318,7 @@ uniform vec4 u_wellProfile[MAX_WELLS]; // corner radius, depth, rim width, unuse
 uniform int u_wells;
 uniform vec4 u_optics; // ior, thickness, dispersion, specular
 uniform float u_dome;   // slope of each face's lens curvature at its longer edges
+uniform vec4 u_eye;    // eye x, eye y, viewing distance (0 is infinitely far), tallest lens
 uniform vec4 u_look;   // shadow, highlight, flow amplitude, pixel ratio
 uniform float u_time;
 
@@ -361,12 +397,12 @@ float fresnel(float a, float b, float cosI, float cosT) {
   return 0.5 * (s * s + q * q);
 }
 
-// Follows the view ray down through glass of index n that is z thick here.
-// Returns where it lands on the backdrop, as a shift from where it entered;
-// 1 / cos of its angle inside, which stretches the path through the glass;
-// and the share of light the underside lets out, relative to head on.
-vec4 through(vec3 N, float n, float z) {
-  vec3 inside = refract(vec3(0.0, 0.0, -1.0), N, 1.0 / n);
+// Follows a view ray I down through glass of index n that is z thick where it
+// enters. Returns where it lands on the backdrop, as a shift from where it
+// entered; 1 / cos of its angle inside, which stretches the path through the
+// glass; and the share of light the underside lets out, relative to head on.
+vec4 through(vec3 I, vec3 N, float n, float z) {
+  vec3 inside = refract(I, N, 1.0 / n);
   float cosB = max(-inside.z, 0.05);
   float sinOut = n * length(inside.xy);
   float cosOut = sqrt(max(1.0 - sinOut * sinOut, 0.0));
@@ -391,23 +427,26 @@ vec4 castShadow(vec2 p, float shadow, vec4 tint) {
   return vec4(sampleAt(p, u_baseLod) * filtered * (strength * SHADOW_TINT), strength);
 }
 
-void main() {
-  vec2 p = vec2(gl_FragCoord.x, u_backing.y - gl_FragCoord.y) * (u_size / u_backing);
+// The glass under one point, its material folded from every pane that reaches it.
+struct Glass {
+  float d;       // signed distance to the outline
+  vec2 g;        // its outward gradient
+  vec4 tint;
+  float frost;
+  float bevel;
+  float flow;
+  float press;
+  float alpha;
+  float cap;
+  float lift;
+  float lens;    // a unit dome's height
+  vec2 lensTilt; // and its downhill slope
+};
+
+Glass glassAt(vec2 p) {
+  Glass G = Glass(1e5, vec2(0.0, -1.0), vec4(0.0), 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, vec2(0.0));
   float t = u_time;
   float amp = u_look.z;
-
-  float d = 1e5;
-  vec2 g = vec2(0.0, -1.0);
-  vec4 tint = vec4(0.0);
-  float frost = 0.0;
-  float bevel = 1.0;
-  float flow = 0.0;
-  float press = 0.0;
-  float alpha = 0.0;
-  float cap = 1.0;
-  float lift = 0.0;
-  vec2 lens = vec2(0.0);
-
   uint panes = v_mask;
 
   for (int i = 0; i < MAX_PANES; i++) {
@@ -423,59 +462,53 @@ void main() {
 
     vec3 sd = roundedBox(q, rect.zw, radii.x);
     float k = radii.y;
-    float h = max(k - abs(d - sd.x), 0.0) / k;
-    float w = d < sd.x ? h * 0.5 : 1.0 - h * 0.5;
+    float h = max(k - abs(G.d - sd.x), 0.0) / k;
+    float w = G.d < sd.x ? h * 0.5 : 1.0 - h * 0.5;
 
-    d = min(d, sd.x) - h * h * k * 0.25;
-    g = mix(g, sd.yz, w);
-    tint = mix(tint, u_tint[i], w);
-    frost = mix(frost, radii.z, w);
-    bevel = mix(bevel, extra.z, w);
-    flow = mix(flow, extra.x, w);
-    press = mix(press, extra.y, w);
-    alpha = mix(alpha, extra.w, w);
-    cap = mix(cap, u_face[i].x, w);
-    lift = mix(lift, u_face[i].y, w);
+    G.d = min(G.d, sd.x) - h * h * k * 0.25;
+    G.g = mix(G.g, sd.yz, w);
+    G.tint = mix(G.tint, u_tint[i], w);
+    G.frost = mix(G.frost, radii.z, w);
+    G.bevel = mix(G.bevel, extra.z, w);
+    G.flow = mix(G.flow, extra.x, w);
+    G.press = mix(G.press, extra.y, w);
+    G.alpha = mix(G.alpha, extra.w, w);
+    G.cap = mix(G.cap, u_face[i].x, w);
+    G.lift = mix(G.lift, u_face[i].y, w);
 
+    // The face is cut from an ellipsoid over the pane: with X and Y the position across each
+    // half size and r = sqrt(1 - (X² + Y²) / LENS_REACH), a unit dome stands
+    // LENS_REACH · LENS_EDGE · m · (r - LENS_CORNER) high and slopes by 1 at the middle of the
+    // longer edges, m being the shorter half size.
     vec2 extent = max(rect.zw, vec2(1.0));
     vec2 across = clamp(q / extent, -1.0, 1.0);
-    // Each axis keeps its curve right up to the rim it runs into and rolls off across that rim,
-    // as at a rod's rounded end, so a line entering through a side bends as it enters.
-    vec2 roll = smoothstep(vec2(0.0), vec2(max(extra.z, 1.0)), extent - abs(q));
-    vec2 crest = (1.0 - 0.5 * across.yx * across.yx) * roll.yx * across / extent;
+    float m = min(extent.x, extent.y);
+    float r = sqrt(1.0 - dot(across, across) / LENS_REACH);
 
-    lens = mix(lens, min(extent.x, extent.y) * crest, w);
+    G.lens = mix(G.lens, LENS_REACH * LENS_EDGE * m * (r - LENS_CORNER), w);
+    G.lensTilt = mix(G.lensTilt, LENS_EDGE * m / r * across / extent, w);
   }
 
-  if (d > SHADOW_REACH) {
-    fragColor = vec4(0.0);
-    return;
-  }
+  return G;
+}
 
-  float shadow = u_look.x * alpha * (0.6 * softStep(d - 8.0 * g.y, 14.0) + 0.4 * softStep(d, 3.0));
-  float cover = clamp(0.5 - d * u_look.w, 0.0, 1.0);
-
-  if (cover <= 0.0) {
-    fragColor = castShadow(p, shadow, tint);
-    return;
-  }
-
-  float s = -d;
-  float W = max(bevel, 1.0);
+// The height of the glass above its flat underside at p, in z, and the downhill slope of its
+// top, -∇height, in xy: one surface, so every normal is the true normal of that height.
+vec3 surfaceOf(Glass G, vec2 p) {
+  float s = -G.d;
+  float W = max(G.bevel, 1.0);
   float u = s / W;
-  float v = 1.0 - max(u, 0.002);
+  float v = 1.0 - clamp(u, 0.002, 1.0);
   float v4 = v * v * v * v;
-  bool inBevel = u < 1.0;
-  float f = inBevel ? pow(1.0 - v4, 0.25) : 1.0;
-  float fp = inBevel ? v * v * v * pow(max(1.0 - v4, 1e-6), -0.75) : 0.0;
+  float f = pow(1.0 - v4, 0.25);
+  float fp = v * v * v * pow(max(1.0 - v4, 1e-6), -0.75);
   float T = u_optics.y;
-  float rise = ${SLAB_MIN_RISE.toFixed(1)} + ${SLAB_RISE_SPAN.toFixed(1)} * f;
-  float z = T * rise;
-  float slope = min(${SLAB_RISE_SPAN.toFixed(1)} * T / W * fp, ${SLAB_MAX_SLOPE.toFixed(1)});
-
-  float gradLength = length(g);
-  vec2 n2 = gradLength > 1e-4 ? g / gradLength : vec2(0.0, -1.0);
-  vec2 tilt = slope * n2 + u_dome * lens;
+  float z = T * (${SLAB_MIN_RISE.toFixed(1)} + SPAN * f) + u_dome * G.lens;
+  // The rim stands vertical at the outline; the slope stops short of infinite there.
+  float slope = min(SPAN * T / W * fp, MAX_SLOPE);
+  float gradLength = length(G.g);
+  vec2 n2 = gradLength > 1e-4 ? G.g / gradLength : vec2(0.0, -1.0);
+  vec2 tilt = slope * n2 + u_dome * G.lensTilt;
 
   // Wells lower the surface into rounded pockets around the elements that ask for them. Each
   // rim lies just outside its element and tilts the surface into the pocket, so the backdrop
@@ -496,22 +529,270 @@ void main() {
 
   if (dip > 0.0) {
     z = max(z - dip, 0.12 * T);
-    rise = z / max(T, 1e-4);
     tilt += dipTilt;
 
     float lean = length(tilt);
 
-    if (lean > ${SLAB_MAX_SLOPE.toFixed(1)}) tilt *= ${SLAB_MAX_SLOPE.toFixed(1)} / lean;
+    if (lean > MAX_SLOPE) tilt *= MAX_SLOPE / lean;
   }
 
-  if (flow * amp > 0.0) tilt += flow * amp * 0.18 * ripple(p, t);
+  if (G.flow * u_look.z > 0.0) tilt += G.flow * u_look.z * 0.18 * ripple(p, u_time);
 
-  vec3 N = normalize(vec3(tilt, 1.0));
+  return vec3(tilt, z);
+}
+
+void main() {
+  vec2 p = vec2(gl_FragCoord.x, u_backing.y - gl_FragCoord.y) * (u_size / u_backing);
+  float T = u_optics.y;
+  float viewer = u_eye.z;
+
+  // The eye looks down the ray I. From infinitely far it meets the glass right under p. From
+  // nearer it runs from the eye through p on the screen, which lies level with the flat top of
+  // the glass, and meets the glass where it first enters its body: on the face, or through the
+  // wall of the rim that faces the eye.
+  vec3 I = vec3(0.0, 0.0, -1.0);
+  vec2 at = p;
+  Glass G = glassAt(p);
+  Glass under = G;
+  vec3 surface = vec3(0.0);
+  float entry = 0.0;
+  bool wall = false;
+  float cover = clamp(0.5 - G.d * u_look.w, 0.0, 1.0);
+
+  if (viewer > 0.0) {
+    // The ray lies over p + a (T - z) at height z above the underside.
+    vec2 a = (p - u_eye.xy) / viewer;
+    float zOut = T + u_eye.w + 1.0;
+    I = normalize(vec3(a, -1.0));
+    under = glassAt(p + a * T);
+
+    if (under.d > SHADOW_REACH + length(a) * zOut) {
+      fragColor = vec4(0.0);
+      return;
+    }
+
+    // F(z) is negative inside the body and positive above or beside it. The march steps down
+    // from above the tallest lens, at most 4 pixels across at a time, to the first height inside;
+    // regula falsi then closes in on the entry, the Illinois rule halving a stale end.
+    vec2 high = p + a * (T - zOut);
+    Glass top = glassAt(high);
+    float zAbove = zOut;
+    float fAbove = max(zOut - surfaceOf(top, high).z, 0.0) + max(top.d, 0.0) + 0.01;
+    float dAbove = top.d;
+    float fTop = fAbove;
+    float zIn = -1.0;
+    float fIn = 0.0;
+    // The deepest the ray reaches into the outline below the glass's height, for the edge's coverage.
+    float nearest = 1e5;
+    int steps = int(clamp(ceil(length(a) * zOut / 4.0), 1.0, 8.0));
+
+    for (int k = 1; k <= 8; k++) {
+      if (k > steps) break;
+
+      float zk = zOut * (1.0 - float(k) / float(steps));
+      vec2 xk = p + a * (T - zk);
+      Glass K = under;
+
+      if (k < steps) K = glassAt(xk);
+      vec3 Sk = surfaceOf(K, xk);
+
+      if (zk < Sk.z) nearest = min(nearest, K.d);
+
+      if (K.d < 0.0 && zk < Sk.z) {
+        zIn = zk;
+        fIn = zk - Sk.z;
+        G = K;
+        at = xk;
+        surface = Sk;
+        break;
+      }
+
+      zAbove = zk;
+      fAbove = max(zk - Sk.z, 0.0) + max(K.d, 0.0) + 0.01;
+      dAbove = K.d;
+    }
+
+    // A ray whose foot lies inside the outline has passed through the body.
+    nearest = min(nearest, under.d);
+
+    // A ray that leaves the outline on its way down passes over the far side's rim, whose rounded
+    // top may catch it for only a pixel or two. Secant steps on the smooth distance find where
+    // it leaves; the rim then lies just inside, so a few heights above that crossing, a quarter
+    // of a pixel to eight pixels in, decide whether and how deep it ran through the glass.
+    float graze = -1.0;
+
+    if (top.d < 0.0 && under.d > 0.0) {
+      float zHi = zOut;
+      float dHi = top.d;
+      float zLo = 0.0;
+      float dLo = under.d;
+
+      for (int k = 0; k < 3; k++) {
+        float zc = zLo + (zHi - zLo) * dLo / (dLo - dHi);
+        float dc = glassAt(p + a * (T - zc)).d;
+
+        if (dc < 0.0) {
+          zHi = zc;
+          dHi = dc;
+        } else {
+          zLo = zc;
+          dLo = dc;
+        }
+      }
+
+      float zc = zLo + (zHi - zLo) * dLo / (dLo - dHi);
+      // Height per pixel of depth inside the outline along the ray.
+      float climb = (zHi - zLo) / max(dLo - dHi, 1e-4);
+      float deepest = 0.0;
+
+      zIn = -1.0;
+
+      for (int k = 0; k < 4; k++) {
+        float zk = zc + climb * 0.25 * pow(2.0, 1.66 * float(k));
+
+        if (zk >= zOut) break;
+
+        vec2 xk = p + a * (T - zk);
+        Glass K = glassAt(xk);
+        vec3 Sk = surfaceOf(K, xk);
+        float fk = zk - Sk.z;
+
+        if (K.d < 0.0 && fk < 0.0 && fk < deepest) {
+          deepest = fk;
+          zIn = zk;
+          fIn = fk;
+          G = K;
+          at = xk;
+          surface = Sk;
+        }
+      }
+
+      if (zIn >= 0.0) {
+        zAbove = zOut;
+        fAbove = fTop;
+        dAbove = top.d;
+      }
+
+      // How far inside the edge of the view the ray runs, in pixels across.
+      graze = zIn >= 0.0 ? clamp(0.5 - deepest * length(a) * u_look.w, 0.0, 1.0) : 0.0;
+    }
+
+    if (zIn < 0.0) {
+      // A ray that passes within a pixel of the wall's foot without entering lights it partly.
+      G = under;
+      at = p + a * T;
+      surface = surfaceOf(G, at);
+      zIn = 0.0;
+    } else {
+      // Where the step above lies beside the outline, the ray crosses it in between. Secant
+      // steps on the smooth distance find that crossing; below the rim's top there, the ray
+      // enters through the wall, and above it the face lies lower down.
+      if (dAbove > 0.0) {
+        float zLo = zIn;
+        float dLo = G.d;
+        float zHi = zAbove;
+        float dHi = dAbove;
+
+        for (int k = 0; k < 3; k++) {
+          float zc = zLo + (zHi - zLo) * dLo / (dLo - dHi);
+          float dc = glassAt(p + a * (T - zc)).d;
+
+          if (dc < 0.0) {
+            zLo = zc;
+            dLo = dc;
+          } else {
+            zHi = zc;
+            dHi = dc;
+          }
+        }
+
+        // The rim rises a third of the slab within its first pixel, too steep to tell from a wall,
+        // so the wall reaches up to the rim's height a pixel inside the crossing.
+        float zw = zLo + (zHi - zLo) * dLo / (dLo - dHi) - (zHi - zLo) / max(dHi - dLo, 1e-4);
+        vec2 xc = p + a * (T - zw);
+        Glass C = glassAt(xc);
+        vec3 Sc = surfaceOf(C, xc);
+
+        zLo = zw;
+
+        if (zLo < Sc.z) {
+          wall = true;
+          zIn = zLo;
+          G = C;
+          at = xc;
+          surface = Sc;
+        } else {
+          zAbove = zLo;
+          fAbove = zLo - Sc.z + 0.01;
+        }
+      }
+
+      int kept = 0;
+
+      for (int k = 0; k < 5; k++) {
+        if (wall) break;
+
+        float zMid = zIn + (zAbove - zIn) * fIn / (fIn - fAbove);
+        vec2 mid = p + a * (T - zMid);
+        Glass M = glassAt(mid);
+        vec3 midSurface = surfaceOf(M, mid);
+
+        if (M.d < 0.0 && zMid < midSurface.z) {
+          zIn = zMid;
+          fIn = zMid - midSurface.z;
+          G = M;
+          at = mid;
+          surface = midSurface;
+          if (kept == -1) fAbove *= 0.5;
+          kept = -1;
+        } else {
+          zAbove = zMid;
+          fAbove = max(zMid - midSurface.z, 0.0) + max(M.d, 0.0) + 0.01;
+          if (kept == 1) fIn *= 0.5;
+          kept = 1;
+        }
+      }
+    }
+
+    entry = clamp(zIn, 0.0, surface.z);
+    // However it was found, a ray entering below the face beside the outline came through the wall.
+    wall = wall || (G.d > -1.5 && surface.z - entry > 1.0);
+    cover = graze >= 0.0 ? graze : clamp(0.5 - min(nearest, G.d) * u_look.w, 0.0, 1.0);
+  } else {
+    surface = surfaceOf(G, at);
+    entry = surface.z;
+  }
+
+  if (under.d > SHADOW_REACH && cover <= 0.0) {
+    fragColor = vec4(0.0);
+    return;
+  }
+
+  float shadow = u_look.x * under.alpha * (0.6 * softStep(under.d - 8.0 * under.g.y, 14.0) + 0.4 * softStep(under.d, 3.0));
+
+  if (cover <= 0.0) {
+    fragColor = castShadow(p, shadow, under.tint);
+    return;
+  }
+
+  float s = -G.d;
+  float W = max(G.bevel, 1.0);
+  vec2 tilt = surface.xy;
+  float z = entry;
+  float rise = z / max(T, 1e-4);
+  float gradLength = length(G.g);
+  vec2 n2 = gradLength > 1e-4 ? G.g / gradLength : vec2(0.0, -1.0);
+
+  vec3 N = wall ? vec3(n2, 0.0) : normalize(vec3(tilt, 1.0));
   float ior = max(u_optics.x, 1.0);
-  vec4 ray = through(N, ior, z);
-  vec2 base = p + ray.xy;
+  // The backdrop's picture shows each point of its plane, AIR_GAP + T below the screen, where
+  // the eye sees it through air: nearer the middle of the view than the point itself.
+  float project = viewer > 0.0 ? viewer / (viewer + AIR_GAP + T) : 1.0;
+  vec2 eye = u_eye.xy;
+  vec4 ray = through(I, N, ior, z);
+  vec2 base = eye + (at + ray.xy - eye) * project;
 
-  float R = frost * rise;
+  float R = G.frost * rise;
   float lod = max(log2(max(R * u_density * 0.5, 1.0)), u_baseLod);
 
   // Violet and red land at the ends of a short line; the spectrum between
@@ -520,9 +801,9 @@ void main() {
   vec2 violet = base;
   vec2 span = vec2(0.0);
 
-  if (spread > 0.0 && dot(tilt, tilt) > 1e-8) {
-    violet = p + through(N, ior + spread * VIOLET, z).xy;
-    span = p + through(N, max(ior + spread * RED, 1.0), z).xy - violet;
+  if (spread > 0.0 && (dot(tilt, tilt) > 1e-8 || viewer > 0.0)) {
+    violet = eye + (at + through(I, N, ior + spread * VIOLET, z).xy - eye) * project;
+    span = eye + (at + through(I, N, max(ior + spread * RED, 1.0), z).xy - eye) * project - violet;
   }
 
   float spanLength = length(span);
@@ -560,10 +841,11 @@ void main() {
   float luma = dot(col, LUMA);
   col = mix(vec3(luma), col, 1.25);
 
-  float cosIn = sqrt(max(1.0 - (1.0 - N.z * N.z) / (ior * ior), 0.0));
+  float cosI = clamp(-dot(I, N), 0.0, 1.0);
+  float cosIn = sqrt(max(1.0 - (1.0 - cosI * cosI) / (ior * ior), 0.0));
   float head = (ior - 1.0) / (ior + 1.0);
   head *= head;
-  float reflectance = clamp((fresnel(1.0, ior, N.z, cosIn) - head) / (1.0 - head) * u_optics.w, 0.0, 1.0);
+  float reflectance = clamp((fresnel(1.0, ior, cosI, cosIn) - head) / (1.0 - head) * u_optics.w, 0.0, 1.0);
   vec3 sky = vec3(1.0);
 
   if (ray.w < 0.996 || reflectance > 0.004) {
@@ -573,38 +855,40 @@ void main() {
   if (ray.w < 0.996) col = mix(sky, col, ray.w);
 
   float depth = rise * ray.z;
-  float passed = exp2(log2(max(1.0 - tint.a, 1e-4)) * depth);
-  col = col * passed + tint.rgb / max(tint.a, 1e-4) * (1.0 - passed);
+  float passed = exp2(log2(max(1.0 - G.tint.a, 1e-4)) * depth);
+  col = col * passed + G.tint.rgb / max(G.tint.a, 1e-4) * (1.0 - passed);
 
   if (reflectance > 0.004) {
-    vec3 mirrored = vec3(2.0 * N.z * N.xy, 2.0 * N.z * N.z - 1.0);
+    vec3 mirrored = reflect(I, N);
     float up = smoothstep(-0.3, 0.1, mirrored.z);
     vec3 env = sky;
 
     if (up < 1.0) {
       float reach = min((z + AIR_GAP) / max(-mirrored.z, 1e-3), 200.0);
-      env = mix(sampleAt(p + mirrored.xy * reach, log2(max(u_density, 1.0)) + 1.5), sky, up);
+      env = mix(sampleAt(eye + (at + mirrored.xy * reach - eye) * project, log2(max(u_density, 1.0)) + 1.5), sky, up);
     }
 
     col = mix(col, env, reflectance);
   }
 
   float facing = pow(abs(dot(n2, normalize(LIGHT.xy))), 1.5);
-  col += exp(-max(s, 0.0) / 0.9) * 0.34 * (0.3 + 0.7 * facing) * u_look.y;
+  // The hairline runs along the rim's top edge, which a wall seen from the side lies below.
+  float edge = wall ? surface.z - entry : max(s, 0.0);
+  col += exp(-edge / 0.9) * 0.34 * (0.3 + 0.7 * facing) * u_look.y;
 
   // A pressed pane brightens as a whole, wherever it was touched.
-  col = mix(col, vec3(1.0), 0.08 * press);
+  col = mix(col, vec3(1.0), 0.08 * G.press);
 
   col = clamp(col, 0.0, 1.0);
 
   // Text sits inside the rim, so the steep outer part of the bevel keeps the full light it
   // bends in from the backdrop.
-  if (cap < 1.0 || lift > 0.0)
-    col = mix(col, legible(col, cap, lift), smoothstep(max(0.15 * W, 0.5), max(0.45 * W, 2.0), s));
+  if (G.cap < 1.0 || G.lift > 0.0)
+    col = mix(col, legible(col, G.cap, G.lift), smoothstep(max(0.15 * W, 0.5), max(0.45 * W, 2.0), s));
 
-  float a = cover * alpha;
-  vec4 under = a < 0.999 ? castShadow(p, shadow, tint) : vec4(0.0);
-  fragColor = vec4(col * a + (1.0 - a) * under.rgb, a + (1.0 - a) * under.a);
+  float alpha = cover * G.alpha;
+  vec4 behind = alpha < 0.999 ? castShadow(p, shadow, under.tint) : vec4(0.0);
+  fragColor = vec4(col * alpha + (1.0 - alpha) * behind.rgb, alpha + (1.0 - alpha) * behind.a);
 }`;
 
 const UNIFORMS = [
@@ -624,6 +908,7 @@ const UNIFORMS = [
   'u_wells',
   'u_optics',
   'u_dome',
+  'u_eye',
   'u_look',
   'u_time',
 ] as const;
@@ -677,7 +962,9 @@ const WELLS = 516;
 
 const DOME = 517;
 
-const FRAME_LENGTH = 518;
+const EYE = 518;
+
+const FRAME_LENGTH = 522;
 
 type Rgba = [number, number, number, number];
 
@@ -1652,6 +1939,35 @@ export function createSceneRenderer({
     frame.set([optics.ior, optics.thickness, optics.dispersion, optics.specular], OPTICS);
     frame[DOME] = optics.dome;
 
+    if (optics.viewer > 0) {
+      // The eye looks from the middle of the viewport, so scrolling moves it across the scene.
+      const rect = root.getBoundingClientRect();
+
+      const tallest = drawn.reduce(
+        (peak, pane) =>
+          Math.max(
+            peak,
+            LENS_PEAK *
+              optics.dome *
+              Math.min(pane.hx, pane.hy) *
+              (0.6 + 0.4 * pane.presence.value),
+          ),
+        0,
+      );
+
+      frame.set(
+        [
+          window.innerWidth / 2 - rect.left - root.clientLeft,
+          window.innerHeight / 2 - rect.top - root.clientTop,
+          optics.viewer,
+          tallest,
+        ],
+        EYE,
+      );
+    } else {
+      frame.set([0, 0, 0, 0], EYE);
+    }
+
     frame[TIME] = flowing ? flowTime : 0;
     frame.set([shadowStrength, highlightStrength, flowing ? 1 : 0, ratio], LOOK);
 
@@ -1907,6 +2223,8 @@ export function createSceneRenderer({
       if (changed(OPTICS, 4)) gl.uniform4fv(uniforms.u_optics, frame, OPTICS, 4);
 
       if (changed(DOME)) gl.uniform1f(uniforms.u_dome, frame[DOME]);
+
+      if (changed(EYE, 4)) gl.uniform4fv(uniforms.u_eye, frame, EYE, 4);
 
       if (changed(LOOK, 4)) gl.uniform4fv(uniforms.u_look, frame, LOOK, 4);
 
