@@ -3462,6 +3462,13 @@ export default function Page() {
             description: 'Width of the curved rim in CSS pixels.',
           },
           {
+            name: 'optics.dome',
+            type: 'number',
+            default: '0',
+            description:
+              'Curves each face like a lens, so it magnifies the backdrop and bows the lines behind it. The slope at the middle of its longer edges; 0 keeps it flat.',
+          },
+          {
             name: 'optics.dispersion',
             type: 'number',
             default: '0.15 × thickness preference',

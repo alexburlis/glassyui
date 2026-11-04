@@ -154,15 +154,10 @@ export function useHeroArt(
       const band = parseFloat(style.getPropertyValue('--band-h'));
       const accent = style.getPropertyValue('--hc-accent').trim();
       const bandY = narrow ? top - 16 + band * 0.25 : top + cardHeight / 2;
-      // At rest the horizon runs behind the middle of the email field, clear of every edge, and
-      // the rims bend it on both sides. Scrolling lifts the glass, so the line sinks through it.
-      const field = card.querySelector<HTMLElement>('.halcyon-waitlist-input');
-
-      const fieldMiddle = field
-        ? topWithin(field, hero) + field.offsetHeight / 2
-        : top + cardHeight * 0.6;
-
-      const horizon = Math.round(Math.min(height - 40, fieldMiddle));
+      // At rest the horizon crosses the open face above the email field. A line through the
+      // card's middle would pass the domed glass unbent; this far off it, the dome bows it into an
+      // arch. Scrolling lifts the glass, so the line sinks through it.
+      const horizon = Math.round(Math.min(height - 40, top + cardHeight * 0.3));
 
       hero.toggleAttribute('data-tight', height - (top + cardHeight) < 104);
       setArt((drawn) =>

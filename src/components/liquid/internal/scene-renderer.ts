@@ -39,6 +39,11 @@ export type SceneOptics = {
   /** Width of the curved rim in CSS pixels. */
   bevel: number;
   /**
+   * Curves each pane's face like a lens, so it magnifies what lies behind and bows straight
+   * lines across it. The face's slope at the middle of its longer edges. 0 keeps it flat.
+   */
+  dome: number;
+  /**
    * Spreads the refractive index by 0.4 times this value from red to violet
    * light. Flint glass spreads it by about 0.05. 0 turns it off.
    */
@@ -203,14 +208,17 @@ void main() {
  * - Height: with s the depth inside the edge and u = s / W across a bevel of
  *   width W, the surface rises as f(u) = (1 - (1 - u)^4)^(1/4): vertical at
  *   the edge, flat from u = 1. The slab is z = T (0.3 + 0.7 f) thick and its
- *   slope is 0.7 T / W · f'(u).
+ *   slope is 0.7 T / W · f'(u). A dome D lifts the face by (m / 2) D (1 - x²)(1 - y²), with
+ *   x and y the position across each half size and m the shorter half, so its slope is D at
+ *   the middle of the longer edges and it falls to nothing at the corners.
  * - Refraction: the view ray (0, 0, -1) bends through the surface normal into
  *   the glass (GLSL refract, eta = 1 / n), crosses the slab, bends again at
  *   the flat underside, where n sin θ = sin θ', and crosses an air gap to the
  *   backdrop. The rim bends rays toward the middle, so it magnifies the
  *   backdrop beneath it; past the steepest point the shift turns back, which
- *   gives the mirrored strip real glass shows at its edge. The flat face
- *   shows the backdrop in place.
+ *   gives the mirrored strip real glass shows at its edge. A flat face
+ *   shows the backdrop in place; a domed one magnifies it like a lens and
+ *   bows the straight lines behind it.
  * - Total internal reflection: the underside's exact Fresnel term rises to 1
  *   at the critical angle, sin θ = 1 / n, and the backdrop fades into the
  *   surroundings the glass reflects back up.
@@ -272,6 +280,7 @@ uniform vec4 u_well[MAX_WELLS];      // centre x, centre y, half width, half hei
 uniform vec4 u_wellProfile[MAX_WELLS]; // corner radius, depth, rim width, unused
 uniform int u_wells;
 uniform vec4 u_optics; // ior, thickness, dispersion, specular
+uniform float u_dome;   // slope of each face's lens curvature at its longer edges
 uniform vec4 u_look;   // shadow, highlight, flow amplitude, pixel ratio
 uniform float u_time;
 
@@ -395,6 +404,7 @@ void main() {
   float alpha = 0.0;
   float cap = 1.0;
   float lift = 0.0;
+  vec2 lens = vec2(0.0);
 
   uint panes = v_mask;
 
@@ -424,6 +434,13 @@ void main() {
     alpha = mix(alpha, extra.w, w);
     cap = mix(cap, u_face[i].x, w);
     lift = mix(lift, u_face[i].y, w);
+
+    vec2 extent = max(rect.zw, vec2(1.0));
+    vec2 across = clamp(q / extent, -1.0, 1.0);
+    vec2 side = across.yx * across.yx;
+    vec2 crest = (1.0 - side * side * side) * across / extent;
+
+    lens = mix(lens, min(extent.x, extent.y) * crest, w);
   }
 
   if (d > SHADOW_REACH) {
@@ -454,7 +471,7 @@ void main() {
 
   float gradLength = length(g);
   vec2 n2 = gradLength > 1e-4 ? g / gradLength : vec2(0.0, -1.0);
-  vec2 tilt = slope * n2;
+  vec2 tilt = slope * n2 + u_dome * lens;
 
   // Wells lower the surface into rounded pockets around the elements that ask for them. Each
   // rim lies just outside its element and tilts the surface into the pocket, so the backdrop
@@ -602,6 +619,7 @@ const UNIFORMS = [
   'u_wellProfile',
   'u_wells',
   'u_optics',
+  'u_dome',
   'u_look',
   'u_time',
 ] as const;
@@ -653,7 +671,9 @@ const WELL_PROFILE = 484;
 
 const WELLS = 516;
 
-const FRAME_LENGTH = 517;
+const DOME = 517;
+
+const FRAME_LENGTH = 518;
 
 type Rgba = [number, number, number, number];
 
@@ -1626,6 +1646,7 @@ export function createSceneRenderer({
     frame[WELLS] = wells;
 
     frame.set([optics.ior, optics.thickness, optics.dispersion, optics.specular], OPTICS);
+    frame[DOME] = optics.dome;
 
     frame[TIME] = flowing ? flowTime : 0;
     frame.set([shadowStrength, highlightStrength, flowing ? 1 : 0, ratio], LOOK);
@@ -1880,6 +1901,8 @@ export function createSceneRenderer({
       if (changed(WELLS)) gl.uniform1i(uniforms.u_wells, frame[WELLS]);
 
       if (changed(OPTICS, 4)) gl.uniform4fv(uniforms.u_optics, frame, OPTICS, 4);
+
+      if (changed(DOME)) gl.uniform1f(uniforms.u_dome, frame[DOME]);
 
       if (changed(LOOK, 4)) gl.uniform4fv(uniforms.u_look, frame, LOOK, 4);
 

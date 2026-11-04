@@ -38,6 +38,7 @@ const supportedSuites = new Set([
   'panes',
   'painted',
   'wells',
+  'optics',
   'contracts',
   'preferences',
   'motion',
@@ -47,7 +48,7 @@ const invalidSuites = [...suites].filter((suite) => !supportedSuites.has(suite))
 
 if (invalidSuites.length) {
   console.error(
-    `Invalid GLASS_SUITES: ${invalidSuites.map((suite) => suite || '(empty)').join(', ')}. Choose scene, panes, painted, wells, contracts, preferences or motion.`,
+    `Invalid GLASS_SUITES: ${invalidSuites.map((suite) => suite || '(empty)').join(', ')}. Choose scene, panes, painted, wells, optics, contracts, preferences or motion.`,
   );
   process.exit(1);
 }
@@ -3392,12 +3393,68 @@ async function checkOptics(engine, browser, statsPage, results) {
       };
     });
 
+    await run(engine, 'F38 a domed face bows lines like a lens', results, async () => {
+      await addStyle(page, `${loneDrop} ${labDrop} { --lg-scene-tint: transparent !important; }`);
+      await setOptics(page, { Thickness: 'End' });
+      const { clip } = await sceneShot(page, null, labScene);
+      const drop = await dropCircle(page, clip);
+      const reach = drop.r - drop.bevel - 4;
+      const from = Math.round(drop.cy - reach);
+
+      // Where a bright line across the backdrop shows in the middle column of the face.
+      const lineAt = async (y, dome) => {
+        await setBackdrop(
+          page,
+          svg(
+            `<rect width="100%" height="100%" fill="#000"/><rect y="${y - 1}" width="100%" height="3" fill="#fff"/>`,
+            size.width,
+            size.height,
+          ),
+          labScene,
+        );
+        await setOptics(page, { Dome: dome });
+        const shot = await sceneShot(page, `${engine}-dome-${dome}-${Math.round(y)}.png`, labScene);
+
+        const [column] = await analyse(statsPage, { a: shot.png }, [
+          {
+            type: 'line',
+            axis: 'y',
+            at: Math.round(drop.cx),
+            from,
+            to: Math.round(drop.cy + reach),
+          },
+        ]);
+
+        return from + column.indexOf(Math.max(...column));
+      };
+
+      const below = drop.cy + reach * 0.3;
+      const offFlat = await lineAt(below, 'Home');
+      const offDomed = await lineAt(below, 'End');
+      const middleFlat = await lineAt(drop.cy, 'Home');
+      const middleDomed = await lineAt(drop.cy, 'End');
+
+      await resetLab(page);
+
+      assert.ok(
+        offDomed - offFlat >= 4,
+        `a dome must magnify a line off its centre outwards (flat at ${offFlat}, domed at ${offDomed})`,
+      );
+      assert.ok(
+        Math.abs(middleDomed - middleFlat) <= 1,
+        `a dome must leave a line through its centre in place (flat at ${middleFlat}, domed at ${middleDomed})`,
+      );
+
+      return { offFlat, offDomed, middleFlat, middleDomed };
+    });
+
     await run(engine, 'F25 extreme optics stay finite', results, async () => {
       const ends = {
         low: {
           Index: 'Home',
           Thickness: 'Home',
           Bevel: 'Home',
+          Dome: 'Home',
           Dispersion: 'Home',
           Frost: 'Home',
           Merge: 'Home',
@@ -3406,6 +3463,7 @@ async function checkOptics(engine, browser, statsPage, results) {
           Index: 'End',
           Thickness: 'End',
           Bevel: 'End',
+          Dome: 'End',
           Dispersion: 'End',
           Frost: 'End',
           Merge: 'End',
@@ -3414,6 +3472,7 @@ async function checkOptics(engine, browser, statsPage, results) {
           Index: 'End',
           Thickness: 'End',
           Bevel: 'Home',
+          Dome: 'End',
           Dispersion: 'End',
           Frost: 'Home',
           Merge: 'Home',
@@ -3860,6 +3919,9 @@ try {
 
       if (suites.has('backdrops') && !suites.has('scene'))
         await checkBackdropRequests(engine, browser, results);
+
+      if (suites.has('optics') && !suites.has('scene'))
+        await checkOptics(engine, browser, statsPage, results);
 
       if (suites.has('scene') || suites.has('contracts'))
         await checkAlphaContract(engine, browser, statsPage, results);

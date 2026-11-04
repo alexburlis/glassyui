@@ -528,7 +528,9 @@ painter that returns `false` keeps its last picture, and the glass does not
 redraw. An element inside a pane with `data-lg-scene-well` becomes a well: a
 pocket lowered into the glass around it, whose rim bends the backdrop like a
 groove. `--lg-scene-well-depth` (10px) and `--lg-scene-well-bevel` (8px) set its
-depth and rim width; a scene draws up to eight.
+depth and rim width; a scene draws up to eight. `optics.dome` curves each pane's
+face like a lens, so it magnifies the backdrop and bows the lines behind it; 0,
+the default, keeps the face flat.
 
 ### `glass-logo-reveal`
 

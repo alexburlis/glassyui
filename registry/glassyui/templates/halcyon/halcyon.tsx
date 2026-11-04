@@ -287,6 +287,7 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
               className="halcyon-hero-scene"
               optics={{
                 bevel: 34,
+                dome: 0.8,
                 thickness: 72,
                 ior: 1.5,
                 dispersion: 0.25,
@@ -420,6 +421,7 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
             className="halcyon-footer-scene"
             optics={{
               bevel: 32,
+              dome: 0.8,
               thickness: 68,
               ior: 1.5,
               dispersion: 0.25,
