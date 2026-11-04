@@ -208,9 +208,11 @@ void main() {
  * - Height: with s the depth inside the edge and u = s / W across a bevel of
  *   width W, the surface rises as f(u) = (1 - (1 - u)^4)^(1/4): vertical at
  *   the edge, flat from u = 1. The slab is z = T (0.3 + 0.7 f) thick and its
- *   slope is 0.7 T / W · f'(u). A dome D lifts the face by (m / 2) D (1 - x²)(1 - y²), with
- *   x and y the position across each half size and m the shorter half, so its slope is D at
- *   the middle of the longer edges and it falls to nothing at the corners.
+ *   slope is 0.7 T / W · f'(u). A dome D curves the face like a pillow: with x and y the
+ *   position across each half size and m the shorter half, its slope along y is
+ *   D (m / h) y (1 - x² / 2), D at the middle of the longer edges, and along x likewise.
+ *   Each slope rolls off to nothing across the rim of the sides it runs into, so a line that
+ *   enters through a side bends across that rim, as under a rod's rounded end.
  * - Refraction: the view ray (0, 0, -1) bends through the surface normal into
  *   the glass (GLSL refract, eta = 1 / n), crosses the slab, bends again at
  *   the flat underside, where n sin θ = sin θ', and crosses an air gap to the
@@ -437,8 +439,10 @@ void main() {
 
     vec2 extent = max(rect.zw, vec2(1.0));
     vec2 across = clamp(q / extent, -1.0, 1.0);
-    vec2 side = across.yx * across.yx;
-    vec2 crest = (1.0 - side * side * side) * across / extent;
+    // Each axis keeps its curve right up to the rim it runs into and rolls off across that rim,
+    // as at a rod's rounded end, so a line entering through a side bends as it enters.
+    vec2 roll = smoothstep(vec2(0.0), vec2(max(extra.z, 1.0)), extent - abs(q));
+    vec2 crest = (1.0 - 0.5 * across.yx * across.yx) * roll.yx * across / extent;
 
     lens = mix(lens, min(extent.x, extent.y) * crest, w);
   }
