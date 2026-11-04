@@ -576,7 +576,10 @@ void main() {
 
   col = clamp(col, 0.0, 1.0);
 
-  if (cap < 1.0 || lift > 0.0) col = mix(col, legible(col, cap, lift), smoothstep(0.5, 2.0, s));
+  // Text sits inside the rim, so the steep outer part of the bevel keeps the full light it
+  // bends in from the backdrop.
+  if (cap < 1.0 || lift > 0.0)
+    col = mix(col, legible(col, cap, lift), smoothstep(max(0.15 * W, 0.5), max(0.45 * W, 2.0), s));
 
   float a = cover * alpha;
   vec4 under = a < 0.999 ? castShadow(p, shadow, tint) : vec4(0.0);

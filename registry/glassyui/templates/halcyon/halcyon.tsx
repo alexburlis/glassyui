@@ -286,11 +286,11 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
               backdropFps={dawnDone ? 12 : 60}
               className="halcyon-hero-scene"
               optics={{
-                bevel: 18,
-                thickness: 24,
+                bevel: 34,
+                thickness: 72,
                 ior: 1.5,
-                dispersion: 0,
-                frost: 0.75,
+                dispersion: 0.25,
+                frost: 0.5,
                 specular: 1,
                 merge: 0,
               }}
@@ -419,11 +419,11 @@ export function Halcyon({ onJoin }: { onJoin?: JoinWaitlist }) {
             backdropFps={30}
             className="halcyon-footer-scene"
             optics={{
-              bevel: 22,
-              thickness: 36,
+              bevel: 32,
+              thickness: 68,
               ior: 1.5,
-              dispersion: 0.12,
-              frost: 1.5,
+              dispersion: 0.25,
+              frost: 1,
               specular: 1,
               merge: 0,
             }}

@@ -309,7 +309,7 @@ html:has(.halcyon-page) {
 .halcyon-hero-scene .halcyon-waitlist {
   --lg-scene-tint: rgb(12 20 38 / 0.12);
   --lg-scene-frost: 1px;
-  --lg-scene-ink: var(--hc-ink-2);
+  --lg-scene-ink: var(--hc-ink);
 }
 
 .halcyon-hero-inner {
