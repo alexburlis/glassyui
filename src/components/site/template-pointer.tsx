@@ -28,7 +28,6 @@ export function TemplatePointer({
     if (!root || preferences.reduceMotion) return;
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const hover = window.matchMedia('(any-hover: hover) and (any-pointer: fine)');
 
     let card: HTMLElement | null = null;
     let frame = 0;
@@ -47,7 +46,7 @@ export function TemplatePointer({
     const draw = () => {
       frame = 0;
 
-      if (!card || reducedMotion.matches || !hover.matches) return;
+      if (!card || reducedMotion.matches) return;
 
       const target = card.querySelector('.template-window, .template-pro-fan') ?? card;
       const box = target.getBoundingClientRect();
@@ -58,7 +57,7 @@ export function TemplatePointer({
     };
 
     const move = (event: PointerEvent) => {
-      if (event.pointerType === 'touch' || reducedMotion.matches || !hover.matches) return;
+      if (event.pointerType === 'touch' || reducedMotion.matches) return;
 
       const next =
         event.target instanceof Element ? event.target.closest<HTMLElement>(CARDS) : null;
@@ -75,13 +74,11 @@ export function TemplatePointer({
     root.addEventListener('pointermove', move);
     root.addEventListener('pointerleave', release);
     reducedMotion.addEventListener('change', release);
-    hover.addEventListener('change', release);
 
     return () => {
       root.removeEventListener('pointermove', move);
       root.removeEventListener('pointerleave', release);
       reducedMotion.removeEventListener('change', release);
-      hover.removeEventListener('change', release);
       release();
     };
   }, [preferences.reduceMotion]);

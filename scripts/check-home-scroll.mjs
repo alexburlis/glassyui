@@ -119,13 +119,16 @@ try {
       result.openerBuffer = await page.evaluate(() => window.readOpenerBuffer());
       assert.ok(result.openerBuffer, 'the opener phone never drew');
       const buffer = result.openerBuffer;
-      assert.ok(
-        buffer.pixels <= 4_200_000 + buffer.width + buffer.height + 1,
-        `the opener phone drew ${buffer.pixels} backing pixels`,
+      const density = await page.evaluate(() => Math.min(4, Math.max(2, devicePixelRatio * 2)));
+      assert.equal(
+        buffer.width,
+        Math.min(4096, Math.round(buffer.cssWidth * density)),
+        'the intro phone lost its original horizontal sampling',
       );
-      assert.ok(
-        Math.abs(buffer.width / buffer.height - buffer.cssWidth / buffer.cssHeight) < 0.002,
-        'the opener phone drawing buffer distorts its display aspect',
+      assert.equal(
+        buffer.height,
+        Math.min(4096, Math.round(buffer.cssHeight * density)),
+        'the intro phone lost its original vertical sampling',
       );
 
       const geometry = await page.evaluate(() => {
