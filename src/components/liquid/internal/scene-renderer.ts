@@ -824,8 +824,10 @@ export function createSceneRenderer({
   let lowQuality = false;
   let hidden = document.hidden;
   let onscreen = false;
+  let canvasVisible = true;
   let frameId = 0;
   let lastTick = 0;
+  let lastDrawTick = 0;
   let tailUntil = 0;
   let flowTime = 0;
   let flowing = false;
@@ -1039,9 +1041,19 @@ export function createSceneRenderer({
 
     frameId = 0;
     lastTick = 0;
+    lastDrawTick = 0;
+    deltas.length = 0;
   };
 
   const canDraw = () => !destroyed && !lost && !failed && mode === 'on' && gpu !== null;
+
+  const readCanvasVisibility = () => {
+    canvasVisible = getComputedStyle(canvas).visibility === 'visible';
+
+    return canvasVisible;
+  };
+
+  const canPaint = () => !hidden && onscreen && readCanvasVisibility();
 
   const fail = (key: string, message: string) => {
     deactivate();
@@ -1123,7 +1135,7 @@ export function createSceneRenderer({
     // After React removes a scene and before it destroys the renderer, a
     // navigation's head update still wakes the observers. The detached layer
     // has no computed style, which is not a missing backdrop.
-    if (!backdrop.isConnected) return;
+    if (!backdrop.isConnected || !readCanvasVisibility()) return;
 
     const url = firstUrl(getComputedStyle(backdrop).backgroundImage);
 
@@ -1582,7 +1594,7 @@ export function createSceneRenderer({
   };
 
   const render = (final: boolean) => {
-    if (!canDraw() || !gpu || !image || box.width < 1 || box.height < 1) return;
+    if (!canDraw() || !gpu || !image || box.width < 1 || box.height < 1) return false;
 
     const scale = final ? 1 : SCALES[scaleIndex];
     let ratio = Math.min(window.devicePixelRatio || 1, lowQuality ? 1 : 2) * scale;
@@ -1601,11 +1613,16 @@ export function createSceneRenderer({
 
     fill = readFill();
 
-    if (!ensureRaster(final) || !raster) return;
+    if (!ensureRaster(final) || !raster) return false;
 
     pack(backingWidth / box.width, backingWidth, backingHeight);
 
-    if (!dirty && sameValues(0, FRAME_LENGTH)) return;
+    if (final) {
+      scaleIndex = 0;
+      setAttribute(SCALE, String(SCALES[scaleIndex]));
+    }
+
+    if (!dirty && sameValues(0, FRAME_LENGTH)) return false;
 
     const { uniforms } = gpu;
     const updateCells = !sameCells();
@@ -1679,6 +1696,8 @@ export function createSceneRenderer({
     setAttribute(RENDERER, 'webgl');
 
     if (raster.url === requestedUrl) setAttribute(BACKDROP, 'ready');
+
+    return cellVertices > 0;
   };
 
   /*
@@ -1687,7 +1706,7 @@ export function createSceneRenderer({
    * Registration and mutation callbacks both run before the next paint.
    */
   const claim = () => {
-    if (!live || !canDraw()) return;
+    if (!live || !canDraw() || !canPaint()) return;
 
     let count = records.size;
 
@@ -1730,8 +1749,7 @@ export function createSceneRenderer({
     return false;
   };
 
-  // Frame times steer the resolution: a slow median steps down, a fast one
-  // steps back up.
+  // Consecutive GPU draws steer the resolution; polling unchanged glass does no GPU work.
   const adaptScale = (delta: number) => {
     deltas.push(delta);
 
@@ -1760,9 +1778,14 @@ export function createSceneRenderer({
 
     if (!canDraw()) return;
 
-    const dt = lastTick ? Math.min((now - lastTick) / 1000, 0.1) : 1 / 60;
+    if (!canPaint()) {
+      stop();
+      setAttribute(STATE, 'paused');
 
-    if (lastTick) adaptScale(now - lastTick);
+      return;
+    }
+
+    const dt = lastTick ? Math.min((now - lastTick) / 1000, 0.1) : 1 / 60;
 
     lastTick = now;
 
@@ -1773,31 +1796,44 @@ export function createSceneRenderer({
     const busy = moving || flowing || now < tailUntil || animationsRunning();
 
     if (busy) {
-      render(false);
+      if (render(false)) {
+        if (lastDrawTick) adaptScale(now - lastDrawTick);
+
+        lastDrawTick = now;
+      } else {
+        lastDrawTick = 0;
+        deltas.length = 0;
+      }
+
       frameId = requestAnimationFrame(tick);
 
       return;
     }
 
     lastTick = 0;
+    lastDrawTick = 0;
+    deltas.length = 0;
     render(true);
     setAttribute(STATE, 'idle');
   };
 
   function wake() {
-    // A newly mounted offscreen scene needs no shaders. Visibility starts the same renderer
-    // when it can actually paint, including after context restoration or transparency changes.
-    if (!gpu && onscreen && !hidden && mode === 'on' && !destroyed && !lost && !failed) start();
+    if (destroyed || lost || failed || mode !== 'on') return;
 
-    if (!canDraw()) return;
-
-    tailUntil = performance.now() + TAIL_MS;
-
-    if (hidden || !onscreen) {
+    if (!canPaint()) {
+      stop();
       setAttribute(STATE, 'paused');
 
       return;
     }
+
+    // A newly mounted offscreen scene needs no shaders. Visibility starts the same renderer
+    // when it can actually paint, including after context restoration or transparency changes.
+    if (!gpu) start();
+
+    if (!canDraw()) return;
+
+    tailUntil = performance.now() + TAIL_MS;
 
     if (frameId) return;
 
@@ -2040,6 +2076,28 @@ export function createSceneRenderer({
     wake();
   });
 
+  const onCanvasVisibility = () => {
+    if (destroyed) return;
+
+    const previous = canvasVisible;
+
+    if (readCanvasVisibility() !== previous) wake();
+  };
+
+  const visibilityObserver = new MutationObserver(onCanvasVisibility);
+  const visibilityAncestors: HTMLElement[] = [];
+
+  const visibilityEvents = [
+    'transitionrun',
+    'transitionend',
+    'animationstart',
+    'animationend',
+  ] as const;
+
+  const onAncestorVisibility = (event: Event) => {
+    if (event.target === event.currentTarget) onCanvasVisibility();
+  };
+
   const resizeObserver = new ResizeObserver(onChange);
 
   const intersectionObserver = new IntersectionObserver((entries) => {
@@ -2055,7 +2113,7 @@ export function createSceneRenderer({
     onChange();
   });
 
-  const wakeEvents = ['focusin', 'focusout', 'transitionrun', 'animationstart'] as const;
+  const wakeEvents = ['focusin', 'focusout', ...visibilityEvents] as const;
 
   rootObserver.observe(root, {
     attributes: true,
@@ -2065,6 +2123,19 @@ export function createSceneRenderer({
   });
   documentObserver.observe(document.documentElement, { attributes: true });
   headObserver.observe(document.head, { childList: true, subtree: true, characterData: true });
+
+  for (let element: HTMLElement | null = canvas; element; element = element.parentElement) {
+    visibilityObserver.observe(element, {
+      attributes: true,
+      attributeFilter: ['style', 'class', 'hidden', 'data-state', 'aria-hidden'],
+    });
+  }
+
+  for (let element = root.parentElement; element; element = element.parentElement) {
+    visibilityAncestors.push(element);
+    visibilityEvents.forEach((type) => element.addEventListener(type, onAncestorVisibility));
+  }
+
   resizeObserver.observe(root);
   intersectionObserver.observe(root);
   wakeEvents.forEach((type) => root.addEventListener(type, onChange));
@@ -2099,6 +2170,10 @@ export function createSceneRenderer({
       rootObserver.disconnect();
       documentObserver.disconnect();
       headObserver.disconnect();
+      visibilityObserver.disconnect();
+      visibilityAncestors.forEach((element) => {
+        visibilityEvents.forEach((type) => element.removeEventListener(type, onAncestorVisibility));
+      });
       resizeObserver.disconnect();
       intersectionObserver.disconnect();
       unsubscribe();

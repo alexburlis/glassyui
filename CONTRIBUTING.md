@@ -178,10 +178,11 @@ the server setup and smoke commands.
   `node scripts/check-home-scroll.mjs <base-url> <artifact-directory>` checks
   that the intro phone stays within its backing-pixel budget without changing
   its display aspect, and the invisible body does not draw during the desk's
-  lift. At desktop and phone widths, wheel scrolling keeps the turn within two
-  composition frames, and the settled phone does not redraw while feature text
-  moves or while it is offscreen. It saves screenshots, Playwright traces and a
-  report with artifact hashes.
+  lift. The hidden desk stops measuring panes, resumes on reversal, and tracks
+  layout shifts. At desktop and phone widths, wheel scrolling keeps the turn
+  within two composition frames, and the settled phone does not redraw while
+  feature text moves or while it is offscreen. It saves screenshots, Playwright
+  traces and a report with artifact hashes.
 - **Phone Duo:**
   `node scripts/check-phone-duo.mjs <base-url> [artifact-directory]` checks
   seven poses in both finishes at desktop and phone widths, hinge keyboard and

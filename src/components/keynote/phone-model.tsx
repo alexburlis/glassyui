@@ -297,6 +297,8 @@ type Part = { count: number; first: number };
 /** One rounded solid, shaped by uniforms: its back face, its sides and its front face. */
 function template() {
   const values: number[] = [];
+  const indices: number[] = [];
+  const vertices = new Map<string, number>();
   const contour: Array<{ corner: [number, number]; plan: [number, number] }> = [];
 
   // The outline runs once around: each corner's quarter turn, joined by the straight sides.
@@ -315,16 +317,29 @@ function template() {
     }
   }
 
-  const vertex = (index: number, segment: number, t: number) => {
-    const { corner, plan } = contour[index % contour.length];
+  const append = (key: string, record: [number, number, number, number, number, number]) => {
+    let index = vertices.get(key);
 
-    values.push(plan[0], plan[1], corner[0], corner[1], segment, t);
+    if (index === undefined) {
+      index = values.length / 6;
+      vertices.set(key, index);
+      values.push(...record);
+    }
+
+    indices.push(index);
   };
 
-  const centre = (segment: number) => values.push(0, 0, 0, 0, segment, 0);
+  const vertex = (index: number, segment: number, t: number) => {
+    const at = index % contour.length;
+    const { corner, plan } = contour[at];
+
+    append(`${at}:${segment}:${t}`, [plan[0], plan[1], corner[0], corner[1], segment, t]);
+  };
+
+  const centre = (segment: number) => append(`centre:${segment}`, [0, 0, 0, 0, segment, 0]);
 
   const cap = (segment: number) => {
-    const first = values.length / 6;
+    const first = indices.length;
 
     for (let index = 0; index < contour.length; index += 1) {
       centre(segment);
@@ -332,7 +347,7 @@ function template() {
       vertex(index + 1, segment, 1);
     }
 
-    return { count: values.length / 6 - first, first };
+    return { count: indices.length - first, first };
   };
 
   const back = cap(4);
@@ -345,7 +360,7 @@ function template() {
 
   for (let step = 0; step <= BACK_STEPS; step += 1) rings.push([2, step / BACK_STEPS]);
 
-  const sideFirst = values.length / 6;
+  const sideFirst = indices.length;
 
   for (let ring = 0; ring < rings.length - 1; ring += 1) {
     const [s0, t0] = rings[ring];
@@ -361,13 +376,12 @@ function template() {
     }
   }
 
-  const sides = { count: values.length / 6 - sideFirst, first: sideFirst };
+  const sides = { count: indices.length - sideFirst, first: sideFirst };
   const front = cap(3);
 
-  // The back, sides and front are consecutive triangles with the same uniforms. Keep their
-  // vertex order while submitting each solid as one span instead of separate surfaces.
   return {
     full: { count: back.count + sides.count + front.count, first: back.first },
+    indices: new Uint16Array(indices),
     shell: { count: back.count + sides.count, first: back.first },
     values: new Float32Array(values),
   };
@@ -457,9 +471,12 @@ function createRenderer(canvas: HTMLCanvasElement) {
 
   const mesh = template();
   const buffer = gl.createBuffer();
+  const indexBuffer = gl.createBuffer();
 
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
   gl.bufferData(gl.ARRAY_BUFFER, mesh.values, gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, mesh.indices, gl.STATIC_DRAW);
 
   const attribute = (name: string, size: number, offset: number) => {
     const location = gl.getAttribLocation(program, name);
@@ -518,7 +535,12 @@ function createRenderer(canvas: HTMLCanvasElement) {
     gl.uniform1f(uniforms.material, piece.material);
     gl.uniform1f(uniforms.fade, fade);
 
-    gl.drawArrays(gl.TRIANGLES, piece.part.first, piece.part.count);
+    gl.drawElements(
+      gl.TRIANGLES,
+      piece.part.count,
+      gl.UNSIGNED_SHORT,
+      piece.part.first * Uint16Array.BYTES_PER_ELEMENT,
+    );
   };
 
   return {
@@ -670,6 +692,7 @@ function createRenderer(canvas: HTMLCanvasElement) {
     },
     destroy() {
       gl.deleteBuffer(buffer);
+      gl.deleteBuffer(indexBuffer);
       gl.deleteProgram(program);
     },
   };

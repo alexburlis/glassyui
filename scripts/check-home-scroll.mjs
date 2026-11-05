@@ -38,26 +38,49 @@ try {
       localStorage.setItem('glassy-ui-intro', 'seen');
       const counts = new Map();
       let openerBuffer;
-      const draw = WebGL2RenderingContext.prototype.drawArrays;
-      WebGL2RenderingContext.prototype.drawArrays = function (...args) {
-        counts.set(this.canvas, (counts.get(this.canvas) ?? 0) + 1);
+      let countDeskStyles = false;
+      let deskStyles = 0;
+      const computedStyle = window.getComputedStyle;
+      window.getComputedStyle = function (element, ...args) {
+        if (countDeskStyles && element.tagName !== 'CANVAS' && element.closest('.desk-screen'))
+          deskStyles += 1;
 
-        if (this.canvas.closest('.keynote-stage .lg-phone-duo')) {
-          const pixels = this.canvas.width * this.canvas.height;
-
-          if (!openerBuffer || pixels > openerBuffer.pixels) {
-            openerBuffer = {
-              pixels,
-              width: this.canvas.width,
-              height: this.canvas.height,
-              cssWidth: this.canvas.clientWidth,
-              cssHeight: this.canvas.clientHeight,
-            };
-          }
-        }
-
-        return draw.apply(this, args);
+        return computedStyle.call(this, element, ...args);
       };
+
+      window.startDeskStyleCount = () => {
+        deskStyles = 0;
+        countDeskStyles = true;
+      };
+
+      window.stopDeskStyleCount = () => {
+        countDeskStyles = false;
+
+        return deskStyles;
+      };
+
+      for (const method of ['drawArrays', 'drawElements']) {
+        const draw = WebGL2RenderingContext.prototype[method];
+        WebGL2RenderingContext.prototype[method] = function (...args) {
+          counts.set(this.canvas, (counts.get(this.canvas) ?? 0) + 1);
+
+          if (this.canvas.closest('.keynote-stage .lg-phone-duo')) {
+            const pixels = this.canvas.width * this.canvas.height;
+
+            if (!openerBuffer || pixels > openerBuffer.pixels) {
+              openerBuffer = {
+                pixels,
+                width: this.canvas.width,
+                height: this.canvas.height,
+                cssWidth: this.canvas.clientWidth,
+                cssHeight: this.canvas.clientHeight,
+              };
+            }
+          }
+
+          return draw.apply(this, args);
+        };
+      }
 
       window.readTurnDraws = () =>
         [...counts].flatMap(([canvas, draws]) =>
@@ -140,6 +163,9 @@ try {
       assert.equal(result.invisibleBodyDraws, 0, 'the invisible zero-depth phone body redrew');
 
       await at(320);
+      result.visibleBodyDraws = await page.evaluate(() => window.readBodyDraws());
+      assert.ok(result.visibleBodyDraws > 0, 'the visible phone body never drew');
+      await page.evaluate(() => window.startDeskStyleCount());
       const initial = await page.evaluate(() => window.readTurnDraws());
       // Move the features through their arrival while the settled phone remains still.
       await page.evaluate(async ({ top, range }) => {
@@ -158,12 +184,85 @@ try {
       }, geometry);
       await at(670);
       const final = await page.evaluate(() => window.readTurnDraws());
+      result.hiddenDeskStyleReads = await page.evaluate(() => window.stopDeskStyleCount());
+      assert.equal(result.hiddenDeskStyleReads, 0, 'the hidden desk kept measuring its panes');
       result.stationaryDraws = final.map((canvas, index) => canvas.draws - initial[index].draws);
 
       if (result.stationaryDraws.some((draws) => draws > 0)) {
         report.failures.push(
           `${width}: stationary phone shaders redrew ${result.stationaryDraws.join(', ')} times`,
         );
+      }
+
+      const checkShift = () =>
+        page.waitForFunction(() => {
+          const track = document.querySelector('.turn');
+
+          const expected =
+            Math.min(
+              1,
+              Math.max(
+                0,
+                -track.getBoundingClientRect().top /
+                  (track.offsetHeight - document.querySelector('.turn-stage').clientHeight),
+              ),
+            ) * 719;
+
+          return (
+            Math.abs(Number(document.querySelector('.turn-stage').dataset.frame) - expected) < 0.5
+          );
+        });
+
+      try {
+        await page.evaluate(() => {
+          const spacer = document.createElement('div');
+          spacer.id = 'scroll-check-spacer';
+          spacer.style.height = '160px';
+          document.querySelector('main').before(spacer);
+        });
+        await checkShift();
+      } finally {
+        await page.evaluate(() => document.getElementById('scroll-check-spacer')?.remove());
+      }
+
+      await checkShift();
+      result.layoutShiftTracked = true;
+      await at(30);
+      await page.waitForFunction(
+        () =>
+          document.querySelector('.desk-screen.lg-scene').getAttribute('data-lg-scene-state') !==
+          'paused',
+      );
+      result.deskResumed = true;
+
+      try {
+        await page.evaluate(() => {
+          const style = document.createElement('style');
+          style.id = 'scene-visibility-check';
+          style.textContent =
+            '.turn-desk-face[data-state="scroll-hidden"] .desk-screen { visibility: hidden; }';
+          document.head.append(style);
+          document.querySelector('.turn-desk-face').setAttribute('data-state', 'scroll-hidden');
+        });
+        await page.waitForFunction(
+          () =>
+            document.querySelector('.desk-screen.lg-scene').getAttribute('data-lg-scene-state') ===
+            'paused',
+        );
+        await page.evaluate(() =>
+          document.querySelector('.turn-desk-face').removeAttribute('data-state'),
+        );
+        await page.waitForFunction(
+          () =>
+            document.querySelector('.desk-screen.lg-scene').getAttribute('data-lg-scene-state') !==
+            'paused',
+        );
+        result.stateVisibilityResumed = true;
+      } finally {
+        await page.evaluate(() => {
+          document.querySelector('.turn-desk-face').removeAttribute('data-state');
+          document.getElementById('scene-visibility-check')?.remove();
+        });
       }
 
       await at(110);
