@@ -163,22 +163,123 @@ try {
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.waitForFunction(() => document.documentElement.dataset.lgReduceMotion === '0');
     await hinge.focus();
-    await hinge.press('Home');
 
     // Observe the rendered canvas, not the target angle: an instant jump can
     // satisfy the slider's ARIA value while skipping every folding frame.
-    // Subscribe after input so the renderer draws before each sampled frame;
-    // WebGL's drawing buffer is cleared after the browser composites it.
-    const frames = await figure.locator('canvas').evaluate(async (canvas) => {
+    // Arm before input, then sample after each complete draw batch and before
+    // compositing clears WebGL's drawing buffer.
+    const recording = await figure.locator('canvas').evaluateHandle((canvas) => {
       const gl = canvas.getContext('webgl2');
-      // Read a small visible patch. Copying the whole supersampled canvas into
-      // a CPU-backed 2D canvas would stall the animation being measured.
+      // Queue a small patch into GPU buffers; synchronous readback can consume
+      // the entire 120ms transition while waiting for the previous draw.
       const pixels = new Uint8Array(32 * 32 * 4);
       const frames = [];
-      const started = performance.now();
+      const pending = [];
+      const figure = canvas.closest('.lg-phone-duo');
+      const draw = gl.drawArrays;
+      const packBuffer = gl.getParameter(gl.PIXEL_PACK_BUFFER_BINDING);
+      let started;
+      let queued = false;
+      let alive = true;
+      let finish;
+      let fail;
 
-      await new Promise((resolve) => {
-        function sample(now) {
+      const done = new Promise((resolve, reject) => {
+        finish = resolve;
+        fail = reject;
+      });
+
+      let timer = setTimeout(stop, 2500);
+
+      async function collect(error) {
+        const deadline = performance.now() + 2000;
+
+        try {
+          if (error) throw error;
+
+          for (const { buffer, sync, time, fold } of pending) {
+            let status = gl.clientWaitSync(sync, 0, 0);
+
+            while (status === gl.TIMEOUT_EXPIRED) {
+              if (performance.now() >= deadline) {
+                throw new Error('The phone motion pixel readback exceeded two seconds.');
+              }
+
+              await new Promise((resolve) => setTimeout(resolve, 16));
+              status = gl.clientWaitSync(sync, 0, 0);
+            }
+
+            if (status === gl.WAIT_FAILED) {
+              throw new Error('The phone motion pixel readback failed.');
+            }
+
+            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, buffer);
+            gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, pixels);
+            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, packBuffer);
+            let hash = 2166136261;
+            let visible = 0;
+
+            for (let i = 0; i < pixels.length; i++) {
+              hash = Math.imul(hash ^ pixels[i], 16777619);
+
+              if (i % 4 === 3 && pixels[i] > 0) visible++;
+            }
+
+            if (visible > 0) frames.push({ time, fold, hash: hash >>> 0 });
+          }
+
+          return frames;
+        } finally {
+          gl.bindBuffer(gl.PIXEL_PACK_BUFFER, packBuffer);
+
+          for (const { buffer, sync } of pending) {
+            if (sync) gl.deleteSync(sync);
+
+            gl.deleteBuffer(buffer);
+          }
+        }
+      }
+
+      function stop(error) {
+        if (!alive) return done;
+
+        alive = false;
+        clearTimeout(timer);
+        document.removeEventListener('keydown', begin, true);
+        gl.drawArrays = draw;
+        collect(error).then(finish, fail);
+
+        return done;
+      }
+
+      function begin(event) {
+        if (event.key !== 'Home' || started !== undefined) return;
+
+        started = performance.now();
+        clearTimeout(timer);
+        timer = setTimeout(stop, 500);
+      }
+
+      function sample() {
+        queued = false;
+
+        if (!alive) return;
+
+        try {
+          const buffer = gl.createBuffer();
+
+          if (!buffer) throw new Error('The phone motion pixel buffer could not be created.');
+
+          const capture = {
+            buffer,
+            sync: null,
+            time: performance.now() - started,
+            fold: Number(getComputedStyle(figure).getPropertyValue('--lg-phone-duo-fold')),
+          };
+
+          pending.push(capture);
+          gl.bindBuffer(gl.PIXEL_PACK_BUFFER, buffer);
+          gl.bufferData(gl.PIXEL_PACK_BUFFER, pixels.length, gl.STREAM_READ);
           gl.readPixels(
             Math.floor(canvas.width / 2) - 16,
             Math.floor(canvas.height / 2) - 16,
@@ -186,28 +287,47 @@ try {
             32,
             gl.RGBA,
             gl.UNSIGNED_BYTE,
-            pixels,
+            0,
           );
-          let hash = 2166136261;
-          let visible = 0;
+          capture.sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
 
-          for (let i = 0; i < pixels.length; i++) {
-            hash = Math.imul(hash ^ pixels[i], 16777619);
+          if (!capture.sync) throw new Error('The phone motion pixel fence could not be created.');
 
-            if (i % 4 === 3 && pixels[i] > 0) visible++;
-          }
+          gl.flush();
+        } catch (error) {
+          stop(error);
+        } finally {
+          gl.bindBuffer(gl.PIXEL_PACK_BUFFER, packBuffer);
+        }
+      }
 
-          if (visible > 0) frames.push({ time: now - started, hash: hash >>> 0 });
+      document.addEventListener('keydown', begin, true);
+      gl.drawArrays = function (...args) {
+        const result = draw.apply(this, args);
 
-          if (now - started < 500) requestAnimationFrame(sample);
-          else resolve();
+        if (alive && started !== undefined && !queued) {
+          queued = true;
+          queueMicrotask(sample);
         }
 
-        requestAnimationFrame(sample);
-      });
+        return result;
+      };
 
-      return frames;
+      return { done, stop };
     });
+
+    let frames;
+
+    try {
+      await hinge.press('Home');
+      frames = await recording.evaluate(({ done }) => done);
+    } finally {
+      try {
+        await recording.evaluate(({ stop }) => stop());
+      } finally {
+        await recording.dispose();
+      }
+    }
 
     manifest.motion.push({ width, action: 'slider close', frames });
     assert.ok(

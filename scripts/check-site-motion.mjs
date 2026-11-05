@@ -1102,6 +1102,38 @@ async function checkTemplateScroll(browser, name) {
 
       const centre = await windowCentre(page, SCROLLING_CARD);
 
+      if (mode !== 'motion') {
+        result.pointerWrites = await page.evaluate(async (selector) => {
+          const card = document.querySelector(selector);
+          let writes = 0;
+
+          const observer = new MutationObserver((records) => {
+            writes += records.length;
+          });
+
+          observer.observe(card, { attributes: true, attributeFilter: ['style', 'data-pointer'] });
+
+          try {
+            for (let index = 0; index < 6; index += 1) {
+              card.dispatchEvent(
+                new PointerEvent('pointermove', {
+                  bubbles: true,
+                  pointerType: 'mouse',
+                  clientX: 100 + index * 10,
+                  clientY: 450,
+                }),
+              );
+              await new Promise(requestAnimationFrame);
+            }
+
+            return writes;
+          } finally {
+            observer.disconnect();
+          }
+        }, SCROLLING_CARD);
+        assert.equal(result.pointerWrites, 0, 'reduced motion must skip pointer DOM work');
+      }
+
       // Halcyon's page runs on for 3.3 windows, which take 2.3 s after a 150 ms pause.
       const going = await recordPage(page, SCROLLING_CARD, 3200, () =>
         page.mouse.move(centre.x, centre.y),

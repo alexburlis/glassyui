@@ -793,10 +793,22 @@ export function createPhoneDuoRenderer(canvas: HTMLCanvasElement) {
       gl.generateMipmap(gl.TEXTURE_2D);
     },
     draw({ fold, turn, pitch, roll, orbit, azimuth, balance, zoom, attached, white, glare }: Pose) {
-      // Resolve the thin frame at twice the display density before compositing.
-      const ratio = Math.min(4, Math.max(2, window.devicePixelRatio * 2));
-      const width = Math.min(4096, Math.round(canvas.clientWidth * ratio));
-      const height = Math.min(4096, Math.round(canvas.clientHeight * ratio));
+      // Supersample the thin frame within the glass renderer's backing-pixel budget.
+      const cssWidth = canvas.clientWidth;
+      const cssHeight = canvas.clientHeight;
+
+      if (!cssWidth || !cssHeight) return;
+
+      const ratio = Math.min(
+        4,
+        Math.max(2, window.devicePixelRatio * 2),
+        Math.sqrt(4_200_000 / (cssWidth * cssHeight)),
+        4096 / cssWidth,
+        4096 / cssHeight,
+      );
+
+      const width = Math.round(cssWidth * ratio);
+      const height = Math.round(cssHeight * ratio);
 
       if (!width || !height) return;
 

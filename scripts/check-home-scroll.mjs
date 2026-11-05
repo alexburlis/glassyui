@@ -37,9 +37,24 @@ try {
     await context.addInitScript(() => {
       localStorage.setItem('glassy-ui-intro', 'seen');
       const counts = new Map();
+      let openerBuffer;
       const draw = WebGL2RenderingContext.prototype.drawArrays;
       WebGL2RenderingContext.prototype.drawArrays = function (...args) {
         counts.set(this.canvas, (counts.get(this.canvas) ?? 0) + 1);
+
+        if (this.canvas.closest('.keynote-stage .lg-phone-duo')) {
+          const pixels = this.canvas.width * this.canvas.height;
+
+          if (!openerBuffer || pixels > openerBuffer.pixels) {
+            openerBuffer = {
+              pixels,
+              width: this.canvas.width,
+              height: this.canvas.height,
+              cssWidth: this.canvas.clientWidth,
+              cssHeight: this.canvas.clientHeight,
+            };
+          }
+        }
 
         return draw.apply(this, args);
       };
@@ -52,6 +67,15 @@ try {
             ? [{ draws }]
             : [],
         );
+      window.readOpenerBuffer = () => openerBuffer;
+      window.readBodyDraws = () =>
+        [...counts].reduce(
+          (sum, [canvas, draws]) =>
+            canvas.isConnected && canvas.closest('.turn-player') && !canvas.closest('[data-slab]')
+              ? sum + draws
+              : sum,
+          0,
+        );
     });
     const page = await context.newPage();
     await context.tracing.start({ screenshots: true, snapshots: true });
@@ -63,6 +87,23 @@ try {
       const privacy = page.getByRole('region', { name: 'Analytics privacy settings' });
       await privacy.getByRole('button', { name: 'Reject analytics', exact: true }).click();
       await page.waitForSelector('.turn-player [data-slab]', { state: 'attached' });
+
+      await page.getByRole('button', { name: 'Replay intro', exact: true }).click();
+      await page.waitForFunction(() => document.documentElement.hasAttribute('data-keynote-intro'));
+      await page.waitForFunction(
+        () => !document.documentElement.hasAttribute('data-keynote-intro'),
+      );
+      result.openerBuffer = await page.evaluate(() => window.readOpenerBuffer());
+      assert.ok(result.openerBuffer, 'the opener phone never drew');
+      const buffer = result.openerBuffer;
+      assert.ok(
+        buffer.pixels <= 4_200_000 + buffer.width + buffer.height + 1,
+        `the opener phone drew ${buffer.pixels} backing pixels`,
+      );
+      assert.ok(
+        Math.abs(buffer.width / buffer.height - buffer.cssWidth / buffer.cssHeight) < 0.002,
+        'the opener phone drawing buffer distorts its display aspect',
+      );
 
       const geometry = await page.evaluate(() => {
         const track = document.querySelector('.turn');
@@ -85,6 +126,18 @@ try {
         );
         await page.waitForTimeout(300);
       };
+
+      await at(0);
+
+      const beforeLift = await page.evaluate(() => window.readBodyDraws());
+
+      await at(30);
+      await at(55);
+      result.invisibleBodyDraws = await page.evaluate(
+        (before) => window.readBodyDraws() - before,
+        beforeLift,
+      );
+      assert.equal(result.invisibleBodyDraws, 0, 'the invisible zero-depth phone body redrew');
 
       await at(320);
       const initial = await page.evaluate(() => window.readTurnDraws());

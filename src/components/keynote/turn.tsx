@@ -378,7 +378,7 @@ export function Turn({ active, desk, deskFace, nativeCount, onDeskFrame, theme }
         edge={DESK_EDGE[theme]}
         keys={tween(morph, [0.8, 1], [0, 1], (value) => value)}
         stage={modelStage}
-        visible={active && handedOver}
+        visible={active && handedOver && depth > 0}
       />
       <div
         data-slab=""
