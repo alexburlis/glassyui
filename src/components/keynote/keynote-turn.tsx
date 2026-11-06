@@ -62,6 +62,7 @@ export function KeynoteTurn({ caption, children, nativeCount }: KeynoteTurnProps
   const contentRef = useRef<HTMLDivElement>(null);
   const captionRef = useRef<HTMLParagraphElement>(null);
   const playerRef = useRef<PlayerRef | null>(null);
+  const slotTopRef = useRef(0);
   const [moving, setMoving] = useState(false);
   const [onscreen, setOnscreen] = useState(true);
   const [size, setSize] = useState<Size | null>(null);
@@ -97,14 +98,11 @@ export function KeynoteTurn({ caption, children, nativeCount }: KeynoteTurnProps
 
       if (!moving || !desk || !face || !content || !slot || !stage) return;
 
-      if (pose.frame <= 0) {
+      if (!pose.handedOver) {
         restoreDesk();
 
         return;
       }
-
-      // Read before writing the face's dimensions, avoiding a forced layout between writes.
-      const slotTop = pose.visible ? slot.offsetTop : 0;
 
       face.inert = !pose.visible;
       face.style.visibility = pose.visible ? 'visible' : 'hidden';
@@ -122,7 +120,8 @@ export function KeynoteTurn({ caption, children, nativeCount }: KeynoteTurnProps
       face.style.borderRadius = `${pose.radius}px`;
       face.style.overflow = 'hidden';
       face.style.transformOrigin = '0 0';
-      face.style.transform = `translateY(${-slotTop}px) ${pose.transform}`;
+      face.style.transform = `translateY(${-slotTopRef.current}px) ${pose.transform}`;
+      content.style.willChange = 'transform, opacity';
       content.style.width = `${desk.width}px`;
       content.style.transformOrigin = '0 0';
       content.style.transform = `translate(${(pose.width - desk.width * pose.scale) / 2}px, ${(pose.height - desk.height * pose.scale) / 2}px) scale(${pose.scale})`;
@@ -163,15 +162,17 @@ export function KeynoteTurn({ caption, children, nativeCount }: KeynoteTurnProps
   useLayoutEffect(() => {
     const track = trackRef.current;
     const stage = stageRef.current;
-    const screen = deskRef.current?.querySelector<HTMLElement>('.desk-screen');
+    const slot = deskRef.current;
+    const screen = slot?.querySelector<HTMLElement>('.desk-screen');
 
-    if (!moving || !track || !stage || !screen) return;
+    if (!moving || !track || !stage || !slot || !screen) return;
 
     // The stylesheet centres the desk by its height, which only the page knows for certain: a
     // narrow desk stacks its widgets and grows past its minimum.
     const measure = () => {
       restoreDesk();
       track.style.setProperty('--desk-height', `${screen.offsetHeight}px`);
+      slotTopRef.current = slot.offsetTop;
       setSize({ height: Math.round(stage.clientHeight), width: Math.round(stage.clientWidth) });
       setDesk(measureDesk(stage, screen));
     };
@@ -225,25 +226,42 @@ export function KeynoteTurn({ caption, children, nativeCount }: KeynoteTurnProps
     };
 
     const scrubber = createScrubber(paint);
+    let trackTop = 0;
+    let range = 0;
 
     const target = () => {
-      const box = track.getBoundingClientRect();
-      // The stage pins for its own height; a transparent border below it reaches further.
-      const range = box.height - stage.clientHeight;
-      const progress = range > 0 ? Math.min(Math.max(-box.top / range, 0), 1) : 0;
+      const progress =
+        range > 0 ? Math.min(Math.max((window.scrollY - trackTop) / range, 0), 1) : 0;
 
       return progress * TURN.end;
     };
 
     const onScroll = () => scrubber.set(target());
 
-    scrubber.set(target(), true);
+    const refresh = () => {
+      const box = track.getBoundingClientRect();
+
+      trackTop = box.top + window.scrollY;
+      // The stage pins for its own height; a transparent border below it reaches further.
+      range = box.height - stage.clientHeight;
+      onScroll();
+    };
+
+    refresh();
+
+    const observer = new ResizeObserver(refresh);
+
+    observer.observe(track);
+    observer.observe(document.body);
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
+    window.addEventListener('resize', refresh);
+    document.fonts?.addEventListener('loadingdone', refresh);
 
     return () => {
+      observer.disconnect();
       window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
+      window.removeEventListener('resize', refresh);
+      document.fonts?.removeEventListener('loadingdone', refresh);
       scrubber.stop();
       caption.style.removeProperty('opacity');
       stage.removeAttribute('data-turning');

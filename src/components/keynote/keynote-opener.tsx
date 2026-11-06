@@ -369,8 +369,10 @@ export function KeynoteOpener({ children }: { children: ReactNode }) {
     // It plays once the composition has mounted and drawn a frame, so setting up its WebGL never
     // costs a played frame.
     let waiting = 0;
+    let playerHost: HTMLDivElement | null = null;
 
     const start = () => {
+      playerHost = stage.querySelector<HTMLDivElement>('.keynote-player') ?? playerHost;
       const player = playerRef.current;
 
       if (started || !player) return;
@@ -404,6 +406,14 @@ export function KeynoteOpener({ children }: { children: ReactNode }) {
       cancelAnimationFrame(waiting);
       nav?.style.removeProperty('translate');
       delete stage.dataset.frame;
+
+      // Release completed intro drawing buffers without waiting for garbage collection.
+      for (const canvas of playerHost?.querySelectorAll('canvas') ?? []) {
+        if (!canvas.isConnected) {
+          canvas.width = 1;
+          canvas.height = 1;
+        }
+      }
     };
   }, [from, intro, land, stageModule]);
 

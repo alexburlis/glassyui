@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from 'remotion';
@@ -22,7 +22,7 @@ const TEXT_FONT =
 export type DeskBox = { height: number; radius: number; width: number; x: number; y: number };
 
 export type DeskFace = {
-  frame: number;
+  handedOver: boolean;
   height: number;
   perspective: number;
   radius: number;
@@ -208,18 +208,19 @@ function usePointerTilt(active: boolean, phone: Phone) {
   return tilt;
 }
 
-/**
- * The second half of the home page's keynote: the desk lifts, turns over in one sweep and lands
- * as a phone running the same components, then features arrive from either side and point at the
- * parts of the screen they describe. Both screens stay live while their face is visible.
- */
-export function Turn({ active, desk, deskFace, nativeCount, onDeskFrame, theme }: TurnProps) {
-  const frame = useCurrentFrame();
+type TurnSceneProps = Omit<TurnProps, 'nativeCount'> & { frame: number };
+
+const TurnScene = memo(function TurnScene({
+  active,
+  desk,
+  deskFace,
+  frame,
+  onDeskFrame,
+  theme,
+}: TurnSceneProps) {
   const { height, width } = useVideoConfig();
-  const { phone, title, wide } = layout(width, height);
+  const { phone } = layout(width, height);
   const lifted = liftedScale(desk, width, height);
-  const ink = theme === 'light' ? '#222224' : '#f5f5f7';
-  const quiet = theme === 'light' ? '#66666a' : '#a8a8af';
   const reflectionShown = tween(frame, TURN.glint, [0, 1], EASE_OUT);
   const tilt = usePointerTilt(active && frame >= TURN.title[0], phone);
 
@@ -264,7 +265,7 @@ export function Turn({ active, desk, deskFace, nativeCount, onDeskFrame, theme }
 
   useLayoutEffect(() => {
     onDeskFrame({
-      frame,
+      handedOver,
       perspective,
       height: faceHeight,
       radius: faceRadius,
@@ -280,7 +281,7 @@ export function Turn({ active, desk, deskFace, nativeCount, onDeskFrame, theme }
     faceRadius,
     faceWidth,
     facing,
-    frame,
+    handedOver,
     onDeskFrame,
     perspective,
   ]);
@@ -342,11 +343,18 @@ export function Turn({ active, desk, deskFace, nativeCount, onDeskFrame, theme }
   const footprint = Math.abs(Math.cos((angle * Math.PI) / 180)) * slabWidth + depth;
   const shadowOpacity = handedOver ? (theme === 'light' ? 0.22 : 0.5) * (0.6 + 0.4 * travel) : 0;
 
-  const items = turnFeatures(nativeCount);
-  const titleShown = tween(frame, TURN.title, [0, 1], EASE_OUT);
-
   return (
-    <AbsoluteFill style={{ perspective }}>
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        perspective,
+      }}
+    >
       {deskFace
         ? createPortal(
             <ScreenReflection
@@ -378,7 +386,7 @@ export function Turn({ active, desk, deskFace, nativeCount, onDeskFrame, theme }
         edge={DESK_EDGE[theme]}
         keys={tween(morph, [0.8, 1], [0, 1], (value) => value)}
         stage={modelStage}
-        visible={active && handedOver}
+        visible={active && handedOver && depth > 0}
       />
       <div
         data-slab=""
@@ -407,8 +415,11 @@ export function Turn({ active, desk, deskFace, nativeCount, onDeskFrame, theme }
                 position: 'absolute',
                 top: 0,
                 left: 0,
+                width: SCREEN.width,
+                height: SCREEN.height,
                 transformOrigin: '0 0',
                 transform: `translate(${fit.x.toFixed(2)}px, ${fit.y.toFixed(2)}px) scale(${fit.scale.toFixed(4)})`,
+                willChange: handedOver ? 'transform, opacity' : undefined,
               }}
             >
               <PhoneScreen live={active && facing} theme={theme} />
@@ -416,7 +427,34 @@ export function Turn({ active, desk, deskFace, nativeCount, onDeskFrame, theme }
           </PhoneFront>
         </div>
       </div>
+    </div>
+  );
+});
 
+/**
+ * The second half of the home page's keynote: the desk lifts, turns over in one sweep and lands
+ * as a phone running the same components, then features arrive from either side and point at the
+ * parts of the screen they describe. Both screens stay live while their face is visible.
+ */
+export function Turn({ active, desk, deskFace, nativeCount, onDeskFrame, theme }: TurnProps) {
+  const frame = useCurrentFrame();
+  const { height, width } = useVideoConfig();
+  const { phone, title, wide } = layout(width, height);
+  const ink = theme === 'light' ? '#222224' : '#f5f5f7';
+  const quiet = theme === 'light' ? '#66666a' : '#a8a8af';
+  const items = turnFeatures(nativeCount);
+  const titleShown = tween(frame, TURN.title, [0, 1], EASE_OUT);
+
+  return (
+    <AbsoluteFill>
+      <TurnScene
+        active={active}
+        desk={desk}
+        deskFace={deskFace}
+        frame={Math.min(frame, TURN.spin[1])}
+        onDeskFrame={onDeskFrame}
+        theme={theme}
+      />
       <div
         aria-hidden
         style={{

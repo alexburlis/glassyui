@@ -127,6 +127,7 @@ uniform vec2 phone;
 uniform float unit;
 uniform float bodyDepth;
 uniform vec2 extent;
+uniform vec2 canvasOrigin;
 
 float softbox(vec3 ray, vec3 toward, vec3 up, vec2 spread) {
   toward = normalize(toward);
@@ -287,7 +288,7 @@ void main() {
   alpha *= fade;
 
   // Sub-pixel dithering keeps the long, quiet gradients free of bands. It never animates.
-  float noise = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
+  float noise = fract(sin(dot(gl_FragCoord.xy + canvasOrigin, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
   c = clamp(soft(c) + noise / 255.0, 0.0, 1.0);
   colour = vec4(c * alpha, alpha);
 }`;
@@ -297,6 +298,8 @@ type Part = { count: number; first: number };
 /** One rounded solid, shaped by uniforms: its back face, its sides and its front face. */
 function template() {
   const values: number[] = [];
+  const indices: number[] = [];
+  const vertices = new Map<string, number>();
   const contour: Array<{ corner: [number, number]; plan: [number, number] }> = [];
 
   // The outline runs once around: each corner's quarter turn, joined by the straight sides.
@@ -315,16 +318,29 @@ function template() {
     }
   }
 
-  const vertex = (index: number, segment: number, t: number) => {
-    const { corner, plan } = contour[index % contour.length];
+  const append = (key: string, record: [number, number, number, number, number, number]) => {
+    let index = vertices.get(key);
 
-    values.push(plan[0], plan[1], corner[0], corner[1], segment, t);
+    if (index === undefined) {
+      index = values.length / 6;
+      vertices.set(key, index);
+      values.push(...record);
+    }
+
+    indices.push(index);
   };
 
-  const centre = (segment: number) => values.push(0, 0, 0, 0, segment, 0);
+  const vertex = (index: number, segment: number, t: number) => {
+    const at = index % contour.length;
+    const { corner, plan } = contour[at];
+
+    append(`${at}:${segment}:${t}`, [plan[0], plan[1], corner[0], corner[1], segment, t]);
+  };
+
+  const centre = (segment: number) => append(`centre:${segment}`, [0, 0, 0, 0, segment, 0]);
 
   const cap = (segment: number) => {
-    const first = values.length / 6;
+    const first = indices.length;
 
     for (let index = 0; index < contour.length; index += 1) {
       centre(segment);
@@ -332,7 +348,7 @@ function template() {
       vertex(index + 1, segment, 1);
     }
 
-    return { count: values.length / 6 - first, first };
+    return { count: indices.length - first, first };
   };
 
   const back = cap(4);
@@ -345,7 +361,7 @@ function template() {
 
   for (let step = 0; step <= BACK_STEPS; step += 1) rings.push([2, step / BACK_STEPS]);
 
-  const sideFirst = values.length / 6;
+  const sideFirst = indices.length;
 
   for (let ring = 0; ring < rings.length - 1; ring += 1) {
     const [s0, t0] = rings[ring];
@@ -361,13 +377,12 @@ function template() {
     }
   }
 
-  const sides = { count: values.length / 6 - sideFirst, first: sideFirst };
+  const sides = { count: indices.length - sideFirst, first: sideFirst };
   const front = cap(3);
 
-  // The back, sides and front are consecutive triangles with the same uniforms. Keep their
-  // vertex order while submitting each solid as one span instead of separate surfaces.
   return {
     full: { count: back.count + sides.count + front.count, first: back.first },
+    indices: new Uint16Array(indices),
     shell: { count: back.count + sides.count, first: back.first },
     values: new Float32Array(values),
   };
@@ -434,6 +449,81 @@ type PhoneModelState = {
   stage: { height: number; perspective: number; width: number };
 };
 
+type CanvasCrop = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  fullWidth: number;
+  fullHeight: number;
+};
+
+function canvasCrop(
+  { back, body, keys, stage }: PhoneModelState,
+  fullWidth: number,
+  fullHeight: number,
+): CanvasCrop {
+  const unit = Math.min(body.width, body.height * PHONE_ASPECT);
+  // The keys extend sideways; the plateau and lenses extend behind the body. Every part's
+  // vertices lie in this box, so its projected corners also cover the rounded silhouettes.
+  const halfWidth = body.width / 2 + 0.011 * unit * keys;
+  const halfHeight = body.height / 2;
+  const radians = Math.PI / 180;
+  const yaw = body.pose.y * radians;
+  const roll = body.pose.z * radians;
+  const pitch = body.pose.x * radians;
+  const cosYaw = Math.cos(yaw);
+  const sinYaw = Math.sin(yaw);
+  const cosRoll = Math.cos(roll);
+  const sinRoll = Math.sin(roll);
+  const cosPitch = Math.cos(pitch);
+  const sinPitch = Math.sin(pitch);
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  for (const x of [-halfWidth, halfWidth]) {
+    for (const y of [-halfHeight, halfHeight]) {
+      for (const z of [-body.depth / 2, body.depth / 2 + 0.044 * unit * back]) {
+        const yawX = (x * cosYaw + z * sinYaw) * body.scale;
+        const yawZ = (-x * sinYaw + z * cosYaw) * body.scale;
+        const rollX = yawX * cosRoll - y * body.scale * sinRoll;
+        const rollY = yawX * sinRoll + y * body.scale * cosRoll;
+        const pointZ = stage.perspective - body.eye[2] + rollY * sinPitch + yawZ * cosPitch;
+        const w = (stage.perspective - pointZ) / stage.perspective;
+
+        // A box crossing the eye cannot be bounded by its projected corners; the original
+        // stage viewport covers its near-plane clipping instead.
+        if (w <= 0) {
+          return { left: 0, top: 0, width: fullWidth, height: fullHeight, fullWidth, fullHeight };
+        }
+
+        const px = (stage.width / 2 + (rollX - body.eye[0]) / w) * (fullWidth / stage.width);
+
+        const py =
+          (stage.height / 2 + (rollY * cosPitch - yawZ * sinPitch - body.eye[1]) / w) *
+          (fullHeight / stage.height);
+
+        minX = Math.min(minX, px);
+        minY = Math.min(minY, py);
+        maxX = Math.max(maxX, px);
+        maxY = Math.max(maxY, py);
+      }
+    }
+  }
+
+  // Keep the original device-pixel grid and a two-pixel antialias margin. Tiles avoid resizing
+  // the multisampled buffer for every small change in the turn or pointer tilt.
+  const tile = 128;
+  const left = Math.max(0, Math.min(fullWidth - 1, Math.floor((minX - 2) / tile) * tile));
+  const top = Math.max(0, Math.min(fullHeight - 1, Math.floor((minY - 2) / tile) * tile));
+  const right = Math.max(left + 1, Math.min(fullWidth, Math.ceil((maxX + 2) / tile) * tile));
+  const bottom = Math.max(top + 1, Math.min(fullHeight, Math.ceil((maxY + 2) / tile) * tile));
+
+  return { left, top, width: right - left, height: bottom - top, fullWidth, fullHeight };
+}
+
 function createRenderer(canvas: HTMLCanvasElement) {
   const gl = canvas.getContext('webgl2', { antialias: true, premultipliedAlpha: true });
 
@@ -457,9 +547,12 @@ function createRenderer(canvas: HTMLCanvasElement) {
 
   const mesh = template();
   const buffer = gl.createBuffer();
+  const indexBuffer = gl.createBuffer();
 
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
   gl.bufferData(gl.ARRAY_BUFFER, mesh.values, gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, mesh.indices, gl.STATIC_DRAW);
 
   const attribute = (name: string, size: number, offset: number) => {
     const location = gl.getAttribLocation(program, name);
@@ -476,6 +569,7 @@ function createRenderer(canvas: HTMLCanvasElement) {
     'backRound',
     'basis',
     'bodyDepth',
+    'canvasOrigin',
     'centre',
     'depth',
     'edgeColour',
@@ -518,21 +612,40 @@ function createRenderer(canvas: HTMLCanvasElement) {
     gl.uniform1f(uniforms.material, piece.material);
     gl.uniform1f(uniforms.fade, fade);
 
-    gl.drawArrays(gl.TRIANGLES, piece.part.first, piece.part.count);
+    gl.drawElements(
+      gl.TRIANGLES,
+      piece.part.count,
+      gl.UNSIGNED_SHORT,
+      piece.part.first * Uint16Array.BYTES_PER_ELEMENT,
+    );
   };
 
   return {
-    draw({ back, body, edge, keys, stage }: PhoneModelState) {
+    draw(state: PhoneModelState) {
+      const { back, body, edge, keys, stage } = state;
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
-      const width = Math.round(stage.width * ratio);
-      const height = Math.round(stage.height * ratio);
 
-      if (canvas.width !== width || canvas.height !== height) {
-        canvas.width = width;
-        canvas.height = height;
+      const crop = canvasCrop(
+        state,
+        Math.round(stage.width * ratio),
+        Math.round(stage.height * ratio),
+      );
+
+      if (canvas.width !== crop.width || canvas.height !== crop.height) {
+        canvas.width = crop.width;
+        canvas.height = crop.height;
       }
 
-      gl.viewport(0, 0, width, height);
+      canvas.style.left = `${(crop.left * stage.width) / crop.fullWidth}px`;
+      canvas.style.top = `${(crop.top * stage.height) / crop.fullHeight}px`;
+      canvas.style.width = `${(crop.width * stage.width) / crop.fullWidth}px`;
+      canvas.style.height = `${(crop.height * stage.height) / crop.fullHeight}px`;
+      const bottom = crop.fullHeight - crop.top - crop.height;
+
+      // Shift the full-stage camera into the smaller buffer without changing its sampling or
+      // lighting. The fragment origin keeps the dither at its original stage pixel as well.
+      gl.viewport(-crop.left, -bottom, crop.fullWidth, crop.fullHeight);
+      gl.uniform2f(uniforms.canvasOrigin, crop.left, bottom);
       gl.clearColor(0, 0, 0, 0);
       gl.clearDepth(1);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -670,6 +783,7 @@ function createRenderer(canvas: HTMLCanvasElement) {
     },
     destroy() {
       gl.deleteBuffer(buffer);
+      gl.deleteBuffer(indexBuffer);
       gl.deleteProgram(program);
     },
   };
@@ -707,7 +821,8 @@ export function PhoneModel({ back, body, edge, keys, stage, visible }: PhoneMode
       ref={canvasRef}
       style={{
         position: 'absolute',
-        inset: 0,
+        left: 0,
+        top: 0,
         display: 'block',
         width: '100%',
         height: '100%',

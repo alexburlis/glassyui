@@ -69,6 +69,8 @@ const baseUrl = process.argv[2];
 
 const lensContractsOnly = process.argv[4] === 'lens-contracts';
 
+const introTimingOnly = process.argv[4] === 'intro-timing';
+
 const lensFaultOnly = lensContractsOnly ? process.argv[5] : undefined;
 
 const lensFaults = [
@@ -307,6 +309,7 @@ async function open(
     clock = false,
     hash = '',
     height = 900,
+    instrument = true,
     javaScriptEnabled = true,
     lensFault = 'none',
     mobile = false,
@@ -334,7 +337,7 @@ async function open(
     JSON.stringify({ theme, ...preferences }),
   );
 
-  if (!liveTurnOnly) await instrumentLens(context, lensFault);
+  if (instrument && !liveTurnOnly) await instrumentLens(context, lensFault);
 
   if (liveTurnOnly) {
     await context.addInitScript(() => {
@@ -453,6 +456,27 @@ const landing = (page, timeout = 15000) =>
     undefined,
     { timeout },
   );
+
+// Screenshots, video and resource instrumentation can hold the browser's frames.
+// Measure playback separately from the contexts that collect visual evidence.
+async function checkIntroTiming(browser, engine, report) {
+  const { context, errors, page } = await open(browser, {
+    instrument: false,
+    waitUntil: 'domcontentloaded',
+  });
+
+  const loadedAt = Date.now();
+
+  try {
+    await playing(page);
+    await landing(page);
+    report.landedAfter = Date.now() - loadedAt;
+    expect(engine, report.landedAfter < 7000, `the opener takes ${report.landedAfter}ms to land`);
+    expect(engine, errors.length === 0, `timed playback logged errors: ${errors.join(' | ')}`);
+  } finally {
+    await context.close();
+  }
+}
 
 // Every ancestor of the hero's glass button and of the desk, up to the root, must leave the glass
 // its backdrop: no opacity below 1, filter, mask or clip-path.
@@ -1256,6 +1280,12 @@ async function checkEngine(browserType) {
   manifest.engines[engine] = report;
 
   try {
+    if (introTimingOnly) {
+      await checkIntroTiming(browser, engine, report);
+
+      return;
+    }
+
     if (lensContractsOnly) {
       await checkLensContracts(browser, engine, report);
 
@@ -1387,8 +1417,7 @@ async function checkEngine(browserType) {
 
     const landedAfter = Date.now() - loadedAt;
 
-    report.landedAfter = landedAfter;
-    expect(engine, landedAfter < 7000, `the opener takes ${landedAfter}ms to land`);
+    report.capturedLandedAfter = landedAfter;
 
     const landedState = await page.evaluate(() => ({
       players: document.querySelectorAll('.keynote-stage .__remotion-player').length,
@@ -2233,6 +2262,8 @@ async function checkEngine(browserType) {
         motionLayout,
       );
     }
+
+    await checkIntroTiming(browser, engine, report);
   } finally {
     await browser.close();
   }
@@ -2288,8 +2319,12 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(
-  lensContractsOnly
-    ? 'The keynote lens releases its WebGL objects and keeps reusable contexts.'
-    : 'The keynote opens, lands, turns and stands still where it should.',
-);
+if (introTimingOnly) {
+  console.log('The keynote intro lands without capture overhead.');
+} else {
+  console.log(
+    lensContractsOnly
+      ? 'The keynote lens releases its WebGL objects and keeps reusable contexts.'
+      : 'The keynote opens, lands, turns and stands still where it should.',
+  );
+}

@@ -37,12 +37,53 @@ try {
     await context.addInitScript(() => {
       localStorage.setItem('glassy-ui-intro', 'seen');
       const counts = new Map();
-      const draw = WebGL2RenderingContext.prototype.drawArrays;
-      WebGL2RenderingContext.prototype.drawArrays = function (...args) {
-        counts.set(this.canvas, (counts.get(this.canvas) ?? 0) + 1);
+      const introCanvases = new Set();
+      let openerBuffer;
+      let countDeskStyles = false;
+      let deskStyles = 0;
+      const computedStyle = window.getComputedStyle;
+      window.getComputedStyle = function (element, ...args) {
+        if (countDeskStyles && element.tagName !== 'CANVAS' && element.closest('.desk-screen'))
+          deskStyles += 1;
 
-        return draw.apply(this, args);
+        return computedStyle.call(this, element, ...args);
       };
+
+      window.startDeskStyleCount = () => {
+        deskStyles = 0;
+        countDeskStyles = true;
+      };
+
+      window.stopDeskStyleCount = () => {
+        countDeskStyles = false;
+
+        return deskStyles;
+      };
+
+      for (const method of ['drawArrays', 'drawElements']) {
+        const draw = WebGL2RenderingContext.prototype[method];
+        WebGL2RenderingContext.prototype[method] = function (...args) {
+          counts.set(this.canvas, (counts.get(this.canvas) ?? 0) + 1);
+
+          if (this.canvas.closest('.keynote-player')) introCanvases.add(this.canvas);
+
+          if (this.canvas.closest('.keynote-stage .lg-phone-duo')) {
+            const pixels = this.canvas.width * this.canvas.height;
+
+            if (!openerBuffer || pixels > openerBuffer.pixels) {
+              openerBuffer = {
+                pixels,
+                width: this.canvas.width,
+                height: this.canvas.height,
+                cssWidth: this.canvas.clientWidth,
+                cssHeight: this.canvas.clientHeight,
+              };
+            }
+          }
+
+          return draw.apply(this, args);
+        };
+      }
 
       window.readTurnDraws = () =>
         [...counts].flatMap(([canvas, draws]) =>
@@ -51,6 +92,27 @@ try {
           !canvas.closest('.desk-screen')
             ? [{ draws }]
             : [],
+        );
+      window.readOpenerBuffer = () => openerBuffer;
+      window.readEndedIntroBuffers = () =>
+        [...introCanvases].map((canvas) => {
+          const context = canvas.getContext('webgl2');
+
+          return {
+            connected: canvas.isConnected,
+            lost: context?.isContextLost() ?? false,
+            pixels:
+              (context?.drawingBufferWidth ?? canvas.width) *
+              (context?.drawingBufferHeight ?? canvas.height),
+          };
+        });
+      window.readBodyDraws = () =>
+        [...counts].reduce(
+          (sum, [canvas, draws]) =>
+            canvas.isConnected && canvas.closest('.turn-player') && !canvas.closest('[data-slab]')
+              ? sum + draws
+              : sum,
+          0,
         );
     });
     const page = await context.newPage();
@@ -63,6 +125,36 @@ try {
       const privacy = page.getByRole('region', { name: 'Analytics privacy settings' });
       await privacy.getByRole('button', { name: 'Reject analytics', exact: true }).click();
       await page.waitForSelector('.turn-player [data-slab]', { state: 'attached' });
+
+      await page.getByRole('button', { name: 'Replay intro', exact: true }).click();
+      await page.waitForFunction(() => document.documentElement.hasAttribute('data-keynote-intro'));
+      await page.waitForFunction(
+        () => !document.documentElement.hasAttribute('data-keynote-intro'),
+      );
+      await page.waitForFunction(
+        () =>
+          window.readEndedIntroBuffers().length > 0 &&
+          window
+            .readEndedIntroBuffers()
+            .every((canvas) => !canvas.connected && !canvas.lost && canvas.pixels <= 1),
+        null,
+        { timeout: 2000 },
+      );
+      result.endedIntroBuffers = await page.evaluate(() => window.readEndedIntroBuffers());
+      result.openerBuffer = await page.evaluate(() => window.readOpenerBuffer());
+      assert.ok(result.openerBuffer, 'the opener phone never drew');
+      const buffer = result.openerBuffer;
+      const density = await page.evaluate(() => Math.min(4, Math.max(2, devicePixelRatio * 2)));
+      assert.equal(
+        buffer.width,
+        Math.min(4096, Math.round(buffer.cssWidth * density)),
+        'the intro phone lost its original horizontal sampling',
+      );
+      assert.equal(
+        buffer.height,
+        Math.min(4096, Math.round(buffer.cssHeight * density)),
+        'the intro phone lost its original vertical sampling',
+      );
 
       const geometry = await page.evaluate(() => {
         const track = document.querySelector('.turn');
@@ -86,7 +178,54 @@ try {
         await page.waitForTimeout(300);
       };
 
+      await at(0);
+
+      const beforeLift = await page.evaluate(() => window.readBodyDraws());
+
+      await at(30);
+      await at(55);
+      result.invisibleBodyDraws = await page.evaluate(
+        (before) => window.readBodyDraws() - before,
+        beforeLift,
+      );
+      assert.equal(result.invisibleBodyDraws, 0, 'the invisible zero-depth phone body redrew');
+
       await at(320);
+      result.visibleBodyDraws = await page.evaluate(() => window.readBodyDraws());
+      assert.ok(result.visibleBodyDraws > 0, 'the visible phone body never drew');
+      result.bodySurface = await page.evaluate(() => {
+        const canvas = [...document.querySelectorAll('.turn-player canvas')].find(
+          (element) => !element.closest('[data-slab]'),
+        );
+
+        const box = canvas.getBoundingClientRect();
+        const stage = document.querySelector('.turn-stage');
+        const density = Math.min(devicePixelRatio, 2);
+
+        return {
+          density,
+          horizontalDensity: canvas.width / box.width,
+          verticalDensity: canvas.height / box.height,
+          pixels: canvas.width * canvas.height,
+          fullStagePixels:
+            Math.round(stage.clientWidth * density) * Math.round(stage.clientHeight * density),
+        };
+      });
+      const surface = result.bodySurface;
+      assert.ok(
+        Math.abs(surface.horizontalDensity - surface.density) < 0.001 &&
+          Math.abs(surface.verticalDensity - surface.density) < 0.001,
+        'the bounded phone body lost its device-pixel sampling',
+      );
+
+      if (width >= 900) {
+        assert.ok(
+          surface.pixels < surface.fullStagePixels / 2,
+          'the settled phone still allocates a mostly transparent full-stage body surface',
+        );
+      }
+
+      await page.evaluate(() => window.startDeskStyleCount());
       const initial = await page.evaluate(() => window.readTurnDraws());
       // Move the features through their arrival while the settled phone remains still.
       await page.evaluate(async ({ top, range }) => {
@@ -105,12 +244,85 @@ try {
       }, geometry);
       await at(670);
       const final = await page.evaluate(() => window.readTurnDraws());
+      result.hiddenDeskStyleReads = await page.evaluate(() => window.stopDeskStyleCount());
+      assert.equal(result.hiddenDeskStyleReads, 0, 'the hidden desk kept measuring its panes');
       result.stationaryDraws = final.map((canvas, index) => canvas.draws - initial[index].draws);
 
       if (result.stationaryDraws.some((draws) => draws > 0)) {
         report.failures.push(
           `${width}: stationary phone shaders redrew ${result.stationaryDraws.join(', ')} times`,
         );
+      }
+
+      const checkShift = () =>
+        page.waitForFunction(() => {
+          const track = document.querySelector('.turn');
+
+          const expected =
+            Math.min(
+              1,
+              Math.max(
+                0,
+                -track.getBoundingClientRect().top /
+                  (track.offsetHeight - document.querySelector('.turn-stage').clientHeight),
+              ),
+            ) * 719;
+
+          return (
+            Math.abs(Number(document.querySelector('.turn-stage').dataset.frame) - expected) < 0.5
+          );
+        });
+
+      try {
+        await page.evaluate(() => {
+          const spacer = document.createElement('div');
+          spacer.id = 'scroll-check-spacer';
+          spacer.style.height = '160px';
+          document.querySelector('main').before(spacer);
+        });
+        await checkShift();
+      } finally {
+        await page.evaluate(() => document.getElementById('scroll-check-spacer')?.remove());
+      }
+
+      await checkShift();
+      result.layoutShiftTracked = true;
+      await at(30);
+      await page.waitForFunction(
+        () =>
+          document.querySelector('.desk-screen.lg-scene').getAttribute('data-lg-scene-state') !==
+          'paused',
+      );
+      result.deskResumed = true;
+
+      try {
+        await page.evaluate(() => {
+          const style = document.createElement('style');
+          style.id = 'scene-visibility-check';
+          style.textContent =
+            '.turn-desk-face[data-state="scroll-hidden"] .desk-screen { visibility: hidden; }';
+          document.head.append(style);
+          document.querySelector('.turn-desk-face').setAttribute('data-state', 'scroll-hidden');
+        });
+        await page.waitForFunction(
+          () =>
+            document.querySelector('.desk-screen.lg-scene').getAttribute('data-lg-scene-state') ===
+            'paused',
+        );
+        await page.evaluate(() =>
+          document.querySelector('.turn-desk-face').removeAttribute('data-state'),
+        );
+        await page.waitForFunction(
+          () =>
+            document.querySelector('.desk-screen.lg-scene').getAttribute('data-lg-scene-state') !==
+            'paused',
+        );
+        result.stateVisibilityResumed = true;
+      } finally {
+        await page.evaluate(() => {
+          document.querySelector('.turn-desk-face').removeAttribute('data-state');
+          document.getElementById('scene-visibility-check')?.remove();
+        });
       }
 
       await at(110);
