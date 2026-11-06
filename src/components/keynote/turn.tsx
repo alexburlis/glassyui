@@ -415,8 +415,11 @@ const TurnScene = memo(function TurnScene({
                 position: 'absolute',
                 top: 0,
                 left: 0,
+                width: SCREEN.width,
+                height: SCREEN.height,
                 transformOrigin: '0 0',
                 transform: `translate(${fit.x.toFixed(2)}px, ${fit.y.toFixed(2)}px) scale(${fit.scale.toFixed(4)})`,
+                willChange: handedOver ? 'transform, opacity' : undefined,
               }}
             >
               <PhoneScreen live={active && facing} theme={theme} />

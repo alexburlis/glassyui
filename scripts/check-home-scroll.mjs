@@ -37,6 +37,7 @@ try {
     await context.addInitScript(() => {
       localStorage.setItem('glassy-ui-intro', 'seen');
       const counts = new Map();
+      const introCanvases = new Set();
       let openerBuffer;
       let countDeskStyles = false;
       let deskStyles = 0;
@@ -63,6 +64,8 @@ try {
         const draw = WebGL2RenderingContext.prototype[method];
         WebGL2RenderingContext.prototype[method] = function (...args) {
           counts.set(this.canvas, (counts.get(this.canvas) ?? 0) + 1);
+
+          if (this.canvas.closest('.keynote-player')) introCanvases.add(this.canvas);
 
           if (this.canvas.closest('.keynote-stage .lg-phone-duo')) {
             const pixels = this.canvas.width * this.canvas.height;
@@ -91,6 +94,18 @@ try {
             : [],
         );
       window.readOpenerBuffer = () => openerBuffer;
+      window.readEndedIntroBuffers = () =>
+        [...introCanvases].map((canvas) => {
+          const context = canvas.getContext('webgl2');
+
+          return {
+            connected: canvas.isConnected,
+            lost: context?.isContextLost() ?? false,
+            pixels:
+              (context?.drawingBufferWidth ?? canvas.width) *
+              (context?.drawingBufferHeight ?? canvas.height),
+          };
+        });
       window.readBodyDraws = () =>
         [...counts].reduce(
           (sum, [canvas, draws]) =>
@@ -116,6 +131,16 @@ try {
       await page.waitForFunction(
         () => !document.documentElement.hasAttribute('data-keynote-intro'),
       );
+      await page.waitForFunction(
+        () =>
+          window.readEndedIntroBuffers().length > 0 &&
+          window
+            .readEndedIntroBuffers()
+            .every((canvas) => !canvas.connected && !canvas.lost && canvas.pixels <= 1),
+        null,
+        { timeout: 2000 },
+      );
+      result.endedIntroBuffers = await page.evaluate(() => window.readEndedIntroBuffers());
       result.openerBuffer = await page.evaluate(() => window.readOpenerBuffer());
       assert.ok(result.openerBuffer, 'the opener phone never drew');
       const buffer = result.openerBuffer;
