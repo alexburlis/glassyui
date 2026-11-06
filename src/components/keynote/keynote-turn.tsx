@@ -121,6 +121,7 @@ export function KeynoteTurn({ caption, children, nativeCount }: KeynoteTurnProps
       face.style.overflow = 'hidden';
       face.style.transformOrigin = '0 0';
       face.style.transform = `translateY(${-slotTopRef.current}px) ${pose.transform}`;
+      content.style.willChange = 'transform, opacity';
       content.style.width = `${desk.width}px`;
       content.style.transformOrigin = '0 0';
       content.style.transform = `translate(${(pose.width - desk.width * pose.scale) / 2}px, ${(pose.height - desk.height * pose.scale) / 2}px) scale(${pose.scale})`;
