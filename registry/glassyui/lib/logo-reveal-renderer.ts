@@ -479,6 +479,9 @@ export function createLogoRevealRenderer(canvas: HTMLCanvasElement): LogoRevealR
     if (vertices) gl.deleteVertexArray(vertices);
 
     gl.deleteProgram(program);
+
+    canvas.width = 1;
+    canvas.height = 1;
   };
 
   try {

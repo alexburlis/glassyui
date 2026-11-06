@@ -22,11 +22,21 @@ const engines = [
   { name: 'firefox', type: firefox, options: {} },
 ];
 
+const selectedEngines = (process.env.GLASS_ENGINES ?? 'chromium,webkit,firefox').split(',');
+
+assert.ok(
+  selectedEngines.every((name) => engines.some((engine) => engine.name === name)),
+  'Select Chromium, WebKit or Firefox with GLASS_ENGINES',
+);
+
 const manifest = {
   status: 'running',
   surface: 'docs page, local browsers',
+  selectedEngines,
   captures: [],
   landings: [],
+  replays: [],
+  holds: [],
   errors: [],
 };
 
@@ -78,6 +88,8 @@ const hash = (buffer) => crypto.createHash('sha256').update(buffer).digest('hex'
 
 try {
   for (const engine of engines) {
+    if (!selectedEngines.includes(engine.name)) continue;
+
     const browser = await engine.type.launch({ headless: true, ...engine.options });
 
     try {
@@ -92,6 +104,16 @@ try {
 
         // Once per tab, so a reload keeps a preference the check has changed.
         await context.addInitScript((chosen) => {
+          const counts = new WeakMap();
+          const draw = WebGL2RenderingContext.prototype.drawArrays;
+          WebGL2RenderingContext.prototype.drawArrays = function (...args) {
+            counts.set(this.canvas, (counts.get(this.canvas) ?? 0) + 1);
+
+            return draw.apply(this, args);
+          };
+
+          window.readLogoDraws = (canvas) => counts.get(canvas) ?? 0;
+
           if (sessionStorage.getItem('logo-reveal-check')) return;
 
           sessionStorage.setItem('logo-reveal-check', '1');
@@ -129,8 +151,54 @@ try {
         );
 
         // Watch one run from its first frame: the canvas must change as the glass moves.
-        await replay.click();
-        await preview.locator('.lg-logo-reveal[data-state="playing"]').waitFor();
+        const previous = await reveal.locator('canvas').evaluateHandle((canvas) => {
+          const context = canvas.getContext('webgl2');
+
+          return {
+            canvas,
+            context,
+            pixels: context.drawingBufferWidth * context.drawingBufferHeight,
+          };
+        });
+
+        try {
+          await replay.click();
+          await preview.locator('.lg-logo-reveal[data-state="playing"]').waitFor();
+
+          const retired = await previous.evaluate(({ canvas, context, pixels }) => {
+            const bufferPixels = context.drawingBufferWidth * context.drawingBufferHeight;
+            const reusedPixel = new Uint8Array(4);
+
+            context.clearColor(1, 0, 0, 1);
+            context.clear(context.COLOR_BUFFER_BIT);
+            context.readPixels(0, 0, 1, 1, context.RGBA, context.UNSIGNED_BYTE, reusedPixel);
+
+            return {
+              beforePixels: pixels,
+              connected: canvas.isConnected,
+              contextLost: context.isContextLost(),
+              pixels: bufferPixels,
+              reusedPixel: [...reusedPixel],
+            };
+          });
+
+          manifest.replays.push({ run: label, ...retired });
+          assert.ok(retired.beforePixels > 1, `${label}: the old reveal must have drawn`);
+          assert.equal(retired.connected, false, `${label}: Replay must replace the old reveal`);
+          assert.equal(
+            retired.contextLost,
+            false,
+            `${label}: disposal must keep reusable contexts`,
+          );
+          assert.equal(retired.pixels, 1, `${label}: Replay must release the old drawing buffer`);
+          assert.deepEqual(
+            retired.reusedPixel,
+            [255, 0, 0, 255],
+            `${label}: the released context must still draw`,
+          );
+        } finally {
+          await previous.dispose();
+        }
 
         const frames = [];
 
@@ -184,16 +252,29 @@ try {
 
         const held = await reveal.screenshot({ path: path.join(directory, `${prefix}-held.png`) });
 
+        const heldDraws = await reveal
+          .locator('canvas')
+          .evaluate((canvas) => window.readLogoDraws(canvas));
+
         keep(`${prefix}-held.png`);
         assert.ok(
           (await difference(page, held, lockup)) > 1,
           `${label}: the held moment must show the glass`,
         );
         await page.waitForTimeout(300);
-        assert.equal(
-          hash(await reveal.screenshot()),
-          hash(held),
-          `${label}: a held moment must stand still`,
+
+        const afterHeldDraws = await reveal
+          .locator('canvas')
+          .evaluate((canvas) => window.readLogoDraws(canvas));
+
+        const heldDifference = await difference(page, held, await reveal.screenshot());
+
+        manifest.holds.push({ run: label, heldDraws, afterHeldDraws, heldDifference });
+        assert.ok(heldDraws > 0, `${label}: the held frame must have drawn`);
+        assert.equal(afterHeldDraws, heldDraws, `${label}: a held moment must stop drawing`);
+        assert.ok(
+          heldDifference < 0.01,
+          `${label}: a held moment must stand still (${heldDifference.toFixed(5)})`,
         );
         await page.keyboard.press('End');
         await preview.locator('.lg-logo-reveal[data-state="ended"]').waitFor();
@@ -221,6 +302,8 @@ try {
           );
         }, theme);
         await page.reload({ waitUntil: 'networkidle' });
+
+        if (await consent.count()) await consent.click();
         await page.waitForFunction(() => document.documentElement.dataset.lgReduceMotion === '1');
         await preview.getByRole('img', { name: 'Glassy UI', exact: true }).scrollIntoViewIfNeeded();
         assert.equal(
