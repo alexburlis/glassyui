@@ -193,6 +193,38 @@ try {
       await at(320);
       result.visibleBodyDraws = await page.evaluate(() => window.readBodyDraws());
       assert.ok(result.visibleBodyDraws > 0, 'the visible phone body never drew');
+      result.bodySurface = await page.evaluate(() => {
+        const canvas = [...document.querySelectorAll('.turn-player canvas')].find(
+          (element) => !element.closest('[data-slab]'),
+        );
+
+        const box = canvas.getBoundingClientRect();
+        const stage = document.querySelector('.turn-stage');
+        const density = Math.min(devicePixelRatio, 2);
+
+        return {
+          density,
+          horizontalDensity: canvas.width / box.width,
+          verticalDensity: canvas.height / box.height,
+          pixels: canvas.width * canvas.height,
+          fullStagePixels:
+            Math.round(stage.clientWidth * density) * Math.round(stage.clientHeight * density),
+        };
+      });
+      const surface = result.bodySurface;
+      assert.ok(
+        Math.abs(surface.horizontalDensity - surface.density) < 0.001 &&
+          Math.abs(surface.verticalDensity - surface.density) < 0.001,
+        'the bounded phone body lost its device-pixel sampling',
+      );
+
+      if (width >= 900) {
+        assert.ok(
+          surface.pixels < surface.fullStagePixels / 2,
+          'the settled phone still allocates a mostly transparent full-stage body surface',
+        );
+      }
+
       await page.evaluate(() => window.startDeskStyleCount());
       const initial = await page.evaluate(() => window.readTurnDraws());
       // Move the features through their arrival while the settled phone remains still.
