@@ -90,7 +90,7 @@
     "@sentry/nextjs": "10.75.2",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
-    "next": "16.4.3",
+    "next": "16.4.5",
     "posthog-js": "1.434.15",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -110,7 +110,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/turndown": "5.0.6",
     "eslint": "9.39.5",
-    "eslint-config-next": "16.4.3",
+    "eslint-config-next": "16.4.5",
     "jsdom": "^29.1.1",
     "knip": "6.39.0",
     "oxfmt": "0.70.0",
@@ -133,7 +133,7 @@
     "patchedDependencies": {
       "braces@3.0.3": "patches/braces@3.0.3.patch",
       "mdx-blog-kit@0.1.2": "patches/mdx-blog-kit@0.1.2.patch",
-      "next@16.4.3": "patches/next@16.4.3.patch",
+      "next@16.4.5": "patches/next@16.4.5.patch",
       "posthog-js@1.434.15": "patches/posthog-js@1.434.15.patch"
     }
   },
