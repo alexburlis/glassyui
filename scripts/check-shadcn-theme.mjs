@@ -2932,12 +2932,21 @@ try {
           ),
       });
 
-      // Keep the fixture's relative reference to the single repository patch.
+      // Keep the fixture's relative references to the repository patches.
       fs.mkdirSync(path.join(temporaryContainer, 'patches'));
-      fs.copyFileSync(
-        path.join(root, 'patches', 'braces@3.0.3.patch'),
-        path.join(temporaryContainer, 'patches', 'braces@3.0.3.patch'),
+
+      const fixtureManifest = JSON.parse(
+        fs.readFileSync(path.join(sourceFixture, 'package.json'), 'utf8'),
       );
+
+      for (const reference of Object.values(fixtureManifest.pnpm?.patchedDependencies ?? {})) {
+        const patchName = path.basename(reference);
+
+        fs.copyFileSync(
+          path.join(root, 'patches', patchName),
+          path.join(temporaryContainer, 'patches', patchName),
+        );
+      }
 
       if (fixture.palette) applyPalette(temporaryRoot, PALETTES[fixture.palette]);
       run('pnpm', ['install', '--frozen-lockfile', '--prefer-offline'], temporaryRoot);
