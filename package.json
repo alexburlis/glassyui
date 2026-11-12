@@ -90,16 +90,16 @@
     "@sentry/nextjs": "10.75.2",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
-    "mdx-blog-kit": "file:vendor/mdx-blog-kit-0.1.2.tgz",
     "next": "16.4.5",
-    "next-mdx-remote": "6.0.0",
     "posthog-js": "1.434.15",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "remark-gfm": "4.0.1",
     "remotion": "4.0.529",
     "server-only": "0.0.1",
-    "turndown": "7.2.4"
+    "turndown": "7.2.4",
+    "mdx-blog-kit": "file:vendor/mdx-blog-kit-0.1.2.tgz",
+    "next-mdx-remote": "6.0.0",
+    "remark-gfm": "4.0.1"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",
