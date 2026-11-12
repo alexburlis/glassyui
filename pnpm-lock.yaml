@@ -31,6 +31,9 @@ patchedDependencies:
   braces@3.0.3:
     hash: c5ffd8075677409c3704bfa465f0304cb1bb97954b8351c0c2b64fe361f9f1e0
     path: patches/braces@3.0.3.patch
+  deepmerge@4.3.1:
+    hash: d9495ba09ddf9b382478b30ee738a1e1a5031277eaa5838a73ec568149269d76
+    path: patches/deepmerge@4.3.1.patch
   mdx-blog-kit@0.1.2:
     hash: bf43501cf20ac511bccbfb5d13237ba9c3efe32996a50b4b9c7bd3788fe03606
     path: patches/mdx-blog-kit@0.1.2.patch
@@ -8024,7 +8027,7 @@ snapshots:
 
   deep-is@0.1.4: {}
 
-  deepmerge@4.3.1: {}
+  deepmerge@4.3.1(patch_hash=d9495ba09ddf9b382478b30ee738a1e1a5031277eaa5838a73ec568149269d76): {}
 
   default-browser-id@5.0.1: {}
 
@@ -10544,7 +10547,7 @@ snapshots:
       commander: 14.0.3
       cosmiconfig: 9.0.2(typescript@6.0.3)
       dedent: 1.7.2
-      deepmerge: 4.3.1
+      deepmerge: 4.3.1(patch_hash=d9495ba09ddf9b382478b30ee738a1e1a5031277eaa5838a73ec568149269d76)
       diff: 8.0.4
       execa: 9.6.1
       fast-glob: 3.3.3

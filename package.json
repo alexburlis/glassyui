@@ -90,16 +90,16 @@
     "@sentry/nextjs": "10.75.2",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "mdx-blog-kit": "file:vendor/mdx-blog-kit-0.1.2.tgz",
     "next": "16.4.5",
+    "next-mdx-remote": "6.0.0",
     "posthog-js": "1.434.15",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "remark-gfm": "4.0.1",
     "remotion": "4.0.529",
     "server-only": "0.0.1",
-    "turndown": "7.2.4",
-    "mdx-blog-kit": "file:vendor/mdx-blog-kit-0.1.2.tgz",
-    "next-mdx-remote": "6.0.0",
-    "remark-gfm": "4.0.1"
+    "turndown": "7.2.4"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",
@@ -148,7 +148,8 @@
       "braces@3.0.3": "patches/braces@3.0.3.patch",
       "mdx-blog-kit@0.1.2": "patches/mdx-blog-kit@0.1.2.patch",
       "next@16.4.5": "patches/next@16.4.5.patch",
-      "posthog-js@1.434.15": "patches/posthog-js@1.434.15.patch"
+      "posthog-js@1.434.15": "patches/posthog-js@1.434.15.patch",
+      "deepmerge@4.3.1": "patches/deepmerge@4.3.1.patch"
     }
   },
   "packageManager": "pnpm@10.34.5+sha512.a4ee05f2f73658255bd6a89859c065a45c28a57daefae2c893a168ee2b73168c37b91e83e57ea67654ad03f03031746430e8bce38e362e042605fb8abc80192e"

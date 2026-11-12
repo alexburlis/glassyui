@@ -15,6 +15,22 @@ This is an intentional input limit that prevents stack exhaustion. Remove this
 patch when an upstream release fixes the advisory and passes the security
 contract in `scripts/test-braces-security.mjs`.
 
+## `deepmerge@4.3.1`
+
+The upstream package has no published fix for
+[GHSA-gcqx-w48m-w2h4](https://github.com/advisories/GHSA-gcqx-w48m-w2h4). Its
+prototype-poisoning guard inspects the target object rather than the key, so a
+`__proto__` key still sets the prototype of the merged result when the target
+has a null prototype, holds a `null` placeholder or has its own `__proto__` key.
+The local patch applies the remedy proposed in
+[TehShrike/deepmerge#273](https://github.com/TehShrike/deepmerge/issues/273):
+both copy loops in `mergeObject` skip the keys `__proto__`, `constructor` and
+`prototype`, whatever the target's shape, so merging drops own keys with those
+names. It patches `index.js` and both builds in `dist/`; the root and the
+`base-nova` fixture apply the same file. Like the `braces` patch, it keeps the
+published version, so `pnpm audit` and Dependabot continue to report the
+advisory. Remove the patch when an upstream release fixes the advisory.
+
 ## Container certificate trust
 
 The Docker build installs the updated Alpine `ca-certificates` package. Build
@@ -74,7 +90,6 @@ Two groups sit outside their parents' declared ranges:
   these pins, and the same pin in `fixtures/shadcn-theme-consumer/base-nova`,
   when those parents require minimatch 11.
 
-`deepmerge` 4.3.1 and `zod` 3.25.76 still carry advisories: no fixed `deepmerge`
-release exists, and the pinned shadcn CLI 4.14.1 requires zod 3. Both arrive
-only through the shadcn CLI, which runs in local registry tooling and is not
-part of the deployed site.
+`zod` 3.25.76 still carries an advisory, because the pinned shadcn CLI 4.14.1
+requires zod 3. It arrives only through the shadcn CLI, which runs in local
+registry tooling and is not part of the deployed site.
