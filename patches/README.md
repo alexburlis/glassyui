@@ -53,3 +53,28 @@ Keep the bounded acquisition model in the application. Remove the patch only
 when an upstream SDK honors the same storage contract and the paired analytics
 browser checks prove that query, referrer and search content stay out of
 cookies, other SDK storage and transmitted events.
+
+## Security overrides
+
+`pnpm.overrides` in `package.json` pins transitive packages whose published
+security fix their parents do not yet require. Dependabot cannot raise these
+itself; its security runs report each one as not possible. Each pin is exact, so
+it holds the package at that version until it is removed. Drop a pin once its
+parent's own range resolves a fixed version.
+
+Two groups sit outside their parents' declared ranges:
+
+- `glob` 14.0.3 under `@sentry/bundler-plugin-core` and
+  `@sentry/bundler-plugins`, which ask for glob 13. Sentry's build plugin calls
+  only `glob(patterns, options)`, which glob 14 keeps. Remove both pins when the
+  installed Sentry SDK requires glob 14.
+- `minimatch` 11.0.4 under `@ts-morph/common` and
+  `@typescript-eslint/typescript-estree`, which ask for minimatch 10. Both call
+  only `minimatch(path, pattern, options)`, which minimatch 11 keeps. Remove
+  these pins, and the same pin in `fixtures/shadcn-theme-consumer/base-nova`,
+  when those parents require minimatch 11.
+
+`deepmerge` 4.3.1 and `zod` 3.25.76 still carry advisories: no fixed `deepmerge`
+release exists, and the pinned shadcn CLI 4.14.1 requires zod 3. Both arrive
+only through the shadcn CLI, which runs in local registry tooling and is not
+part of the deployed site.
