@@ -128,13 +128,28 @@
       "@modelcontextprotocol/sdk": "1.32.0",
       "proxy-addr": "2.0.8",
       "postcss-selector-parser": "7.1.6",
-      "hono": "4.13.11"
+      "hono": "4.13.11",
+      "posthog-js>dompurify": "3.4.17",
+      "ajv>fast-uri": "3.1.9",
+      "@dotenvx/dotenvx>systeminformation": "5.33.19",
+      "@modelcontextprotocol/sdk>@hono/node-server": "2.1.6",
+      "undici": "7.30.1",
+      "qs": "6.16.2",
+      "express>body-parser": "2.4.0",
+      "express-rate-limit>ip-address": "10.7.6",
+      "eslint-plugin-react-hooks>zod": "4.6.7",
+      "knip>zod": "4.6.7",
+      "@sentry/bundler-plugin-core>glob": "14.0.3",
+      "@sentry/bundler-plugins>glob": "14.0.3",
+      "@ts-morph/common>minimatch": "11.0.4",
+      "@typescript-eslint/typescript-estree>minimatch": "11.0.4"
     },
     "patchedDependencies": {
       "braces@3.0.3": "patches/braces@3.0.3.patch",
       "mdx-blog-kit@0.1.2": "patches/mdx-blog-kit@0.1.2.patch",
       "next@16.4.5": "patches/next@16.4.5.patch",
-      "posthog-js@1.434.15": "patches/posthog-js@1.434.15.patch"
+      "posthog-js@1.434.15": "patches/posthog-js@1.434.15.patch",
+      "deepmerge@4.3.1": "patches/deepmerge@4.3.1.patch"
     }
   },
   "packageManager": "pnpm@10.34.5+sha512.a4ee05f2f73658255bd6a89859c065a45c28a57daefae2c893a168ee2b73168c37b91e83e57ea67654ad03f03031746430e8bce38e362e042605fb8abc80192e"
