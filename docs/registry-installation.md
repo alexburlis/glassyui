@@ -210,6 +210,16 @@ but it passes them after `--`, which skips Expo's SDK version matching; `--fix`
 aligns them. Files land in `components/glassyui`, or `src/components/glassyui`
 in apps that keep their code in `src`.
 
+Skipping that matching lets npm take each package's newest release, and npm
+refuses a release whose peer range excludes the app's React Native. The newest
+Reanimated and Worklets need a newer React Native than an older SDK ships, so
+the pages of the items that use them (`glass-swipe-row`, `glass-card-stack`) ask
+apps without Reanimated to run
+`npx expo install react-native-reanimated react-native-worklets` first. npm
+keeps an installed version, so the CLI then leaves that pair alone. The Expo
+smoke starts its consumer with the pair for the same reason and checks that the
+CLI keeps it.
+
 Verify the Expo catalogue with `pnpm check:native-registry`. Against a running
 production build, `pnpm smoke:expo-consumer http://127.0.0.1:3100` installs
 every item into a clean copy of the Expo fixture, then type-checks and bundles
