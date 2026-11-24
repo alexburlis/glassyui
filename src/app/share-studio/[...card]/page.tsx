@@ -150,6 +150,19 @@ async function cardFor(kind: string, name: string | undefined): Promise<ShareCar
     return { title: 'Components', second: 'One glass.', mosaic: MOSAIC };
   }
 
+  // The templates page's card shows the first free template live.
+  if (kind === 'templates') {
+    const halcyon = TEMPLATE_STAGES.halcyon;
+
+    if (!halcyon) return null;
+
+    return {
+      title: 'Templates',
+      second: 'Whole pages.',
+      stage: { id: 'template-halcyon', src: `${freeTemplatePath('halcyon')}/preview`, ...halcyon },
+    };
+  }
+
   if (kind === 'docs')
     return { title: 'Get started.', second: 'With shadcn.', stage: stage('install') };
 

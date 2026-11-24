@@ -35,18 +35,15 @@ const nextConfig: NextConfig = {
     return [
       { source: '/pro', destination: `${PRO_ORIGIN}/`, permanent: true },
       { source: '/pro/:path*', destination: `${PRO_ORIGIN}/:path*`, permanent: true },
-      // The retired portfolio template and guide, and the old templates index, lead to Glassy UI
-      // Pro. The free templates' pages and every template's poster live under /templates.
-      ...[
-        '/templates',
-        '/templates/portfolio',
-        '/templates/portfolio/:path*',
-        '/guides/portfolio',
-      ].map((source) => ({
-        source,
-        destination: PRO_ORIGIN,
-        permanent: true,
-      })),
+      // The retired portfolio template and its guide lead to Glassy UI Pro. Every template has its
+      // place on /templates, and the free ones their own pages under it.
+      ...['/templates/portfolio', '/templates/portfolio/:path*', '/guides/portfolio'].map(
+        (source) => ({
+          source,
+          destination: PRO_ORIGIN,
+          permanent: true,
+        }),
+      ),
       {
         source: '/:path*',
         has: [{ type: 'host', value: 'www.glassyui.com' }],

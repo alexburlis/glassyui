@@ -10,7 +10,7 @@ import {
   GlassDialogDescription,
   GlassDialogTitle,
 } from '@/components/liquid';
-import { TemplateCardBody } from '@/components/site/template-card';
+import { TemplateCardBody, TemplateWindow } from '@/components/site/template-card';
 import { captureAction } from '@/lib/analytics/browser';
 import { PRO_OFFER } from '@/lib/pro-teaser';
 import { PRO_CHECKOUT_URL, PRO_ORIGIN } from '@/lib/site-links';
@@ -23,6 +23,26 @@ const refund = `Full refund up to ${PRO_OFFER.refundDays} days after your first 
 const firstRelease = PRO_CARDS.filter((card) => card.status === 'first-release');
 
 const planned = PRO_CARDS.filter((card) => card.status === 'planned');
+
+// The Pro tile fans out three of the planned templates, the first in the middle: every one of
+// them comes with Pro.
+const fan = planned.length >= 3 ? [planned[1], planned[0], planned[2]] : planned;
+
+/** The dialog's way through the collection: a chevron pointing back or on. */
+function StepGlyph({ direction }: { direction: 'previous' | 'next' }) {
+  return (
+    <svg aria-hidden className="template-dialog-step-glyph" viewBox="0 0 16 16">
+      <path
+        d={direction === 'previous' ? 'm10 3.5-4.5 4.5 4.5 4.5' : 'm6 3.5 4.5 4.5L6 12.5'}
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
 
 function CheckGlyph() {
   return (
@@ -40,11 +60,15 @@ function CheckGlyph() {
 }
 
 function ProTemplateCard({
+  backdrop,
   card,
+  level,
   onOpen,
   sizes,
 }: {
+  backdrop: number;
   card: ProCard;
+  level: 3 | 4;
   onOpen: (event: MouseEvent<HTMLAnchorElement>, card: ProCard) => void;
   sizes: string;
 }) {
@@ -58,26 +82,32 @@ function ProTemplateCard({
       onClick={(event) => onOpen(event, card)}
     >
       <TemplateCardBody
-        action={
-          <>
-            Get it first with Pro<span aria-hidden> ›</span>
-          </>
-        }
+        backdrop={backdrop}
         card={card}
-        chip={card.chip}
+        level={level}
         sizes={sizes}
+        // The planned templates share one label above them rather than one each.
+        tag={card.status === 'first-release' ? card.chip : undefined}
         tier="pro"
       />
     </a>
   );
 }
 
-export function ProTemplates() {
+/** The Pro group. `level` is the heading level of its title, which its cards' names sit under. */
+export function ProTemplates({ backdropOffset, level }: { backdropOffset: number; level: 2 | 3 }) {
+  const Title = level === 2 ? 'h2' : 'h3';
+  const cardLevel = level === 2 ? 3 : 4;
+
   const [open, setOpen] = useState(false);
   // Separate from open, so the dialog keeps its template while it closes.
   const [shown, setShown] = useState(PRO_CARDS[0]);
+  // The template just paged away from, which fades out under the one shown.
+  const [previous, setPrevious] = useState<ProCard | null>(null);
   const opener = useRef<HTMLAnchorElement>(null);
+  const swipe = useRef<{ x: number; y: number } | null>(null);
   const stripLabel = useId();
+  const position = PRO_CARDS.indexOf(shown);
 
   const show = (event: MouseEvent<HTMLAnchorElement>, card: ProCard) => {
     // A modified click keeps the link, so the Pro site still opens in a new tab or window.
@@ -87,6 +117,7 @@ export function ProTemplates() {
 
     event.preventDefault();
     opener.current = event.currentTarget;
+    setPrevious(null);
     setShown(card);
     setOpen(true);
     captureAction({
@@ -100,6 +131,7 @@ export function ProTemplates() {
   const pick = (card: ProCard) => {
     if (card === shown) return;
 
+    setPrevious(shown);
     setShown(card);
     captureAction({
       source: 'template',
@@ -109,21 +141,53 @@ export function ProTemplates() {
     });
   };
 
+  // The collection runs round: on from the last template comes back to the first.
+  const neighbour = (by: 1 | -1) =>
+    PRO_CARDS[(position + by + PRO_CARDS.length) % PRO_CARDS.length];
+
+  const step = (by: 1 | -1) => pick(neighbour(by));
+
+  // The frame holds the poster shown, the one fading out and the two a step away, already loaded
+  // so a step crossfades at once; a jump from the strip loads its poster as it fades in.
+  const framed = PRO_CARDS.filter(
+    (card) =>
+      card === shown || card === previous || card === neighbour(1) || card === neighbour(-1),
+  );
+
   return (
     <div className="template-group">
       <header className="template-group-header">
-        <h3 className="template-group-title">Coming soon to Pro</h3>
+        <Title className="template-group-title">Coming soon to Pro</Title>
+        <span className="template-group-count">
+          {PRO_CARDS.length}
+          <span className="sr-only"> templates</span>
+        </span>
       </header>
-      <div className="template-grid" data-status="first-release">
-        {firstRelease.map((card) => (
-          <ProTemplateCard
-            card={card}
-            key={card.slug}
-            onOpen={show}
-            sizes="(min-width: 1024px) 390px, 50vw"
-          />
-        ))}
+      <div className="template-row">
+        <div className="template-grid" data-status="first-release">
+          {firstRelease.map((card, index) => (
+            <ProTemplateCard
+              backdrop={backdropOffset + index}
+              card={card}
+              key={card.slug}
+              level={cardLevel}
+              onOpen={show}
+              sizes="(min-width: 1024px) 340px, (min-width: 640px) 45vw, 80vw"
+            />
+          ))}
+        </div>
         <a className="template-pro-tile" data-analytics-source="template" href={PRO_ORIGIN}>
+          <div aria-hidden className="template-pro-fan">
+            {fan.map((card) => (
+              <TemplateWindow
+                alt=""
+                className="template-pro-fan-window"
+                key={card.slug}
+                sizes="200px"
+                src={card.poster}
+              />
+            ))}
+          </div>
           <span className="template-pro-tile-copy">
             <span className="template-pro-tile-title">Every Pro template, one price</span>
             <span className="template-pro-tile-text">
@@ -139,23 +203,37 @@ export function ProTemplates() {
           </span>
         </a>
       </div>
-      <div className="template-grid" data-status="planned">
-        {planned.map((card) => (
-          <ProTemplateCard
-            card={card}
-            key={card.slug}
-            onOpen={show}
-            sizes="(min-width: 1024px) 290px, 50vw"
-          />
-        ))}
-      </div>
-      <p className="template-gallery-note">
-        Pro images are design previews. Planned templates have no date yet.
-      </p>
+      {planned.length > 0 ? (
+        <>
+          <p className="template-subgroup">{planned[0].chip}</p>
+          <div className="template-grid" data-status="planned">
+            {planned.map((card, index) => (
+              <ProTemplateCard
+                backdrop={backdropOffset + firstRelease.length + index}
+                card={card}
+                key={card.slug}
+                level={cardLevel}
+                onOpen={show}
+                sizes="(min-width: 1024px) 250px, (min-width: 640px) 45vw, 64vw"
+              />
+            ))}
+          </div>
+        </>
+      ) : null}
+      <p className="template-gallery-note">Pro images are design previews.</p>
       <GlassDialog onOpenChange={setOpen} open={open}>
         <GlassDialogContent
           className="template-dialog"
           closeLabel="Close"
+          // The arrow keys page through the collection from anywhere in the dialog.
+          onKeyDown={(event) => {
+            if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+
+            if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+
+            event.preventDefault();
+            step(event.key === 'ArrowRight' ? 1 : -1);
+          }}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
             opener.current?.focus();
@@ -173,18 +251,80 @@ export function ProTemplates() {
           <div className="template-dialog-body">
             <p className="template-dialog-eyebrow">{shown.chip}</p>
             <div className="template-dialog-poster">
-              <Image
-                alt={`${shown.name} design preview`}
-                height={800}
-                sizes="(min-width: 768px) 500px, 92vw"
-                src={shown.poster}
-                width={1280}
-              />
+              <span aria-hidden className="template-window-bar">
+                <i />
+                <i />
+                <i />
+              </span>
+              {/* A swipe across the poster pages too. The buttons are for a pointer; the keyboard
+                  has the arrow keys and the strip. */}
+              <div
+                className="template-card-poster"
+                onPointerCancel={() => {
+                  swipe.current = null;
+                }}
+                onPointerDown={(event) => {
+                  if (event.pointerType === 'touch') {
+                    swipe.current = { x: event.clientX, y: event.clientY };
+                  }
+                }}
+                onPointerUp={(event) => {
+                  const start = swipe.current;
+
+                  swipe.current = null;
+
+                  if (!start) return;
+
+                  const across = event.clientX - start.x;
+
+                  if (
+                    Math.abs(across) > 40 &&
+                    Math.abs(across) > 1.5 * Math.abs(event.clientY - start.y)
+                  ) {
+                    step(across < 0 ? 1 : -1);
+                  }
+                }}
+              >
+                {framed.map((card) => (
+                  <Image
+                    alt={card === shown ? `${card.name} design preview` : ''}
+                    aria-hidden={card === shown ? undefined : true}
+                    data-shown={card === shown || undefined}
+                    height={800}
+                    key={card.slug}
+                    sizes="(min-width: 768px) 500px, 92vw"
+                    src={card.poster}
+                    width={1280}
+                  />
+                ))}
+                <GlassButton
+                  aria-label="Previous template"
+                  className="template-dialog-step"
+                  data-direction="previous"
+                  onClick={() => step(-1)}
+                  size="sm"
+                  tabIndex={-1}
+                  variant="primary"
+                >
+                  <StepGlyph direction="previous" />
+                </GlassButton>
+                <GlassButton
+                  aria-label="Next template"
+                  className="template-dialog-step"
+                  data-direction="next"
+                  onClick={() => step(1)}
+                  size="sm"
+                  tabIndex={-1}
+                  variant="primary"
+                >
+                  <StepGlyph direction="next" />
+                </GlassButton>
+              </div>
             </div>
             <div className="template-dialog-details">
               <GlassDialogTitle className="template-dialog-title">{shown.name}</GlassDialogTitle>
               <p className="template-dialog-kind">{shown.kind}</p>
-              <p className="template-dialog-timing">{shown.timing}</p>
+              {shown.timing ? <p className="template-dialog-timing">{shown.timing}</p> : null}
               <GlassDialogDescription className="template-dialog-description">
                 Pre-order Glassy UI Pro and get {shown.name} the day it ships.
               </GlassDialogDescription>
@@ -218,9 +358,14 @@ export function ProTemplates() {
               <p className="template-dialog-tax">Plus any tax</p>
             </div>
             <div className="template-dialog-strip">
-              <p className="template-dialog-strip-label" id={stripLabel}>
-                Included with Pro
-              </p>
+              <div className="template-dialog-strip-header">
+                <p className="template-dialog-strip-label" id={stripLabel}>
+                  Included with Pro
+                </p>
+                <p aria-live="polite" className="template-dialog-count">
+                  {position + 1} of {PRO_CARDS.length}
+                </p>
+              </div>
               <div aria-labelledby={stripLabel} className="template-dialog-thumbs" role="group">
                 {PRO_CARDS.map((card) => (
                   <button

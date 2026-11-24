@@ -54,7 +54,7 @@ const documentationGroup: DocsMobileNavGroup = {
     { href: '/mobile', label: 'React Native' },
     { href: '/guides', label: 'Guides' },
     { href: '/blog', label: 'Blog' },
-    { href: '/#templates', label: 'Templates' },
+    { href: '/templates', label: 'Templates' },
     { href: GITHUB.repository, label: 'GitHub', external: true },
   ],
 };

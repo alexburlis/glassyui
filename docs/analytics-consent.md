@@ -284,11 +284,12 @@ A card under Coming soon to Pro on the home page opens the Pro dialog and
 records `site_action` with `source: template`, `action: pro_preview`,
 `outcome: opened` and `template`, the template's public slug from
 `src/lib/pro-teaser.ts`; any other slug is dropped. Switching templates in the
-dialog's strip records `outcome: selected` with the new slug; choosing the
-template already shown records nothing. The dialog's button links straight to
-Pro's Stripe checkout and records `pro_checkout_click` with `source: template`.
-Checkout clicks divided by opens give the dialog's click-through rate; a
-checkout click is intent, never payment.
+dialog, from its strip, its steps, the arrow keys or a swipe, records
+`outcome: selected` with the new slug; choosing the template already shown
+records nothing. The dialog's button links straight to Pro's Stripe checkout and
+records `pro_checkout_click` with `source: template`. Checkout clicks divided by
+opens give the dialog's click-through rate; a checkout click is intent, never
+payment.
 
 ## Pro gallery banner impressions and click-through rate
 

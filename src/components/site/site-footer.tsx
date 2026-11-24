@@ -42,7 +42,7 @@ export function SiteFooter() {
             <Link href="/components">All components</Link>
             <Link href="/mobile">React Native</Link>
             <Link href="/components/glass-provider">Theming</Link>
-            <Link href="/#templates">Templates</Link>
+            <Link href="/templates">Templates</Link>
             <Link href="/guides">Guides</Link>
             <Link href="/blog">Blog</Link>
           </div>

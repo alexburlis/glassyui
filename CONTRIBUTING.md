@@ -153,8 +153,10 @@ the server setup and smoke commands.
 - **Site motion:** `pnpm check:site-motion <base-url> <artifact-directory>`
   proves the home page entrance runs, lands and stays still under reduced
   motion, that scroll reveals never hide content, that menus grow from their
-  trigger, that the Pro card's art drifts only when motion is allowed and that
-  the theme switch keeps working in Chromium, WebKit and Firefox. For a bounded
+  trigger, that the Pro card's art drifts only when motion is allowed, that a
+  template's page scrolls down its window under a mouse and glides back, holds
+  still under reduced motion and loads only as a poster on a phone, and that the
+  theme switch keeps working in Chromium, WebKit and Firefox. For a bounded
   rerun, set `GLASS_ENGINES` to a subset of `chromium,webkit,firefox`, here and
   for the keynote; the manifest records the engines that ran.
 - **Keynote:** `pnpm check:keynote <base-url> <artifact-directory>` proves, in
