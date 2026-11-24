@@ -45,8 +45,20 @@ const sourceDirectory = path.join(root, 'registry', 'glassyui-native');
 const registry = JSON.parse(fs.readFileSync(path.join(root, 'registry-native.json'), 'utf8'));
 
 // The packages the items bring with them. The fixture lists them for local development; the
-// smoke removes them so the CLI has to install them.
+// smoke removes all but the prerequisites below, so the CLI has to install them.
 const glassPackages = [...new Set(registry.items.flatMap((item) => item.dependencies ?? []))];
+
+// The CLI hands packages to Expo without versions, so npm takes each one's newest release, and
+// the newest Reanimated and Worklets can need a newer React Native than the app's SDK. Their
+// items' pages ask apps without them to add them first with `npx expo install`, and npm keeps
+// an installed version, so the consumer starts with the fixture's SDK-matched pair.
+const prerequisites = ['react-native-reanimated', 'react-native-worklets'];
+
+for (const name of prerequisites) {
+  assert.ok(glassPackages.includes(name), `no item needs the prerequisite ${name}`);
+}
+
+const cliPackages = glassPackages.filter((name) => !prerequisites.includes(name));
 
 // Installing every item must install exactly the library's source tree, byte for byte. This is
 // read from the source folder, not from the payloads under test.
@@ -101,6 +113,13 @@ function listFiles(directory, prefix = '') {
       ? listFiles(path.join(directory, entry.name), relativePath)
       : [relativePath];
   });
+}
+
+/** The version npm installed in the clean consumer, whatever range package.json now names. */
+function installedVersion(name) {
+  const manifestPath = path.join(temporaryRoot, 'node_modules', name, 'package.json');
+
+  return JSON.parse(fs.readFileSync(manifestPath, 'utf8')).version;
 }
 
 const report = {
@@ -248,7 +267,7 @@ try {
     const manifestPath = path.join(temporaryRoot, 'package.json');
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
-    for (const name of glassPackages) delete manifest.dependencies[name];
+    for (const name of cliPackages) delete manifest.dependencies[name];
 
     fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
@@ -259,6 +278,11 @@ try {
     fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
 
     run('npm', ['install', '--no-audit', '--no-fund']);
+
+    const prerequisiteVersions = Object.fromEntries(
+      prerequisites.map((name) => [name, installedVersion(name)]),
+    );
+
     run(process.execPath, [
       shadcnBin,
       'add',
@@ -289,12 +313,17 @@ try {
 
     const installedManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
+    report.prerequisites = prerequisiteVersions;
     report.installedByCli = Object.fromEntries(
-      glassPackages.map((name) => [name, installedManifest.dependencies[name]]),
+      cliPackages.map((name) => [name, installedManifest.dependencies[name]]),
     );
 
     for (const name of glassPackages) {
       assert.ok(installedManifest.dependencies[name], `the CLI did not install ${name}`);
+    }
+
+    for (const name of prerequisites) {
+      assert.equal(installedVersion(name), prerequisiteVersions[name], `the CLI replaced ${name}`);
     }
 
     // The pinned CLI hands packages to `npx expo install` after `--`, which skips Expo's version
