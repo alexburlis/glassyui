@@ -134,7 +134,7 @@ for (const item of registry.items) {
   checkRegistryDependencies(item);
 }
 
-for (const name of expectedItems) {
+async function checkWebItem(name) {
   const response = await request(`/r/${name}.json`);
 
   if (response.headers.get('cache-control') !== expectedCacheControl) {
@@ -164,7 +164,8 @@ for (const name of expectedItems) {
     }
 
     checkCssPayload(item);
-    continue;
+
+    return;
   }
 
   assert.equal(item.type, 'registry:ui', `/r/${name}.json returned the wrong item type`);
@@ -206,6 +207,10 @@ for (const name of expectedItems) {
   }
 }
 
+for (let offset = 0; offset < expectedItems.length; offset += 8) {
+  await Promise.all(expectedItems.slice(offset, offset + 8).map(checkWebItem));
+}
+
 const nativeSource = JSON.parse(fs.readFileSync('registry-native.json', 'utf8'));
 
 const nativeResponse = await request('/r/native/registry.json');
@@ -224,7 +229,7 @@ assert.deepEqual(
   'native served catalogue differs',
 );
 
-for (const entry of nativeCatalogue.items) {
+async function checkNativeItem(entry) {
   checkRegistryDependencies(entry);
   const response = await request(`/r/native/${entry.name}.json`);
   assert.equal(
@@ -246,8 +251,13 @@ for (const entry of nativeCatalogue.items) {
     assert.match(file.content, /\S/, `${entry.name} omitted ${file.target} source`);
 }
 
-await request('/r/native/not-a-glassyui-item.json', 404);
+for (let offset = 0; offset < nativeCatalogue.items.length; offset += 8) {
+  await Promise.all(nativeCatalogue.items.slice(offset, offset + 8).map(checkNativeItem));
+}
 
-await request('/r/not-a-glassyui-item.json', 404);
+await Promise.all([
+  request('/r/native/not-a-glassyui-item.json', 404),
+  request('/r/not-a-glassyui-item.json', 404),
+]);
 
 console.log('Registry route smoke passed.');

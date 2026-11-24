@@ -216,18 +216,16 @@ try {
       viewport: { width: 1100, height: 800 },
     });
 
-    const figures = [];
+    const figures = await Promise.all(
+      PLATFORMS.map(async (platform) => {
+        const screen = await dataUrl(
+          `public/previews/mobile/${platform.file}-${theme}.webp`,
+          'image/webp',
+        );
 
-    for (const platform of PLATFORMS) {
-      const screen = await dataUrl(
-        `public/previews/mobile/${platform.file}-${theme}.webp`,
-        'image/webp',
-      );
-
-      figures.push(
-        `<figure><div class="bezel"><div class="screen"><img src="${screen}" alt=""></div></div><figcaption>${platform.label}</figcaption></figure>`,
-      );
-    }
+        return `<figure><div class="bezel"><div class="screen"><img src="${screen}" alt=""></div></div><figcaption>${platform.label}</figcaption></figure>`;
+      }),
+    );
 
     const phonesPng = await shoot(
       phones,

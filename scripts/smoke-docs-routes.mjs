@@ -87,7 +87,7 @@ const checks = [
   })),
 ];
 
-for (const check of checks) {
+async function checkRoute(check) {
   const url = new URL(check.path, baseUrl);
   const response = await fetch(url);
 
@@ -102,6 +102,10 @@ for (const check of checks) {
       throw new Error(`${url} missed marker ${marker}`);
     }
   }
+}
+
+for (let offset = 0; offset < checks.length; offset += 8) {
+  await Promise.all(checks.slice(offset, offset + 8).map(checkRoute));
 }
 
 console.log('Docs route smoke passed.');

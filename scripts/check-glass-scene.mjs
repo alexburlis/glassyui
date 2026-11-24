@@ -254,23 +254,29 @@ async function analyse(statsPage, images, operations) {
 
   return statsPage.evaluate(
     async ({ sources: encoded, operations: list }) => {
-      const decoded = {};
+      const decoded = Object.fromEntries(
+        await Promise.all(
+          Object.entries(encoded).map(async ([name, source]) => {
+            const image = new Image();
+            image.src = source;
+            await image.decode();
+            const canvas = document.createElement('canvas');
+            canvas.width = image.width;
+            canvas.height = image.height;
+            const context = canvas.getContext('2d', { willReadFrequently: true });
+            context.drawImage(image, 0, 0);
 
-      for (const [name, source] of Object.entries(encoded)) {
-        const image = new Image();
-        image.src = source;
-        await image.decode();
-        const canvas = document.createElement('canvas');
-        canvas.width = image.width;
-        canvas.height = image.height;
-        const context = canvas.getContext('2d', { willReadFrequently: true });
-        context.drawImage(image, 0, 0);
-        decoded[name] = {
-          width: image.width,
-          height: image.height,
-          data: context.getImageData(0, 0, image.width, image.height).data,
-        };
-      }
+            return [
+              name,
+              {
+                width: image.width,
+                height: image.height,
+                data: context.getImageData(0, 0, image.width, image.height).data,
+              },
+            ];
+          }),
+        ),
+      );
 
       const pixel = (image, x, y) => {
         const index = (y * image.width + x) * 4;

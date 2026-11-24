@@ -43,25 +43,25 @@ const OPENED = new Set([
 
 // The pages that get a studio card, from the server's own sitemap. Expo-only components share
 // the React Native card, whose loop link-previews/ renders (public/share/README.md).
-const sitemap = await (await fetch(new URL('/sitemap.xml', baseUrl))).text();
+const [sitemap, registryText, blogPosts] = await Promise.all([
+  fetch(new URL('/sitemap.xml', baseUrl)).then((response) => response.text()),
+  fs.readFile('registry.json', 'utf8'),
+  // Artwork must be ready while a post is still a draft or scheduled for a future date.
+  createMdxBlog({
+    contentDir: path.resolve('content/blog'),
+    baseUrl: new URL(baseUrl).origin,
+    routeBase: '/blog',
+  }).getAllPosts({ includeDrafts: true }),
+]);
 
 const pages = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(
   (match) => new URL(match[1]).pathname,
 );
 
-const webComponents = new Set(
-  JSON.parse(await fs.readFile('registry.json', 'utf8')).items.map((item) => item.name),
-);
+const webComponents = new Set(JSON.parse(registryText).items.map((item) => item.name));
 
 const slugUnder = (prefix) =>
   pages.flatMap((page) => (page.startsWith(prefix) ? [page.slice(prefix.length)] : []));
-
-// Artwork must be ready while a post is still a draft or scheduled for a future date.
-const blogPosts = await createMdxBlog({
-  contentDir: path.resolve('content/blog'),
-  baseUrl: new URL(baseUrl).origin,
-  routeBase: '/blog',
-}).getAllPosts({ includeDrafts: true });
 
 const cards = [
   { file: 'components.jpg', route: 'components' },

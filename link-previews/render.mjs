@@ -144,9 +144,10 @@ async function grab(page, frame, modes, subframes) {
     const result = await page.evaluate(
       async ({ index, outputs, count }) => {
         const used = window.film.render(index, count);
-        const data = {};
 
-        for (const mode of outputs) data[mode] = await window.film.read(mode);
+        const data = Object.fromEntries(
+          await Promise.all(outputs.map(async (mode) => [mode, await window.film.read(mode)])),
+        );
 
         return { used, data };
       },
