@@ -321,6 +321,13 @@ export function ComponentInstallation({
               <Link href="/guides/expo">Expo guide</Link> shows.
             </p>
           ) : null}
+          {data.packages.includes('react-native-reanimated') ? (
+            <p>
+              If your app doesn&rsquo;t have Reanimated yet, install it first with{' '}
+              <code>npx expo install react-native-reanimated react-native-worklets</code>, so Expo
+              picks the versions that match your SDK.
+            </p>
+          ) : null}
           <InstallCommandBlock
             items={[data.item]}
             platform={data.platform}
