@@ -128,7 +128,7 @@
       "@modelcontextprotocol/sdk": "1.32.0",
       "proxy-addr": "2.0.8",
       "postcss-selector-parser": "7.1.6",
-      "hono": "4.13.11",
+      "hono": "4.13.16",
       "posthog-js>dompurify": "3.4.17",
       "ajv>fast-uri": "3.1.9",
       "@dotenvx/dotenvx>systeminformation": "5.33.19",
